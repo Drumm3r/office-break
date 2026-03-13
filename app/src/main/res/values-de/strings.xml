@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notification_channel_description">Countdown-Timer für Bewegungspausen</string>
+    <string name="notification_channel_alert_name">Pausen-Alarm</string>
+    <string name="notification_channel_alert_description">Benachrichtigung wenn es Zeit für eine Pause ist</string>
+    <string name="notification_text_running">Nächste Pause in %1$s</string>
+    <string name="notification_text_expired">Zeit für eine Pause!</string>
+    <string name="exercise_done">Geschafft!</string>
+    <string name="reset_confirm_title">Timer zurücksetzen?</string>
+    <string name="reset_confirm_message">Der aktuelle Timer wird gestoppt und zurückgesetzt.</string>
+    <string name="reset_confirm_yes">Zurücksetzen</string>
+    <string name="reset_confirm_no">Abbrechen</string>
+    <string name="hours_label">Stunden</string>
+    <string name="minutes_label">Minuten</string>
+    <string name="reps_label">Wiederholungen</string>
+    <string name="tap_to_enter">Antippen zum Eingeben</string>
+    <string name="enter_time">Zeit eingeben</string>
+    <string name="exercise_heading">Ab zur bewegten Pause!</string>
+    <string name="reps_format">%d Wiederholungen</string>
+    <string name="language_label">Sprache</string>
+    <string name="language_system">System</string>
+    <string name="language_german">Deutsch</string>
+    <string name="language_english">English</string>
+
+    <string name="exercises_title">Übungen</string>
+    <string name="new_exercise_hint">Neue Übung</string>
+    <string name="add_exercise">Hinzufügen</string>
+    <string name="remove_exercise">Entfernen</string>
+
+    <string name="exercise_push_ups">Liegestütze</string>
+    <string name="exercise_squats">Kniebeuge</string>
+    <string name="exercise_deadlifts">Kreuzheben</string>
+    <string name="exercise_lunges">Ausfallschritt</string>
+    <string name="exercise_sit_ups">Sit Ups</string>
+    <string name="exercise_superman_angels">Superman Angels</string>
+</resources>

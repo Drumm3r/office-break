@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Office Break</string>
+    <string name="notification_channel_name">Timer</string>
+    <string name="notification_channel_description">Countdown timer for movement breaks</string>
+    <string name="notification_channel_alert_name">Break Alert</string>
+    <string name="notification_channel_alert_description">Alerts when it\'s time for a break</string>
+    <string name="notification_title">Office Break</string>
+    <string name="notification_text_running">Next break in %1$s</string>
+    <string name="notification_text_expired">Time for a break!</string>
+    <string name="timer_start">Start</string>
+    <string name="timer_reset">Reset</string>
+    <string name="exercise_done">Done!</string>
+    <string name="reset_confirm_title">Reset timer?</string>
+    <string name="reset_confirm_message">The current timer will be stopped and reset.</string>
+    <string name="reset_confirm_yes">Reset</string>
+    <string name="reset_confirm_no">Cancel</string>
+    <string name="hours_label">Hours</string>
+    <string name="minutes_label">Minutes</string>
+    <string name="reps_label">Repetitions</string>
+    <string name="tap_to_enter">Tap to enter</string>
+    <string name="enter_time">Enter time</string>
+    <string name="exercise_heading">Time for an active break!</string>
+    <string name="reps_format">%d repetitions</string>
+    <string name="language_label">Language</string>
+    <string name="language_system">System</string>
+    <string name="language_german">Deutsch</string>
+    <string name="language_english">English</string>
+
+    <string name="exercises_title">Exercises</string>
+    <string name="new_exercise_hint">New exercise</string>
+    <string name="add_exercise">Add</string>
+    <string name="remove_exercise">Remove</string>
+
+    <string name="exercise_push_ups">Push Ups</string>
+    <string name="exercise_squats">Squats</string>
+    <string name="exercise_deadlifts">Deadlifts</string>
+    <string name="exercise_lunges">Lunges</string>
+    <string name="exercise_sit_ups">Sit Ups</string>
+    <string name="exercise_superman_angels">Superman Angels</string>
+</resources>
