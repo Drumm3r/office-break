@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
@@ -48,7 +49,7 @@ class TimerViewModel @JvmOverloads constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_REPS)
 
     val exercises: StateFlow<List<Exercise>> = repository.exercises
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val language: StateFlow<String> = repository.language
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.LANGUAGE_SYSTEM)
@@ -168,9 +169,12 @@ class TimerViewModel @JvmOverloads constructor(
     }
 
     fun onTimerExpired() {
-        val enabledExercises = exercises.value.filter { it.isEnabled }
-        if (enabledExercises.isNotEmpty()) {
-            _currentExercise.value = enabledExercises.random()
+        viewModelScope.launch {
+            val allExercises = repository.exercises.first()
+            val enabledExercises = allExercises.filter { it.isEnabled }
+            if (enabledExercises.isNotEmpty()) {
+                _currentExercise.value = enabledExercises.random()
+            }
         }
     }
 

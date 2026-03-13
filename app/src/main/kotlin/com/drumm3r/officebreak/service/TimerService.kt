@@ -5,6 +5,9 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.media.AudioAttributes
+import android.media.AudioFormat
+import android.media.AudioTrack
 import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
@@ -31,6 +34,7 @@ class TimerService : Service() {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var timerJob: Job? = null
     private var wakeLock: PowerManager.WakeLock? = null
+    private var alarmTrack: AudioTrack? = null
     private val timerStateHolder = TimerStateHolder.instance
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -61,6 +65,9 @@ class TimerService : Service() {
 
     private fun startTimer(totalSeconds: Long) {
         timerJob?.cancel()
+        stopAlarmSound()
+        val manager = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
+        manager.cancel(EXPIRED_NOTIFICATION_ID)
         acquireWakeLock(totalSeconds)
 
         startForeground(NOTIFICATION_ID, buildNotification(formatTime(totalSeconds)))
@@ -82,8 +89,10 @@ class TimerService : Service() {
                     updateNotification(formatTime(remaining))
                 }
                 timerStateHolder.update(TimerState.Expired)
+                wakeScreen()
+                stopForeground(STOP_FOREGROUND_REMOVE)
                 showExpiredNotification()
-                releaseWakeLock()
+                playAlarmSound()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -96,8 +105,11 @@ class TimerService : Service() {
 
     private fun resetTimer() {
         timerJob?.cancel()
+        stopAlarmSound()
         timerStateHolder.update(TimerState.Idle)
         releaseWakeLock()
+        val manager = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
+        manager.cancel(EXPIRED_NOTIFICATION_ID)
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
@@ -129,7 +141,12 @@ class TimerService : Service() {
     }
 
     private fun showExpiredNotification() {
-        wakeScreen()
+        val activityIntent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
+                Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+        startActivity(activityIntent)
 
         val fullScreenIntent = PendingIntent.getActivity(
             this,
@@ -166,7 +183,72 @@ class TimerService : Service() {
             .build()
 
         val manager = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
-        manager.notify(NOTIFICATION_ID, notification)
+        manager.notify(EXPIRED_NOTIFICATION_ID, notification)
+    }
+
+    private fun playAlarmSound() {
+        stopAlarmSound()
+        try {
+            val sampleRate = 44100
+            val beepDurationMs = 150
+            val pauseDurationMs = 100
+            val beepCount = 3
+            val frequency = 1000.0
+
+            val beepSamples = (sampleRate * beepDurationMs) / 1000
+            val pauseSamples = (sampleRate * pauseDurationMs) / 1000
+            val totalSamples = beepCount * beepSamples + (beepCount - 1) * pauseSamples
+            val samples = ShortArray(totalSamples)
+
+            var offset = 0
+            for (beep in 0 until beepCount) {
+                for (i in 0 until beepSamples) {
+                    val angle = 2.0 * Math.PI * frequency * i / sampleRate
+                    samples[offset + i] = (Math.sin(angle) * Short.MAX_VALUE * 0.8).toInt().toShort()
+                }
+                offset += beepSamples
+                if (beep < beepCount - 1) {
+                    offset += pauseSamples
+                }
+            }
+
+            val bufferSize = samples.size * 2
+            alarmTrack = AudioTrack.Builder()
+                .setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_ALARM)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build(),
+                )
+                .setAudioFormat(
+                    AudioFormat.Builder()
+                        .setSampleRate(sampleRate)
+                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                        .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                        .build(),
+                )
+                .setBufferSizeInBytes(bufferSize)
+                .setTransferMode(AudioTrack.MODE_STATIC)
+                .build()
+                .apply {
+                    write(samples, 0, samples.size)
+                    play()
+                }
+        } catch (e: Exception) {
+            android.util.Log.e("TimerService", "Failed to play beep sound", e)
+        }
+    }
+
+    private fun stopAlarmSound() {
+        alarmTrack?.let {
+            try {
+                it.stop()
+            } catch (_: IllegalStateException) {
+                // Already stopped
+            }
+            it.release()
+        }
+        alarmTrack = null
     }
 
     @Suppress("DEPRECATION")
@@ -201,6 +283,7 @@ class TimerService : Service() {
 
     override fun onDestroy() {
         timerJob?.cancel()
+        stopAlarmSound()
         scope.cancel()
         releaseWakeLock()
         super.onDestroy()
@@ -212,6 +295,7 @@ class TimerService : Service() {
         const val ACTION_RESTART = "com.drumm3r.officebreak.ACTION_RESTART"
         const val EXTRA_DURATION_SECONDS = "duration_seconds"
         const val NOTIFICATION_ID = 1
+        const val EXPIRED_NOTIFICATION_ID = 2
 
         fun formatTime(totalSeconds: Long): String {
             val minutes = totalSeconds / 60

@@ -10,6 +10,7 @@ Android app for regular movement breaks at the office. Set a timer, start it, an
 - Random exercise selection from customizable list
 - Auto-restart after exercise confirmation
 - Foreground service with persistent notification
+- Audible beep alert on timer expiry
 - Lock screen notification with screen wake-up on timer expiry
 - Exercise management (add, remove, enable/disable)
 - Language switcher (German, English, System)
