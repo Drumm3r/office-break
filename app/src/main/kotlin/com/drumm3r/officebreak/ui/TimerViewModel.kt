@@ -33,6 +33,8 @@ class TimerViewModel @JvmOverloads constructor(
         const val MAX_EXERCISE_NAME_LENGTH = 100
         private const val TAG = "TimerViewModel"
         private const val KEY_CURRENT_EXERCISE = "current_exercise"
+        private const val KEY_CURRENT_REPS = "current_reps"
+        private const val KEY_USED_EXERCISES = "used_exercises"
     }
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -45,8 +47,14 @@ class TimerViewModel @JvmOverloads constructor(
     val minutes: StateFlow<Int> = repository.timerMinutes
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_MINUTES)
 
-    val reps: StateFlow<Int> = repository.reps
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_REPS)
+    val repsMin: StateFlow<Int> = repository.repsMin
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_REPS_MIN)
+
+    val repsMax: StateFlow<Int> = repository.repsMax
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_REPS_MAX)
+
+    val repsLinked: StateFlow<Boolean> = repository.repsLinked
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_REPS_LINKED)
 
     val exercises: StateFlow<List<Exercise>> = repository.exercises
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
@@ -65,10 +73,21 @@ class TimerViewModel @JvmOverloads constructor(
     )
     val currentExercise: StateFlow<Exercise?> = _currentExercise.asStateFlow()
 
+    private val _currentReps = MutableStateFlow(savedStateHandle.get<Int>(KEY_CURRENT_REPS))
+    val currentReps: StateFlow<Int?> = _currentReps.asStateFlow()
+
+    private val usedExerciseNames: MutableSet<String> =
+        (savedStateHandle.get<ArrayList<String>>(KEY_USED_EXERCISES) ?: arrayListOf()).toMutableSet()
+
     init {
         viewModelScope.launch {
             _currentExercise.collect { exercise ->
                 savedStateHandle[KEY_CURRENT_EXERCISE] = exercise?.let { json.encodeToString(it) }
+            }
+        }
+        viewModelScope.launch {
+            _currentReps.collect { reps ->
+                savedStateHandle[KEY_CURRENT_REPS] = reps
             }
         }
     }
@@ -93,12 +112,41 @@ class TimerViewModel @JvmOverloads constructor(
         }
     }
 
-    fun setReps(value: Int) {
+    fun setRepsMin(value: Int) {
         viewModelScope.launch {
             try {
-                repository.setReps(value.coerceIn(1, 100))
+                val coerced = value.coerceIn(1, 50)
+                repository.setRepsMin(coerced)
+                if (repsLinked.value) {
+                    repository.setRepsMax(coerced)
+                } else if (coerced > repsMax.value) {
+                    repository.setRepsMax(coerced)
+                }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to set reps", e)
+                Log.e(TAG, "Failed to set reps min", e)
+            }
+        }
+    }
+
+    fun setRepsMax(value: Int) {
+        viewModelScope.launch {
+            try {
+                repository.setRepsMax(value.coerceIn(repsMin.value, 50))
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set reps max", e)
+            }
+        }
+    }
+
+    fun setRepsLinked(value: Boolean) {
+        viewModelScope.launch {
+            try {
+                repository.setRepsLinked(value)
+                if (value) {
+                    repository.setRepsMax(repsMin.value)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set reps linked", e)
             }
         }
     }
@@ -165,6 +213,9 @@ class TimerViewModel @JvmOverloads constructor(
 
     fun resetTimer() {
         _currentExercise.value = null
+        _currentReps.value = null
+        usedExerciseNames.clear()
+        savedStateHandle[KEY_USED_EXERCISES] = arrayListOf<String>()
         serviceController.resetTimer()
     }
 
@@ -173,13 +224,26 @@ class TimerViewModel @JvmOverloads constructor(
             val allExercises = repository.exercises.first()
             val enabledExercises = allExercises.filter { it.isEnabled }
             if (enabledExercises.isNotEmpty()) {
-                _currentExercise.value = enabledExercises.random()
+                var available = enabledExercises.filter { it.name !in usedExerciseNames }
+                if (available.isEmpty()) {
+                    usedExerciseNames.clear()
+                    available = enabledExercises
+                }
+                val picked = available.random()
+                usedExerciseNames.add(picked.name)
+                savedStateHandle[KEY_USED_EXERCISES] = ArrayList(usedExerciseNames)
+
+                _currentExercise.value = picked
+                val min = repsMin.value
+                val max = repsMax.value
+                _currentReps.value = (min..max).random()
             }
         }
     }
 
     fun onExerciseDone() {
         _currentExercise.value = null
+        _currentReps.value = null
         val totalSeconds = (hours.value * 3600L) + (minutes.value * 60L)
         if (totalSeconds <= 0) return
 

@@ -5,11 +5,11 @@ Android app for regular movement breaks at the office. Set a timer, start it, an
 ## Features
 
 - Adjustable timer duration (hours + minutes) via sliders or manual input
-- Configurable repetition count
+- Configurable repetition range (min/max) with linkable sliders for fixed or randomized reps
 - Circular countdown display
-- Random exercise selection from customizable list
+- Shuffle-bag exercise selection — cycles through all enabled exercises before repeating
 - Auto-restart after exercise confirmation
-- Foreground service with persistent notification
+- Foreground service with persistent notification (stays visible until manual reset)
 - Audible beep alert on timer expiry
 - Lock screen notification with screen wake-up on timer expiry
 - Exercise management (add, remove, enable/disable)

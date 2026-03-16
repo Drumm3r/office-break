@@ -66,7 +66,9 @@ class TimerViewModelTest {
     private fun collectFlows() = listOf(
         viewModel.hours,
         viewModel.minutes,
-        viewModel.reps,
+        viewModel.repsMin,
+        viewModel.repsMax,
+        viewModel.repsLinked,
         viewModel.exercises,
         viewModel.language,
     )
@@ -96,9 +98,25 @@ class TimerViewModelTest {
     }
 
     @Test
-    fun `reps emits default from repository`() = runTest {
-        viewModel.reps.test {
-            assertEquals(SettingsRepository.DEFAULT_REPS, awaitItem())
+    fun `repsMin emits default from repository`() = runTest {
+        viewModel.repsMin.test {
+            assertEquals(SettingsRepository.DEFAULT_REPS_MIN, awaitItem())
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `repsMax emits default from repository`() = runTest {
+        viewModel.repsMax.test {
+            assertEquals(SettingsRepository.DEFAULT_REPS_MAX, awaitItem())
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `repsLinked emits default from repository`() = runTest {
+        viewModel.repsLinked.test {
+            assertEquals(SettingsRepository.DEFAULT_REPS_LINKED, awaitItem())
             cancelAndConsumeRemainingEvents()
         }
     }
@@ -128,15 +146,100 @@ class TimerViewModelTest {
     }
 
     @Test
-    fun `setReps writes to repository`() = runTest {
-        viewModel.reps.test {
-            assertEquals(SettingsRepository.DEFAULT_REPS, awaitItem())
+    fun `setRepsMin writes to repository`() = runTest {
+        viewModel.repsMin.test {
+            assertEquals(SettingsRepository.DEFAULT_REPS_MIN, awaitItem())
 
-            viewModel.setReps(20)
+            viewModel.setRepsMin(20)
             assertEquals(20, awaitItem())
 
             cancelAndConsumeRemainingEvents()
         }
+    }
+
+    @Test
+    fun `setRepsMin when linked also updates repsMax`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        viewModel.setRepsMin(25)
+        advanceUntilIdle()
+
+        assertEquals(25, viewModel.repsMin.value)
+        assertEquals(25, viewModel.repsMax.value)
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `setRepsMax writes to repository`() = runTest {
+        viewModel.repsMax.test {
+            assertEquals(SettingsRepository.DEFAULT_REPS_MAX, awaitItem())
+
+            viewModel.setRepsMax(30)
+            assertEquals(30, awaitItem())
+
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `setRepsLinked snaps max to min when linking`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        viewModel.setRepsLinked(false)
+        advanceUntilIdle()
+        viewModel.setRepsMin(15)
+        advanceUntilIdle()
+        viewModel.setRepsMax(30)
+        advanceUntilIdle()
+
+        viewModel.setRepsLinked(true)
+        advanceUntilIdle()
+
+        assertEquals(15, viewModel.repsMax.value)
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `setRepsMax cannot go below repsMin`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        viewModel.setRepsLinked(false)
+        advanceUntilIdle()
+        viewModel.setRepsMin(20)
+        advanceUntilIdle()
+
+        viewModel.setRepsMax(5)
+        advanceUntilIdle()
+
+        assertEquals(20, viewModel.repsMax.value)
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `setRepsMin raises repsMax when min exceeds max`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        viewModel.setRepsLinked(false)
+        advanceUntilIdle()
+        viewModel.setRepsMin(10)
+        advanceUntilIdle()
+        viewModel.setRepsMax(15)
+        advanceUntilIdle()
+
+        viewModel.setRepsMin(25)
+        advanceUntilIdle()
+
+        assertEquals(25, viewModel.repsMin.value)
+        assertEquals(25, viewModel.repsMax.value)
+
+        collectors.forEach { it.cancel() }
     }
 
     @Test
@@ -211,6 +314,121 @@ class TimerViewModelTest {
         val exercise = viewModel.currentExercise.value
         assertNotNull(exercise)
         assertTrue(exercise!! in defaultExercises)
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `onTimerExpired cycles through all exercises before repeating`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        val pickedNames = mutableListOf<String>()
+
+        viewModel.onTimerExpired()
+        pickedNames.add(viewModel.currentExercise.value!!.name)
+        viewModel.onExerciseDone()
+        advanceUntilIdle()
+
+        viewModel.onTimerExpired()
+        pickedNames.add(viewModel.currentExercise.value!!.name)
+
+        assertEquals(2, pickedNames.toSet().size)
+        assertTrue(pickedNames.all { name -> defaultExercises.any { it.name == name } })
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `onTimerExpired resets shuffle bag when all exercises used`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        viewModel.onTimerExpired()
+        viewModel.onExerciseDone()
+        advanceUntilIdle()
+
+        viewModel.onTimerExpired()
+        viewModel.onExerciseDone()
+        advanceUntilIdle()
+
+        viewModel.onTimerExpired()
+        val thirdExercise = viewModel.currentExercise.value
+        assertNotNull(thirdExercise)
+        assertTrue(thirdExercise!! in defaultExercises)
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `resetTimer clears shuffle bag`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        viewModel.onTimerExpired()
+        val firstPick = viewModel.currentExercise.value!!.name
+
+        viewModel.resetTimer()
+        advanceUntilIdle()
+
+        val pickedAfterReset = mutableSetOf<String>()
+        repeat(defaultExercises.size) {
+            viewModel.onTimerExpired()
+            pickedAfterReset.add(viewModel.currentExercise.value!!.name)
+            viewModel.onExerciseDone()
+            advanceUntilIdle()
+        }
+
+        assertEquals(defaultExercises.size, pickedAfterReset.size)
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `onTimerExpired produces reps within min max range`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        viewModel.setRepsLinked(false)
+        advanceUntilIdle()
+        viewModel.setRepsMin(5)
+        advanceUntilIdle()
+        viewModel.setRepsMax(15)
+        advanceUntilIdle()
+
+        viewModel.onTimerExpired()
+
+        val reps = viewModel.currentReps.value
+        assertNotNull(reps)
+        assertTrue("reps $reps should be in 5..15", reps!! in 5..15)
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `currentReps cleared on exerciseDone`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        viewModel.onTimerExpired()
+        assertNotNull(viewModel.currentReps.value)
+
+        viewModel.onExerciseDone()
+        assertNull(viewModel.currentReps.value)
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `currentReps cleared on resetTimer`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        viewModel.onTimerExpired()
+        assertNotNull(viewModel.currentReps.value)
+
+        viewModel.resetTimer()
+        assertNull(viewModel.currentReps.value)
 
         collectors.forEach { it.cancel() }
     }

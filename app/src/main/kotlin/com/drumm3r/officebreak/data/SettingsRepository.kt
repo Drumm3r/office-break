@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -34,8 +35,16 @@ class SettingsRepository(
         prefs[KEY_TIMER_MINUTES] ?: DEFAULT_MINUTES
     }
 
-    val reps: Flow<Int> = dataStore.data.map { prefs ->
-        prefs[KEY_REPS] ?: DEFAULT_REPS
+    val repsMin: Flow<Int> = dataStore.data.map { prefs ->
+        prefs[KEY_REPS_MIN] ?: DEFAULT_REPS_MIN
+    }
+
+    val repsMax: Flow<Int> = dataStore.data.map { prefs ->
+        prefs[KEY_REPS_MAX] ?: DEFAULT_REPS_MAX
+    }
+
+    val repsLinked: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[KEY_REPS_LINKED] ?: DEFAULT_REPS_LINKED
     }
 
     val exercises: Flow<List<Exercise>> = dataStore.data.map { prefs ->
@@ -63,8 +72,16 @@ class SettingsRepository(
         dataStore.edit { it[KEY_TIMER_MINUTES] = minutes }
     }
 
-    suspend fun setReps(reps: Int) {
-        dataStore.edit { it[KEY_REPS] = reps }
+    suspend fun setRepsMin(value: Int) {
+        dataStore.edit { it[KEY_REPS_MIN] = value }
+    }
+
+    suspend fun setRepsMax(value: Int) {
+        dataStore.edit { it[KEY_REPS_MAX] = value }
+    }
+
+    suspend fun setRepsLinked(value: Boolean) {
+        dataStore.edit { it[KEY_REPS_LINKED] = value }
     }
 
     suspend fun setExercises(exercises: List<Exercise>) {
@@ -78,13 +95,17 @@ class SettingsRepository(
     companion object {
         private val KEY_TIMER_HOURS = intPreferencesKey("timer_hours")
         private val KEY_TIMER_MINUTES = intPreferencesKey("timer_minutes")
-        private val KEY_REPS = intPreferencesKey("reps")
+        private val KEY_REPS_MIN = intPreferencesKey("reps_min")
+        private val KEY_REPS_MAX = intPreferencesKey("reps_max")
+        private val KEY_REPS_LINKED = booleanPreferencesKey("reps_linked")
         private val KEY_EXERCISES = stringPreferencesKey("exercises")
         private val KEY_LANGUAGE = stringPreferencesKey("language")
 
         const val DEFAULT_HOURS = 0
         const val DEFAULT_MINUTES = 30
-        const val DEFAULT_REPS = 10
+        const val DEFAULT_REPS_MIN = 10
+        const val DEFAULT_REPS_MAX = 10
+        const val DEFAULT_REPS_LINKED = true
 
         const val LANGUAGE_SYSTEM = "system"
         const val LANGUAGE_DE = "de"

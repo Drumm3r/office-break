@@ -8,10 +8,16 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.LinkOff
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
@@ -25,6 +31,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -39,10 +46,14 @@ import kotlin.math.roundToInt
 fun TimerSetup(
     hours: Int,
     minutes: Int,
-    reps: Int,
+    repsMin: Int,
+    repsMax: Int,
+    repsLinked: Boolean,
     onHoursChange: (Int) -> Unit,
     onMinutesChange: (Int) -> Unit,
-    onRepsChange: (Int) -> Unit,
+    onRepsMinChange: (Int) -> Unit,
+    onRepsMaxChange: (Int) -> Unit,
+    onRepsLinkedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showTimeInputDialog by rememberSaveable { mutableStateOf(false) }
@@ -103,11 +114,38 @@ fun TimerSetup(
         Spacer(modifier = Modifier.height(24.dp))
 
         SliderRow(
-            label = stringResource(R.string.reps_label),
-            value = reps,
+            label = stringResource(R.string.reps_min_label),
+            value = repsMin,
             range = 1f..50f,
-            onValueChange = onRepsChange,
+            onValueChange = onRepsMinChange,
         )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SliderRow(
+                label = stringResource(R.string.reps_max_label),
+                value = if (repsLinked) repsMin else repsMax,
+                range = 1f..50f,
+                onValueChange = onRepsMaxChange,
+                enabled = !repsLinked,
+                modifier = Modifier.weight(1f),
+            )
+
+            IconButton(
+                onClick = { onRepsLinkedChange(!repsLinked) },
+                modifier = Modifier.size(48.dp),
+            ) {
+                Icon(
+                    imageVector = if (repsLinked) Icons.Outlined.Link else Icons.Outlined.LinkOff,
+                    contentDescription = stringResource(R.string.reps_link_description),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
     }
 }
 
@@ -194,9 +232,13 @@ private fun SliderRow(
     value: Int,
     range: ClosedFloatingPointRange<Float>,
     onValueChange: (Int) -> Unit,
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .alpha(if (enabled) 1f else 0.38f),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -217,6 +259,7 @@ private fun SliderRow(
             onValueChange = { onValueChange(it.roundToInt()) },
             valueRange = range,
             steps = (range.endInclusive - range.start).toInt() - 1,
+            enabled = enabled,
             modifier = Modifier.fillMaxWidth(),
         )
     }
@@ -229,10 +272,14 @@ private fun TimerSetupPreview() {
         TimerSetup(
             hours = 0,
             minutes = 30,
-            reps = 10,
+            repsMin = 10,
+            repsMax = 10,
+            repsLinked = true,
             onHoursChange = {},
             onMinutesChange = {},
-            onRepsChange = {},
+            onRepsMinChange = {},
+            onRepsMaxChange = {},
+            onRepsLinkedChange = {},
         )
     }
 }

@@ -13,6 +13,9 @@
     <string name="hours_label">Stunden</string>
     <string name="minutes_label">Minuten</string>
     <string name="reps_label">Wiederholungen</string>
+    <string name="reps_min_label">Min Wiederholungen</string>
+    <string name="reps_max_label">Max Wiederholungen</string>
+    <string name="reps_link_description">Wiederholungen verknüpfen</string>
     <string name="tap_to_enter">Antippen zum Eingeben</string>
     <string name="enter_time">Zeit eingeben</string>
     <string name="exercise_heading">Ab zur bewegten Pause!</string>

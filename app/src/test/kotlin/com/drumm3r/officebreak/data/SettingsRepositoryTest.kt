@@ -66,20 +66,60 @@ class SettingsRepositoryTest {
     }
 
     @Test
-    fun `reps emits default when empty`() = runTest {
-        repository.reps.test {
-            assertEquals(SettingsRepository.DEFAULT_REPS, awaitItem())
+    fun `repsMin emits default when empty`() = runTest {
+        repository.repsMin.test {
+            assertEquals(SettingsRepository.DEFAULT_REPS_MIN, awaitItem())
             cancelAndConsumeRemainingEvents()
         }
     }
 
     @Test
-    fun `setReps persists and re-emits`() = runTest {
-        repository.reps.test {
-            assertEquals(SettingsRepository.DEFAULT_REPS, awaitItem())
+    fun `setRepsMin persists and re-emits`() = runTest {
+        repository.repsMin.test {
+            assertEquals(SettingsRepository.DEFAULT_REPS_MIN, awaitItem())
 
-            repository.setReps(20)
+            repository.setRepsMin(20)
             assertEquals(20, awaitItem())
+
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `repsMax emits default when empty`() = runTest {
+        repository.repsMax.test {
+            assertEquals(SettingsRepository.DEFAULT_REPS_MAX, awaitItem())
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `setRepsMax persists and re-emits`() = runTest {
+        repository.repsMax.test {
+            assertEquals(SettingsRepository.DEFAULT_REPS_MAX, awaitItem())
+
+            repository.setRepsMax(30)
+            assertEquals(30, awaitItem())
+
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `repsLinked emits default when empty`() = runTest {
+        repository.repsLinked.test {
+            assertEquals(SettingsRepository.DEFAULT_REPS_LINKED, awaitItem())
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `setRepsLinked persists and re-emits`() = runTest {
+        repository.repsLinked.test {
+            assertEquals(SettingsRepository.DEFAULT_REPS_LINKED, awaitItem())
+
+            repository.setRepsLinked(false)
+            assertEquals(false, awaitItem())
 
             cancelAndConsumeRemainingEvents()
         }

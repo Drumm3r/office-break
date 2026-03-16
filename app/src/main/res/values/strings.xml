@@ -18,6 +18,9 @@
     <string name="hours_label">Hours</string>
     <string name="minutes_label">Minutes</string>
     <string name="reps_label">Repetitions</string>
+    <string name="reps_min_label">Min Repetitions</string>
+    <string name="reps_max_label">Max Repetitions</string>
+    <string name="reps_link_description">Link repetitions</string>
     <string name="tap_to_enter">Tap to enter</string>
     <string name="enter_time">Enter time</string>
     <string name="exercise_heading">Time for an active break!</string>

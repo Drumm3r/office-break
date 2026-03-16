@@ -70,7 +70,7 @@ class TimerService : Service() {
         manager.cancel(EXPIRED_NOTIFICATION_ID)
         acquireWakeLock(totalSeconds)
 
-        startForeground(NOTIFICATION_ID, buildNotification(formatTime(totalSeconds)))
+        startForeground(NOTIFICATION_ID, buildNotification(getString(R.string.notification_text_running, formatTime(totalSeconds))))
         timerStateHolder.update(TimerState.Running(
             remainingSeconds = totalSeconds,
             totalSeconds = totalSeconds,
@@ -86,11 +86,11 @@ class TimerService : Service() {
                         remainingSeconds = remaining,
                         totalSeconds = totalSeconds,
                     ))
-                    updateNotification(formatTime(remaining))
+                    updateNotification(getString(R.string.notification_text_running, formatTime(remaining)))
                 }
                 timerStateHolder.update(TimerState.Expired)
                 wakeScreen()
-                stopForeground(STOP_FOREGROUND_REMOVE)
+                updateNotification(getString(R.string.notification_text_expired))
                 showExpiredNotification()
                 playAlarmSound()
             } catch (e: CancellationException) {
@@ -114,7 +114,7 @@ class TimerService : Service() {
         stopSelf()
     }
 
-    private fun buildNotification(timeText: String): Notification {
+    private fun buildNotification(contentText: String): Notification {
         val pendingIntent = PendingIntent.getActivity(
             this,
             0,
@@ -126,7 +126,7 @@ class TimerService : Service() {
 
         return NotificationCompat.Builder(this, OfficeBreakApp.CHANNEL_ID)
             .setContentTitle(getString(R.string.notification_title))
-            .setContentText(getString(R.string.notification_text_running, timeText))
+            .setContentText(contentText)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
@@ -134,8 +134,8 @@ class TimerService : Service() {
             .build()
     }
 
-    private fun updateNotification(timeText: String) {
-        val notification = buildNotification(timeText)
+    private fun updateNotification(contentText: String) {
+        val notification = buildNotification(contentText)
         val manager = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
         manager.notify(NOTIFICATION_ID, notification)
     }

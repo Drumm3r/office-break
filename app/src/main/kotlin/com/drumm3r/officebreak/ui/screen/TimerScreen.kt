@@ -52,7 +52,10 @@ fun TimerScreen(
     val timerState by viewModel.timerState.collectAsState()
     val hours by viewModel.hours.collectAsState()
     val minutes by viewModel.minutes.collectAsState()
-    val reps by viewModel.reps.collectAsState()
+    val repsMin by viewModel.repsMin.collectAsState()
+    val repsMax by viewModel.repsMax.collectAsState()
+    val repsLinked by viewModel.repsLinked.collectAsState()
+    val currentReps by viewModel.currentReps.collectAsState()
     val currentExercise by viewModel.currentExercise.collectAsState()
     val exercises by viewModel.exercises.collectAsState()
     val language by viewModel.language.collectAsState()
@@ -68,7 +71,7 @@ fun TimerScreen(
     if (currentExercise != null) {
         ExerciseDialog(
             exerciseName = currentExercise!!.name,
-            reps = reps,
+            reps = currentReps ?: repsMin,
             onDone = { viewModel.onExerciseDone() },
         )
     }
@@ -139,10 +142,14 @@ fun TimerScreen(
                             TimerSetup(
                                 hours = hours,
                                 minutes = minutes,
-                                reps = reps,
+                                repsMin = repsMin,
+                                repsMax = repsMax,
+                                repsLinked = repsLinked,
                                 onHoursChange = viewModel::setHours,
                                 onMinutesChange = viewModel::setMinutes,
-                                onRepsChange = viewModel::setReps,
+                                onRepsMinChange = viewModel::setRepsMin,
+                                onRepsMaxChange = viewModel::setRepsMax,
+                                onRepsLinkedChange = viewModel::setRepsLinked,
                             )
 
                             Spacer(modifier = Modifier.height(32.dp))
