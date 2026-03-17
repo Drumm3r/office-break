@@ -35,6 +35,7 @@ class TimerViewModel @JvmOverloads constructor(
         private const val KEY_CURRENT_EXERCISE = "current_exercise"
         private const val KEY_CURRENT_REPS = "current_reps"
         private const val KEY_USED_EXERCISES = "used_exercises"
+        private const val KEY_LAST_PICKED_NAME = "last_picked_name"
     }
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -62,6 +63,24 @@ class TimerViewModel @JvmOverloads constructor(
     val language: StateFlow<String> = repository.language
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.LANGUAGE_SYSTEM)
 
+    val soundEnabled: StateFlow<Boolean> = repository.soundEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_SOUND_ENABLED)
+
+    val vibrationEnabled: StateFlow<Boolean> = repository.vibrationEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_VIBRATION_ENABLED)
+
+    val themeMode: StateFlow<String> = repository.themeMode
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.THEME_SYSTEM)
+
+    val keepScreenOn: StateFlow<Boolean> = repository.keepScreenOn
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_KEEP_SCREEN_ON)
+
+    val autoRestart: StateFlow<Boolean> = repository.autoRestart
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_AUTO_RESTART)
+
+    val beepCount: StateFlow<Int> = repository.beepCount
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_BEEP_COUNT)
+
     private val _currentExercise = MutableStateFlow(
         savedStateHandle.get<String>(KEY_CURRENT_EXERCISE)?.let {
             try {
@@ -78,6 +97,8 @@ class TimerViewModel @JvmOverloads constructor(
 
     private val usedExerciseNames: MutableSet<String> =
         (savedStateHandle.get<ArrayList<String>>(KEY_USED_EXERCISES) ?: arrayListOf()).toMutableSet()
+
+    private var lastPickedName: String? = savedStateHandle.get<String>(KEY_LAST_PICKED_NAME)
 
     init {
         viewModelScope.launch {
@@ -161,6 +182,66 @@ class TimerViewModel @JvmOverloads constructor(
         }
     }
 
+    fun setSoundEnabled(value: Boolean) {
+        viewModelScope.launch {
+            try {
+                repository.setSoundEnabled(value)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set sound enabled", e)
+            }
+        }
+    }
+
+    fun setVibrationEnabled(value: Boolean) {
+        viewModelScope.launch {
+            try {
+                repository.setVibrationEnabled(value)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set vibration enabled", e)
+            }
+        }
+    }
+
+    fun setThemeMode(value: String) {
+        viewModelScope.launch {
+            try {
+                repository.setThemeMode(value)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set theme mode", e)
+            }
+        }
+    }
+
+    fun setKeepScreenOn(value: Boolean) {
+        viewModelScope.launch {
+            try {
+                repository.setKeepScreenOn(value)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set keep screen on", e)
+            }
+        }
+    }
+
+    fun setAutoRestart(value: Boolean) {
+        viewModelScope.launch {
+            try {
+                repository.setAutoRestart(value)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set auto restart", e)
+            }
+        }
+    }
+
+    fun setBeepCount(value: Int) {
+        viewModelScope.launch {
+            try {
+                repository.setBeepCount(value.coerceIn(1, 5))
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set beep count", e)
+            }
+        }
+    }
+
     fun toggleExercise(index: Int) {
         viewModelScope.launch {
             try {
@@ -215,7 +296,9 @@ class TimerViewModel @JvmOverloads constructor(
         _currentExercise.value = null
         _currentReps.value = null
         usedExerciseNames.clear()
+        lastPickedName = null
         savedStateHandle[KEY_USED_EXERCISES] = arrayListOf<String>()
+        savedStateHandle[KEY_LAST_PICKED_NAME] = null
         serviceController.resetTimer()
     }
 
@@ -224,14 +307,23 @@ class TimerViewModel @JvmOverloads constructor(
             val allExercises = repository.exercises.first()
             val enabledExercises = allExercises.filter { it.isEnabled }
             if (enabledExercises.isNotEmpty()) {
+                if (lastPickedName != null && lastPickedName !in usedExerciseNames) {
+                    usedExerciseNames.add(lastPickedName!!)
+                }
+
                 var available = enabledExercises.filter { it.name !in usedExerciseNames }
                 if (available.isEmpty()) {
                     usedExerciseNames.clear()
-                    available = enabledExercises
+                    if (lastPickedName != null && enabledExercises.size > 1) {
+                        usedExerciseNames.add(lastPickedName!!)
+                    }
+                    available = enabledExercises.filter { it.name !in usedExerciseNames }
                 }
                 val picked = available.random()
                 usedExerciseNames.add(picked.name)
+                lastPickedName = picked.name
                 savedStateHandle[KEY_USED_EXERCISES] = ArrayList(usedExerciseNames)
+                savedStateHandle[KEY_LAST_PICKED_NAME] = picked.name
 
                 _currentExercise.value = picked
                 val min = repsMin.value
@@ -244,6 +336,10 @@ class TimerViewModel @JvmOverloads constructor(
     fun onExerciseDone() {
         _currentExercise.value = null
         _currentReps.value = null
+        if (!autoRestart.value) {
+            serviceController.resetTimer()
+            return
+        }
         val totalSeconds = (hours.value * 3600L) + (minutes.value * 60L)
         if (totalSeconds <= 0) return
 

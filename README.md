@@ -8,12 +8,14 @@ Android app for regular movement breaks at the office. Set a timer, start it, an
 - Configurable repetition range (min/max) with linkable sliders for fixed or randomized reps
 - Circular countdown display
 - Shuffle-bag exercise selection — cycles through all enabled exercises before repeating
-- Auto-restart after exercise confirmation
+- Auto-restart after exercise confirmation (configurable — can be disabled)
 - Foreground service with persistent notification (stays visible until manual reset)
-- Audible beep alert on timer expiry
+- Audible beep alert on timer expiry with configurable beep count (1–5)
 - Lock screen notification with screen wake-up on timer expiry
 - Exercise management (add, remove, enable/disable)
+- Theme switcher (System, Light, Dark)
 - Language switcher (German, English, System)
+- Keep screen on during countdown (optional)
 - Material 3 theming
 
 ## Default Exercises

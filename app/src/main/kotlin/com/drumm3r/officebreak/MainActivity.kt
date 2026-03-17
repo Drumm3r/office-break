@@ -12,6 +12,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
@@ -41,9 +42,16 @@ class MainActivity : ComponentActivity() {
         setContent {
             val viewModel: TimerViewModel = viewModel()
             val language by viewModel.language.collectAsState()
+            val themeMode by viewModel.themeMode.collectAsState()
 
             LocaleWrapper(language = language) {
-                OfficeBreakTheme {
+                OfficeBreakTheme(
+                    darkTheme = when (themeMode) {
+                        SettingsRepository.THEME_DARK -> true
+                        SettingsRepository.THEME_LIGHT -> false
+                        else -> isSystemInDarkTheme()
+                    },
+                ) {
                     TimerScreen(viewModel = viewModel)
                 }
             }

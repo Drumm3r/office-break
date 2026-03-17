@@ -8,8 +8,12 @@ import android.content.Intent
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
+import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import androidx.core.app.NotificationCompat
 import com.drumm3r.officebreak.MainActivity
 import com.drumm3r.officebreak.OfficeBreakApp
@@ -20,8 +24,12 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
+import com.drumm3r.officebreak.data.dataStore
 
 sealed interface TimerState {
     data object Idle : TimerState
@@ -35,6 +43,7 @@ class TimerService : Service() {
     private var timerJob: Job? = null
     private var wakeLock: PowerManager.WakeLock? = null
     private var alarmTrack: AudioTrack? = null
+    private var vibrator: Vibrator? = null
     private val timerStateHolder = TimerStateHolder.instance
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -66,6 +75,7 @@ class TimerService : Service() {
     private fun startTimer(totalSeconds: Long) {
         timerJob?.cancel()
         stopAlarmSound()
+        stopVibration()
         val manager = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
         manager.cancel(EXPIRED_NOTIFICATION_ID)
         acquireWakeLock(totalSeconds)
@@ -92,7 +102,12 @@ class TimerService : Service() {
                 wakeScreen()
                 updateNotification(getString(R.string.notification_text_expired))
                 showExpiredNotification()
-                playAlarmSound()
+                val prefs = dataStore.data.first()
+                val soundOn = prefs[booleanPreferencesKey("sound_enabled")] ?: true
+                val vibrationOn = prefs[booleanPreferencesKey("vibration_enabled")] ?: true
+                val beepCount = prefs[intPreferencesKey("beep_count")] ?: 3
+                if (soundOn) playAlarmSound(beepCount)
+                if (vibrationOn) triggerVibration()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -106,6 +121,7 @@ class TimerService : Service() {
     private fun resetTimer() {
         timerJob?.cancel()
         stopAlarmSound()
+        stopVibration()
         timerStateHolder.update(TimerState.Idle)
         releaseWakeLock()
         val manager = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
@@ -186,13 +202,12 @@ class TimerService : Service() {
         manager.notify(EXPIRED_NOTIFICATION_ID, notification)
     }
 
-    private fun playAlarmSound() {
+    private fun playAlarmSound(beepCount: Int = 3) {
         stopAlarmSound()
         try {
             val sampleRate = 44100
             val beepDurationMs = 150
             val pauseDurationMs = 100
-            val beepCount = 3
             val frequency = 1000.0
 
             val beepSamples = (sampleRate * beepDurationMs) / 1000
@@ -237,6 +252,30 @@ class TimerService : Service() {
         } catch (e: Exception) {
             android.util.Log.e("TimerService", "Failed to play beep sound", e)
         }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun triggerVibration() {
+        stopVibration()
+        try {
+            val vib = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val manager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+                manager.defaultVibrator
+            } else {
+                getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+            }
+            vibrator = vib
+
+            val pattern = longArrayOf(0, 150, 100, 150, 100, 150)
+            vib.vibrate(VibrationEffect.createWaveform(pattern, -1))
+        } catch (e: Exception) {
+            android.util.Log.e("TimerService", "Failed to trigger vibration", e)
+        }
+    }
+
+    private fun stopVibration() {
+        vibrator?.cancel()
+        vibrator = null
     }
 
     private fun stopAlarmSound() {
@@ -284,6 +323,7 @@ class TimerService : Service() {
     override fun onDestroy() {
         timerJob?.cancel()
         stopAlarmSound()
+        stopVibration()
         scope.cancel()
         releaseWakeLock()
         super.onDestroy()

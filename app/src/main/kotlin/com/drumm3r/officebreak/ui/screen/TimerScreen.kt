@@ -12,14 +12,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import android.app.Activity
+import android.view.WindowManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -30,14 +30,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FitnessCenter
-import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.drumm3r.officebreak.R
-import com.drumm3r.officebreak.data.SettingsRepository
 import com.drumm3r.officebreak.service.TimerState
 import com.drumm3r.officebreak.ui.TimerViewModel
 import com.drumm3r.officebreak.ui.components.ConfirmResetDialog
@@ -59,12 +59,28 @@ fun TimerScreen(
     val currentExercise by viewModel.currentExercise.collectAsState()
     val exercises by viewModel.exercises.collectAsState()
     val language by viewModel.language.collectAsState()
+    val soundEnabled by viewModel.soundEnabled.collectAsState()
+    val vibrationEnabled by viewModel.vibrationEnabled.collectAsState()
+    val themeMode by viewModel.themeMode.collectAsState()
+    val keepScreenOn by viewModel.keepScreenOn.collectAsState()
+    val autoRestart by viewModel.autoRestart.collectAsState()
+    val beepCount by viewModel.beepCount.collectAsState()
     var showResetDialog by rememberSaveable { mutableStateOf(false) }
     var showExerciseSettings by rememberSaveable { mutableStateOf(false) }
+    var showSettings by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(timerState) {
         if (timerState is TimerState.Expired) {
             viewModel.onTimerExpired()
+        }
+    }
+
+    val activity = LocalContext.current as? Activity
+    LaunchedEffect(keepScreenOn, timerState) {
+        if (keepScreenOn && timerState is TimerState.Running) {
+            activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
     }
 
@@ -83,6 +99,28 @@ fun TimerScreen(
             onAdd = viewModel::addExercise,
             onRemove = viewModel::removeExercise,
             onBack = { showExerciseSettings = false },
+        )
+
+        return
+    }
+
+    if (showSettings) {
+        SettingsScreen(
+            language = language,
+            soundEnabled = soundEnabled,
+            vibrationEnabled = vibrationEnabled,
+            themeMode = themeMode,
+            keepScreenOn = keepScreenOn,
+            autoRestart = autoRestart,
+            beepCount = beepCount,
+            onLanguageChange = viewModel::setLanguage,
+            onSoundEnabledChange = viewModel::setSoundEnabled,
+            onVibrationEnabledChange = viewModel::setVibrationEnabled,
+            onThemeModeChange = viewModel::setThemeMode,
+            onKeepScreenOnChange = viewModel::setKeepScreenOn,
+            onAutoRestartChange = viewModel::setAutoRestart,
+            onBeepCountChange = viewModel::setBeepCount,
+            onBack = { showSettings = false },
         )
 
         return
@@ -117,10 +155,13 @@ fun TimerScreen(
                             tint = MaterialTheme.colorScheme.primary,
                         )
                     }
-                    LanguagePicker(
-                        currentLanguage = language,
-                        onLanguageChange = viewModel::setLanguage,
-                    )
+                    IconButton(onClick = { showSettings = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = stringResource(R.string.settings_title),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
                 }
             }
 
@@ -206,48 +247,3 @@ fun TimerScreen(
     }
 }
 
-@Composable
-private fun LanguagePicker(
-    currentLanguage: String,
-    onLanguageChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var expanded by rememberSaveable { mutableStateOf(false) }
-
-    Box(modifier = modifier) {
-        IconButton(onClick = { expanded = true }) {
-            Icon(
-                imageVector = Icons.Default.Language,
-                contentDescription = stringResource(R.string.language_label),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-        }
-
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.language_system)) },
-                onClick = {
-                    onLanguageChange(SettingsRepository.LANGUAGE_SYSTEM)
-                    expanded = false
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.language_german)) },
-                onClick = {
-                    onLanguageChange(SettingsRepository.LANGUAGE_DE)
-                    expanded = false
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.language_english)) },
-                onClick = {
-                    onLanguageChange(SettingsRepository.LANGUAGE_EN)
-                    expanded = false
-                },
-            )
-        }
-    }
-}

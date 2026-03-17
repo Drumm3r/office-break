@@ -64,6 +64,30 @@ class SettingsRepository(
         prefs[KEY_LANGUAGE] ?: LANGUAGE_SYSTEM
     }
 
+    val soundEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[KEY_SOUND_ENABLED] ?: DEFAULT_SOUND_ENABLED
+    }
+
+    val vibrationEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[KEY_VIBRATION_ENABLED] ?: DEFAULT_VIBRATION_ENABLED
+    }
+
+    val themeMode: Flow<String> = dataStore.data.map { prefs ->
+        prefs[KEY_THEME_MODE] ?: THEME_SYSTEM
+    }
+
+    val keepScreenOn: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[KEY_KEEP_SCREEN_ON] ?: DEFAULT_KEEP_SCREEN_ON
+    }
+
+    val autoRestart: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[KEY_AUTO_RESTART] ?: DEFAULT_AUTO_RESTART
+    }
+
+    val beepCount: Flow<Int> = dataStore.data.map { prefs ->
+        prefs[KEY_BEEP_COUNT] ?: DEFAULT_BEEP_COUNT
+    }
+
     suspend fun setTimerHours(hours: Int) {
         dataStore.edit { it[KEY_TIMER_HOURS] = hours }
     }
@@ -92,6 +116,30 @@ class SettingsRepository(
         dataStore.edit { it[KEY_LANGUAGE] = language }
     }
 
+    suspend fun setSoundEnabled(value: Boolean) {
+        dataStore.edit { it[KEY_SOUND_ENABLED] = value }
+    }
+
+    suspend fun setVibrationEnabled(value: Boolean) {
+        dataStore.edit { it[KEY_VIBRATION_ENABLED] = value }
+    }
+
+    suspend fun setThemeMode(value: String) {
+        dataStore.edit { it[KEY_THEME_MODE] = value }
+    }
+
+    suspend fun setKeepScreenOn(value: Boolean) {
+        dataStore.edit { it[KEY_KEEP_SCREEN_ON] = value }
+    }
+
+    suspend fun setAutoRestart(value: Boolean) {
+        dataStore.edit { it[KEY_AUTO_RESTART] = value }
+    }
+
+    suspend fun setBeepCount(value: Int) {
+        dataStore.edit { it[KEY_BEEP_COUNT] = value }
+    }
+
     companion object {
         private val KEY_TIMER_HOURS = intPreferencesKey("timer_hours")
         private val KEY_TIMER_MINUTES = intPreferencesKey("timer_minutes")
@@ -100,6 +148,12 @@ class SettingsRepository(
         private val KEY_REPS_LINKED = booleanPreferencesKey("reps_linked")
         private val KEY_EXERCISES = stringPreferencesKey("exercises")
         private val KEY_LANGUAGE = stringPreferencesKey("language")
+        private val KEY_SOUND_ENABLED = booleanPreferencesKey("sound_enabled")
+        private val KEY_VIBRATION_ENABLED = booleanPreferencesKey("vibration_enabled")
+        private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
+        private val KEY_KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
+        private val KEY_AUTO_RESTART = booleanPreferencesKey("auto_restart")
+        private val KEY_BEEP_COUNT = intPreferencesKey("beep_count")
 
         const val DEFAULT_HOURS = 0
         const val DEFAULT_MINUTES = 30
@@ -107,8 +161,19 @@ class SettingsRepository(
         const val DEFAULT_REPS_MAX = 10
         const val DEFAULT_REPS_LINKED = true
 
+        const val DEFAULT_SOUND_ENABLED = true
+        const val DEFAULT_VIBRATION_ENABLED = true
+
         const val LANGUAGE_SYSTEM = "system"
         const val LANGUAGE_DE = "de"
         const val LANGUAGE_EN = "en"
+
+        const val THEME_SYSTEM = "system"
+        const val THEME_LIGHT = "light"
+        const val THEME_DARK = "dark"
+
+        const val DEFAULT_KEEP_SCREEN_ON = false
+        const val DEFAULT_AUTO_RESTART = true
+        const val DEFAULT_BEEP_COUNT = 3
     }
 }
