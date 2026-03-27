@@ -57,6 +57,8 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 
 If you find this app useful, consider buying me a coffee:
 
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/drumm3r)
+
 ## Also by the developer
 
 [mysportsmate](https://mysportsmate.de) — your digital fitness companion.
