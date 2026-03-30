@@ -13,6 +13,12 @@ Android app for regular movement breaks at the office. Set a timer, start it, an
 - Audible beep alert on timer expiry with configurable beep count (1–5)
 - Lock screen notification with screen wake-up on timer expiry
 - Exercise management (add, remove, enable/disable)
+- Achievements system with unlockable milestones
+- Stats tracking — weekly reps, week-over-week comparison, most frequent exercise (all data stored locally)
+- Fitness levels with progression
+- Dynamic difficulty increase with adaptive threshold (optional)
+- Data export and import via JSON backup (SAF integration)
+- Onboarding flow for first-time users
 - Theme switcher (System, Light, Dark)
 - Language switcher (German, English, System)
 - Keep screen on during countdown (optional)
