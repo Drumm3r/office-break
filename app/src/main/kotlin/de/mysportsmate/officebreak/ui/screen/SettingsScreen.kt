@@ -51,6 +51,7 @@ fun SettingsScreen(
     themeMode: String,
     keepScreenOn: Boolean,
     autoRestart: Boolean,
+    dynamicIncreaseEnabled: Boolean,
     beepCount: Int,
     trackingEnabled: Boolean,
     onLanguageChange: (String) -> Unit,
@@ -60,6 +61,7 @@ fun SettingsScreen(
     onThemeModeChange: (String) -> Unit,
     onKeepScreenOnChange: (Boolean) -> Unit,
     onAutoRestartChange: (Boolean) -> Unit,
+    onDynamicIncreaseEnabledChange: (Boolean) -> Unit,
     onBeepCountChange: (Int) -> Unit,
     onTrackingEnabledChange: (Boolean) -> Unit,
     onResetStats: () -> Unit,
@@ -144,6 +146,12 @@ fun SettingsScreen(
                 label = stringResource(R.string.settings_auto_restart),
                 checked = autoRestart,
                 onCheckedChange = onAutoRestartChange,
+            )
+
+            SettingsToggleRow(
+                label = stringResource(R.string.settings_dynamic_increase),
+                checked = dynamicIncreaseEnabled,
+                onCheckedChange = onDynamicIncreaseEnabledChange,
             )
 
             Spacer(modifier = Modifier.height(16.dp))

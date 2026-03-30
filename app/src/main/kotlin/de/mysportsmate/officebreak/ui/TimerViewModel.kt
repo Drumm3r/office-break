@@ -29,6 +29,12 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.time.LocalDate
 
+sealed interface DynamicIncreaseOffer {
+    data class Both(val newReps: Int, val newIntervalMinutes: Int) : DynamicIncreaseOffer
+    data class RepsOnly(val newReps: Int) : DynamicIncreaseOffer
+    data class IntervalOnly(val newIntervalMinutes: Int) : DynamicIncreaseOffer
+}
+
 class TimerViewModel @JvmOverloads constructor(
     application: Application,
     private val savedStateHandle: SavedStateHandle,
@@ -40,9 +46,16 @@ class TimerViewModel @JvmOverloads constructor(
 
     companion object {
         const val MAX_EXERCISE_NAME_LENGTH = 100
+        const val REPS_INCREASE = 2
+        const val INTERVAL_DECREASE_MINUTES = 5
+        const val MAX_REPS = 50
+        const val MIN_INTERVAL_MINUTES = 5
         private const val TAG = "TimerViewModel"
         private const val KEY_CURRENT_EXERCISE = "current_exercise"
         private const val KEY_CURRENT_REPS = "current_reps"
+        private const val WORK_DAY_MINUTES = 480
+        private const val WORK_DAYS_FOR_INCREASE = 3
+        private const val MIN_THRESHOLD = 5
     }
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -91,6 +104,15 @@ class TimerViewModel @JvmOverloads constructor(
 
     val beepCount: StateFlow<Int> = repository.beepCount
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_BEEP_COUNT)
+
+    val dynamicIncreaseEnabled: StateFlow<Boolean> = repository.dynamicIncreaseEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_DYNAMIC_INCREASE_ENABLED)
+
+    private val breaksSinceLastIncrease: StateFlow<Int> = repository.breaksSinceLastIncrease
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_BREAKS_SINCE_LAST_INCREASE)
+
+    private val _dynamicIncreaseOffer = MutableStateFlow<DynamicIncreaseOffer?>(null)
+    val dynamicIncreaseOffer: StateFlow<DynamicIncreaseOffer?> = _dynamicIncreaseOffer.asStateFlow()
 
     val trackingEnabled: StateFlow<Boolean> = statsRepository.trackingEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StatsRepository.DEFAULT_TRACKING_ENABLED)
@@ -311,6 +333,16 @@ class TimerViewModel @JvmOverloads constructor(
         }
     }
 
+    fun setDynamicIncreaseEnabled(value: Boolean) {
+        viewModelScope.launch {
+            try {
+                repository.setDynamicIncreaseEnabled(value)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set dynamic increase enabled", e)
+            }
+        }
+    }
+
     fun setBeepCount(value: Int) {
         viewModelScope.launch {
             try {
@@ -441,9 +473,103 @@ class TimerViewModel @JvmOverloads constructor(
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to record break stats", e)
                 }
-            }
-        }
 
+                if (dynamicIncreaseEnabled.value) {
+                    try {
+                        val newCount = breaksSinceLastIncrease.value + 1
+                        repository.setBreaksSinceLastIncrease(newCount)
+
+                        if (newCount >= computeIncreaseThreshold()) {
+                            val offer = computeIncreaseOffer()
+                            if (offer != null) {
+                                _dynamicIncreaseOffer.value = offer
+                                return@launch
+                            }
+                            repository.setBreaksSinceLastIncrease(0)
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to check dynamic increase", e)
+                    }
+                }
+
+                restartOrResetTimer()
+            }
+        } else {
+            restartOrResetTimer()
+        }
+    }
+
+    fun acceptIncreaseReps() {
+        viewModelScope.launch {
+            try {
+                val newMin = (repsMin.value + REPS_INCREASE).coerceAtMost(MAX_REPS)
+                val newMax = (repsMax.value + REPS_INCREASE).coerceAtMost(MAX_REPS)
+                repository.setRepsMin(newMin)
+                repository.setRepsMax(newMax)
+                repository.setBreaksSinceLastIncrease(0)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to increase reps", e)
+            }
+            _dynamicIncreaseOffer.value = null
+            restartOrResetTimer()
+        }
+    }
+
+    fun acceptDecreaseInterval() {
+        viewModelScope.launch {
+            try {
+                val totalMinutes = hours.value * 60 + minutes.value
+                val newTotalMinutes = (totalMinutes - INTERVAL_DECREASE_MINUTES).coerceAtLeast(MIN_INTERVAL_MINUTES)
+                repository.setTimerHours(newTotalMinutes / 60)
+                repository.setTimerMinutes(newTotalMinutes % 60)
+                repository.setBreaksSinceLastIncrease(0)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to decrease interval", e)
+            }
+            _dynamicIncreaseOffer.value = null
+            restartOrResetTimer()
+        }
+    }
+
+    fun declineDynamicIncrease() {
+        viewModelScope.launch {
+            try {
+                repository.setBreaksSinceLastIncrease(0)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to reset increase counter", e)
+            }
+            _dynamicIncreaseOffer.value = null
+            restartOrResetTimer()
+        }
+    }
+
+    private fun computeIncreaseThreshold(): Int {
+        val intervalMinutes = hours.value * 60 + minutes.value
+        if (intervalMinutes <= 0) return MIN_THRESHOLD
+
+        return maxOf(MIN_THRESHOLD, (WORK_DAY_MINUTES / intervalMinutes) * WORK_DAYS_FOR_INCREASE)
+    }
+
+    private fun computeIncreaseOffer(): DynamicIncreaseOffer? {
+        val currentMax = repsMax.value
+        val totalMinutes = hours.value * 60 + minutes.value
+        val canIncreaseReps = currentMax + REPS_INCREASE <= MAX_REPS
+        val canDecreaseInterval = totalMinutes - INTERVAL_DECREASE_MINUTES >= MIN_INTERVAL_MINUTES
+
+        return when {
+            canIncreaseReps && canDecreaseInterval -> DynamicIncreaseOffer.Both(
+                newReps = currentMax + REPS_INCREASE,
+                newIntervalMinutes = totalMinutes - INTERVAL_DECREASE_MINUTES,
+            )
+            canIncreaseReps -> DynamicIncreaseOffer.RepsOnly(newReps = currentMax + REPS_INCREASE)
+            canDecreaseInterval -> DynamicIncreaseOffer.IntervalOnly(
+                newIntervalMinutes = totalMinutes - INTERVAL_DECREASE_MINUTES,
+            )
+            else -> null
+        }
+    }
+
+    private fun restartOrResetTimer() {
         if (!autoRestart.value) {
             serviceController.resetTimer()
             return

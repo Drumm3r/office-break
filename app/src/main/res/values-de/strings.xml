@@ -37,10 +37,18 @@
     <string name="settings_timer">Timer</string>
     <string name="settings_keep_screen_on">Bildschirm anlassen</string>
     <string name="settings_auto_restart">Timer automatisch neustarten</string>
+    <string name="settings_dynamic_increase">Dynamische Schwierigkeitssteigerung</string>
     <string name="settings_notifications">Benachrichtigungen</string>
     <string name="settings_beep_volume">Signalton-Lautstärke</string>
     <string name="settings_vibration">Vibration</string>
     <string name="settings_beep_count">Anzahl der Signaltöne</string>
+
+    <!-- Dynamische Steigerung -->
+    <string name="dynamic_increase_title">Du wirst stärker!</string>
+    <string name="dynamic_increase_message">Möchtest du die Schwierigkeit erhöhen?</string>
+    <string name="dynamic_increase_reps">Wiederholungen auf %d erhöhen</string>
+    <string name="dynamic_increase_interval">Intervall auf %d Min. verringern</string>
+    <string name="dynamic_increase_decline">Nicht jetzt</string>
 
     <string name="exercises_title">Übungen</string>
     <string name="new_exercise_hint">Neue Übung</string>

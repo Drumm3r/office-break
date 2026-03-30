@@ -46,6 +46,7 @@ import de.mysportsmate.officebreak.ui.TimerViewModel
 import de.mysportsmate.officebreak.ui.components.AchievementUnlockDialog
 import de.mysportsmate.officebreak.ui.components.ConfirmResetDialog
 import de.mysportsmate.officebreak.ui.components.CountdownDisplay
+import de.mysportsmate.officebreak.ui.components.DynamicIncreaseDialog
 import de.mysportsmate.officebreak.ui.components.ExerciseDialog
 import de.mysportsmate.officebreak.ui.components.TimerSetup
 
@@ -73,6 +74,8 @@ fun TimerScreen(
     val statsSnapshot by viewModel.statsSnapshot.collectAsState()
     val achievementState by viewModel.achievementState.collectAsState()
     val breakRecords by viewModel.breakRecords.collectAsState()
+    val dynamicIncreaseEnabled by viewModel.dynamicIncreaseEnabled.collectAsState()
+    val dynamicIncreaseOffer by viewModel.dynamicIncreaseOffer.collectAsState()
     val newlyUnlockedAchievements by viewModel.newlyUnlockedAchievements.collectAsState()
     var showResetDialog by rememberSaveable { mutableStateOf(false) }
     var showExerciseSettings by rememberSaveable { mutableStateOf(false) }
@@ -118,6 +121,15 @@ fun TimerScreen(
         )
     }
 
+    if (dynamicIncreaseOffer != null && newlyUnlockedAchievements.isEmpty()) {
+        DynamicIncreaseDialog(
+            offer = dynamicIncreaseOffer!!,
+            onAcceptReps = { viewModel.acceptIncreaseReps() },
+            onAcceptInterval = { viewModel.acceptDecreaseInterval() },
+            onDecline = { viewModel.declineDynamicIncrease() },
+        )
+    }
+
     if (showStats) {
         StatsScreen(
             snapshot = statsSnapshot,
@@ -156,6 +168,7 @@ fun TimerScreen(
             themeMode = themeMode,
             keepScreenOn = keepScreenOn,
             autoRestart = autoRestart,
+            dynamicIncreaseEnabled = dynamicIncreaseEnabled,
             beepCount = beepCount,
             trackingEnabled = trackingEnabled,
             onLanguageChange = viewModel::setLanguage,
@@ -165,6 +178,7 @@ fun TimerScreen(
             onThemeModeChange = viewModel::setThemeMode,
             onKeepScreenOnChange = viewModel::setKeepScreenOn,
             onAutoRestartChange = viewModel::setAutoRestart,
+            onDynamicIncreaseEnabledChange = viewModel::setDynamicIncreaseEnabled,
             onBeepCountChange = viewModel::setBeepCount,
             onTrackingEnabledChange = viewModel::setTrackingEnabled,
             onResetStats = viewModel::resetStats,

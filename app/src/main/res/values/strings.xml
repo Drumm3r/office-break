@@ -40,10 +40,18 @@
     <string name="settings_timer">Timer</string>
     <string name="settings_keep_screen_on">Keep screen on</string>
     <string name="settings_auto_restart">Auto-restart timer</string>
+    <string name="settings_dynamic_increase">Dynamic difficulty increase</string>
     <string name="settings_notifications">Notifications</string>
     <string name="settings_beep_volume">Beep volume</string>
     <string name="settings_vibration">Vibration</string>
     <string name="settings_beep_count">Number of beeps</string>
+
+    <!-- Dynamic Increase -->
+    <string name="dynamic_increase_title">You\'re getting stronger!</string>
+    <string name="dynamic_increase_message">Would you like to increase your difficulty?</string>
+    <string name="dynamic_increase_reps">Increase reps to %d</string>
+    <string name="dynamic_increase_interval">Decrease interval to %d min</string>
+    <string name="dynamic_increase_decline">Not now</string>
 
     <string name="exercises_title">Exercises</string>
     <string name="new_exercise_hint">New exercise</string>

@@ -97,6 +97,14 @@ class SettingsRepository(
         prefs[KEY_BEEP_COUNT] ?: DEFAULT_BEEP_COUNT
     }
 
+    val dynamicIncreaseEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[KEY_DYNAMIC_INCREASE_ENABLED] ?: DEFAULT_DYNAMIC_INCREASE_ENABLED
+    }
+
+    val breaksSinceLastIncrease: Flow<Int> = dataStore.data.map { prefs ->
+        prefs[KEY_BREAKS_SINCE_LAST_INCREASE] ?: DEFAULT_BREAKS_SINCE_LAST_INCREASE
+    }
+
     val onboardingCompleted: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[KEY_ONBOARDING_COMPLETED] ?: prefs.asMap().isNotEmpty()
     }
@@ -170,6 +178,14 @@ class SettingsRepository(
         dataStore.edit { it[KEY_BEEP_COUNT] = value }
     }
 
+    suspend fun setDynamicIncreaseEnabled(value: Boolean) {
+        dataStore.edit { it[KEY_DYNAMIC_INCREASE_ENABLED] = value }
+    }
+
+    suspend fun setBreaksSinceLastIncrease(value: Int) {
+        dataStore.edit { it[KEY_BREAKS_SINCE_LAST_INCREASE] = value }
+    }
+
     suspend fun setOnboardingCompleted(completed: Boolean) {
         dataStore.edit { it[KEY_ONBOARDING_COMPLETED] = completed }
     }
@@ -202,6 +218,8 @@ class SettingsRepository(
         private val KEY_KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
         private val KEY_AUTO_RESTART = booleanPreferencesKey("auto_restart")
         private val KEY_BEEP_COUNT = intPreferencesKey("beep_count")
+        private val KEY_DYNAMIC_INCREASE_ENABLED = booleanPreferencesKey("dynamic_increase_enabled")
+        private val KEY_BREAKS_SINCE_LAST_INCREASE = intPreferencesKey("breaks_since_last_increase")
         private val KEY_USED_EXERCISE_NAMES = stringPreferencesKey("used_exercise_names")
         private val KEY_LAST_PICKED_NAME = stringPreferencesKey("last_picked_name")
         private val KEY_ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
@@ -226,6 +244,9 @@ class SettingsRepository(
         const val DEFAULT_KEEP_SCREEN_ON = false
         const val DEFAULT_AUTO_RESTART = true
         const val DEFAULT_BEEP_COUNT = 3
+
+        const val DEFAULT_DYNAMIC_INCREASE_ENABLED = true
+        const val DEFAULT_BREAKS_SINCE_LAST_INCREASE = 0
 
         private val KNOWN_DEFAULT_NAMES: Map<String, String> = mapOf(
             // English
