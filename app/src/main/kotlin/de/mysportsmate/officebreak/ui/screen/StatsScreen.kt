@@ -132,13 +132,26 @@ fun StatsScreen(
                     false
                 }
             }
-            val breaksThisWeek = thisWeekRecords.size
-            val activeDaysThisWeek = thisWeekRecords.map { it.dateString }.toSet().size
-            val avgPerDay = if (activeDaysThisWeek > 0) {
-                "%.1f".format(breaksThisWeek.toFloat() / 7f)
-            } else {
-                "0"
+            val lastWeekStart = today.minusDays(13)
+            val lastWeekEnd = today.minusDays(7)
+            val lastWeekRecords = breakRecords.filter {
+                try {
+                    val date = LocalDate.parse(it.dateString)
+                    !date.isBefore(lastWeekStart) && !date.isAfter(lastWeekEnd)
+                } catch (_: Exception) {
+                    false
+                }
             }
+
+            val breaksThisWeek = thisWeekRecords.size
+            val repsThisWeek = thisWeekRecords.sumOf { it.reps }
+            val breaksAvgPerDay = if (breaksThisWeek > 0) "%.1f".format(breaksThisWeek.toFloat() / 7f) else "0"
+            val repsAvgPerDay = if (repsThisWeek > 0) "%.1f".format(repsThisWeek.toFloat() / 7f) else "0"
+
+            val breaksLastWeek = lastWeekRecords.size
+            val repsLastWeek = lastWeekRecords.sumOf { it.reps }
+            val breaksAvgPerDayLastWeek = if (breaksLastWeek > 0) "%.1f".format(breaksLastWeek.toFloat() / 7f) else "0"
+            val repsAvgPerDayLastWeek = if (repsLastWeek > 0) "%.1f".format(repsLastWeek.toFloat() / 7f) else "0"
 
             Text(
                 text = stringResource(R.string.stats_this_week),
@@ -152,11 +165,35 @@ fun StatsScreen(
                 Column(modifier = Modifier.padding(16.dp)) {
                     StatRow(
                         label = stringResource(R.string.stats_breaks_this_week),
-                        value = breaksThisWeek.toString(),
+                        value = stringResource(
+                            R.string.stats_last_week_format,
+                            breaksThisWeek.toString(),
+                            breaksLastWeek.toString(),
+                        ),
                     )
                     StatRow(
                         label = stringResource(R.string.stats_average_per_day),
-                        value = avgPerDay,
+                        value = stringResource(
+                            R.string.stats_last_week_format,
+                            breaksAvgPerDay,
+                            breaksAvgPerDayLastWeek,
+                        ),
+                    )
+                    StatRow(
+                        label = stringResource(R.string.stats_reps_this_week),
+                        value = stringResource(
+                            R.string.stats_last_week_format,
+                            repsThisWeek.toString(),
+                            repsLastWeek.toString(),
+                        ),
+                    )
+                    StatRow(
+                        label = stringResource(R.string.stats_reps_average_per_day),
+                        value = stringResource(
+                            R.string.stats_last_week_format,
+                            repsAvgPerDay,
+                            repsAvgPerDayLastWeek,
+                        ),
                     )
                 }
             }
@@ -285,6 +322,14 @@ private fun StatRow(
 @Composable
 private fun StatsScreenPreview() {
     OfficeBreakTheme {
+        val today = LocalDate.now()
+        val sampleRecords = listOf(
+            BreakRecord("Push Ups", 10, System.currentTimeMillis(), today.toString()),
+            BreakRecord("Squats", 15, System.currentTimeMillis(), today.minusDays(1).toString()),
+            BreakRecord("Push Ups", 12, System.currentTimeMillis(), today.minusDays(2).toString()),
+            BreakRecord("Lunges", 8, System.currentTimeMillis(), today.minusDays(8).toString()),
+            BreakRecord("Push Ups", 10, System.currentTimeMillis(), today.minusDays(9).toString()),
+        )
         StatsScreen(
             snapshot = StatsSnapshot(
                 totalBreaksAllTime = 42,
@@ -294,7 +339,7 @@ private fun StatsScreenPreview() {
                 perExerciseCounts = mapOf("Push Ups" to 15, "Squats" to 12, "Lunges" to 10),
                 perExerciseReps = mapOf("Push Ups" to 180, "Squats" to 150, "Lunges" to 120),
             ),
-            breakRecords = emptyList(),
+            breakRecords = sampleRecords,
             onBack = {},
         )
     }

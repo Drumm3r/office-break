@@ -93,8 +93,11 @@
     <string name="stats_days">%d Tage</string>
     <string name="stats_this_week">Diese Woche</string>
     <string name="stats_breaks_this_week">Pausen diese Woche</string>
-    <string name="stats_average_per_day">Durchschnitt pro Tag</string>
-    <string name="stats_favorite_exercise">Lieblingsübung</string>
+    <string name="stats_average_per_day">Pausen Ø/Tag</string>
+    <string name="stats_reps_this_week">Wiederholungen diese Woche</string>
+    <string name="stats_reps_average_per_day">Wiederholungen Ø/Tag</string>
+    <string name="stats_last_week_format">%1$s (Vorwoche: %2$s)</string>
+    <string name="stats_favorite_exercise">Häufigste Übung</string>
     <string name="stats_times_format">%d mal</string>
     <string name="stats_exercise_distribution">Übungsverteilung</string>
     <string name="stats_exercise_detail">%1$d mal / %2$d Wdh.</string>

@@ -96,8 +96,11 @@
     <string name="stats_days">%d days</string>
     <string name="stats_this_week">This Week</string>
     <string name="stats_breaks_this_week">Breaks this week</string>
-    <string name="stats_average_per_day">Average per day</string>
-    <string name="stats_favorite_exercise">Favorite Exercise</string>
+    <string name="stats_average_per_day">Breaks avg/day</string>
+    <string name="stats_reps_this_week">Reps this week</string>
+    <string name="stats_reps_average_per_day">Reps avg/day</string>
+    <string name="stats_last_week_format">%1$s (last week: %2$s)</string>
+    <string name="stats_favorite_exercise">Most Frequent Exercise</string>
     <string name="stats_times_format">%d times</string>
     <string name="stats_exercise_distribution">Exercise Distribution</string>
     <string name="stats_exercise_detail">%1$d times / %2$d reps</string>
