@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -242,6 +243,38 @@ class StatsRepository(
             prefs.remove(KEY_ACHIEVEMENT_STATE)
         }
     }
+
+    suspend fun snapshotForExport(): StatsExportSnapshot {
+        val prefs = dataStore.data.first()
+        return StatsExportSnapshot(
+            trackingEnabled = prefs[KEY_TRACKING_ENABLED] ?: DEFAULT_TRACKING_ENABLED,
+            breakRecords = decodeList(prefs[KEY_BREAK_RECORDS]),
+            dailyAggregates = decodeList(prefs[KEY_DAILY_AGGREGATES]),
+            yearlyAggregates = decodeList(prefs[KEY_YEARLY_AGGREGATES]),
+            statsSnapshot = decodeOrDefault(prefs[KEY_STATS_SNAPSHOT], StatsSnapshot()),
+            achievementState = decodeOrDefault(prefs[KEY_ACHIEVEMENT_STATE], AchievementState()),
+        )
+    }
+
+    suspend fun restoreFromBackup(data: BackupData) {
+        dataStore.edit { prefs ->
+            prefs[KEY_TRACKING_ENABLED] = data.trackingEnabled
+            prefs[KEY_BREAK_RECORDS] = json.encodeToString(data.breakRecords)
+            prefs[KEY_DAILY_AGGREGATES] = json.encodeToString(data.dailyAggregates)
+            prefs[KEY_YEARLY_AGGREGATES] = json.encodeToString(data.yearlyAggregates)
+            prefs[KEY_STATS_SNAPSHOT] = json.encodeToString(data.statsSnapshot)
+            prefs[KEY_ACHIEVEMENT_STATE] = json.encodeToString(data.achievementState)
+        }
+    }
+
+    data class StatsExportSnapshot(
+        val trackingEnabled: Boolean,
+        val breakRecords: List<BreakRecord>,
+        val dailyAggregates: List<DailyAggregate>,
+        val yearlyAggregates: List<YearlyAggregate>,
+        val statsSnapshot: StatsSnapshot,
+        val achievementState: AchievementState,
+    )
 
     private fun updateSnapshot(snapshot: StatsSnapshot, record: BreakRecord): StatsSnapshot {
         val today = record.dateString

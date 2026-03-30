@@ -214,6 +214,19 @@
     <string name="achievement_mastery_100_title">Master</string>
     <string name="achievement_mastery_100_desc">Do any exercise 100 times</string>
 
+    <!-- Data Export/Import -->
+    <string name="settings_data">Data</string>
+    <string name="settings_export_data">Export data</string>
+    <string name="settings_import_data">Import data</string>
+    <string name="import_confirm_title">Import data?</string>
+    <string name="import_confirm_message">This will replace all your current settings, statistics, and achievements with the data from the file.</string>
+    <string name="import_confirm_yes">Import</string>
+    <string name="export_success">Data exported successfully</string>
+    <string name="import_success">Data imported successfully</string>
+    <string name="import_error_invalid_format">The selected file is not a valid Office Break backup</string>
+    <string name="import_error_newer_version">This backup was created by a newer version of Office Break. Please update the app.</string>
+    <string name="backup_error">Something went wrong: %1$s</string>
+
     <!-- Widget -->
     <string name="widget_description">Shows your break stats and timer at a glance</string>
     <string name="widget_today_breaks">%d breaks today</string>

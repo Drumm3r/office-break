@@ -20,6 +20,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import android.app.Activity
 import android.view.WindowManager
+import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -42,6 +43,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import de.mysportsmate.officebreak.R
 import de.mysportsmate.officebreak.service.TimerState
 import de.mysportsmate.officebreak.data.AchievementRegistry
+import de.mysportsmate.officebreak.ui.BackupUiState
 import de.mysportsmate.officebreak.ui.TimerViewModel
 import de.mysportsmate.officebreak.ui.components.AchievementUnlockDialog
 import de.mysportsmate.officebreak.ui.components.ConfirmResetDialog
@@ -77,6 +79,7 @@ fun TimerScreen(
     val dynamicIncreaseEnabled by viewModel.dynamicIncreaseEnabled.collectAsState()
     val dynamicIncreaseOffer by viewModel.dynamicIncreaseOffer.collectAsState()
     val newlyUnlockedAchievements by viewModel.newlyUnlockedAchievements.collectAsState()
+    val backupState by viewModel.backupState.collectAsState()
     var showResetDialog by rememberSaveable { mutableStateOf(false) }
     var showExerciseSettings by rememberSaveable { mutableStateOf(false) }
     var showSettings by rememberSaveable { mutableStateOf(false) }
@@ -95,6 +98,20 @@ fun TimerScreen(
             activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         } else {
             activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
+
+    val toastContext = LocalContext.current
+    LaunchedEffect(backupState) {
+        val message = when (backupState) {
+            is BackupUiState.ExportSuccess -> toastContext.getString(R.string.export_success)
+            is BackupUiState.ImportSuccess -> toastContext.getString(R.string.import_success)
+            is BackupUiState.Error -> (backupState as BackupUiState.Error).message
+            else -> null
+        }
+        if (message != null) {
+            Toast.makeText(toastContext, message, Toast.LENGTH_LONG).show()
+            viewModel.clearBackupState()
         }
     }
 
@@ -182,6 +199,8 @@ fun TimerScreen(
             onBeepCountChange = viewModel::setBeepCount,
             onTrackingEnabledChange = viewModel::setTrackingEnabled,
             onResetStats = viewModel::resetStats,
+            onExportToUri = viewModel::exportData,
+            onImportFromUri = viewModel::importData,
             onBack = { showSettings = false },
         )
 

@@ -1,5 +1,8 @@
 package de.mysportsmate.officebreak.ui.screen
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -39,7 +42,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.mysportsmate.officebreak.R
 import de.mysportsmate.officebreak.data.SettingsRepository
+import de.mysportsmate.officebreak.ui.components.ConfirmImportDialog
 import de.mysportsmate.officebreak.ui.components.ConfirmResetStatsDialog
+import java.time.LocalDate
 import kotlin.math.roundToInt
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
@@ -65,9 +70,24 @@ fun SettingsScreen(
     onBeepCountChange: (Int) -> Unit,
     onTrackingEnabledChange: (Boolean) -> Unit,
     onResetStats: () -> Unit,
+    onExportToUri: (Uri) -> Unit,
+    onImportFromUri: (Uri) -> Unit,
     onBack: () -> Unit,
 ) {
     var showResetStatsDialog by rememberSaveable { mutableStateOf(false) }
+    var showImportConfirmDialog by rememberSaveable { mutableStateOf(false) }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri ->
+        if (uri != null) onExportToUri(uri)
+    }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) onImportFromUri(uri)
+    }
 
     if (showResetStatsDialog) {
         ConfirmResetStatsDialog(
@@ -76,6 +96,16 @@ fun SettingsScreen(
                 onResetStats()
             },
             onDismiss = { showResetStatsDialog = false },
+        )
+    }
+
+    if (showImportConfirmDialog) {
+        ConfirmImportDialog(
+            onConfirm = {
+                showImportConfirmDialog = false
+                importLauncher.launch(arrayOf("application/json", "application/octet-stream"))
+            },
+            onDismiss = { showImportConfirmDialog = false },
         )
     }
     Scaffold(
@@ -213,6 +243,34 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(text = stringResource(R.string.settings_reset_stats))
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = stringResource(R.string.settings_data),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+
+            OutlinedButton(
+                onClick = {
+                    exportLauncher.launch("office-break-backup-${LocalDate.now()}.json")
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(text = stringResource(R.string.settings_export_data))
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedButton(
+                onClick = { showImportConfirmDialog = true },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(text = stringResource(R.string.settings_import_data))
             }
 
             Spacer(modifier = Modifier.height(16.dp))

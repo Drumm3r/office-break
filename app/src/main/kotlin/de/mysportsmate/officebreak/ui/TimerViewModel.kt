@@ -1,15 +1,19 @@
 package de.mysportsmate.officebreak.ui
 
 import android.app.Application
+import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import de.mysportsmate.officebreak.R
 import de.mysportsmate.officebreak.data.AchievementDefinition
 import de.mysportsmate.officebreak.data.AchievementState
+import de.mysportsmate.officebreak.data.BackupManager
 import de.mysportsmate.officebreak.data.BreakRecord
 import de.mysportsmate.officebreak.data.Exercise
 import de.mysportsmate.officebreak.data.FitnessLevel
+import de.mysportsmate.officebreak.data.ImportResult
 import de.mysportsmate.officebreak.data.SettingsRepository
 import de.mysportsmate.officebreak.data.StatsRepository
 import de.mysportsmate.officebreak.data.StatsSnapshot
@@ -29,6 +33,13 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.time.LocalDate
+
+sealed interface BackupUiState {
+    data object Idle : BackupUiState
+    data object ExportSuccess : BackupUiState
+    data object ImportSuccess : BackupUiState
+    data class Error(val message: String) : BackupUiState
+}
 
 sealed interface DynamicIncreaseOffer {
     data class Both(val newReps: Int, val newIntervalMinutes: Int) : DynamicIncreaseOffer
@@ -60,6 +71,10 @@ class TimerViewModel @JvmOverloads constructor(
     }
 
     private val json = Json { ignoreUnknownKeys = true }
+    private val backupManager = BackupManager(repository, statsRepository)
+
+    private val _backupState = MutableStateFlow<BackupUiState>(BackupUiState.Idle)
+    val backupState: StateFlow<BackupUiState> = _backupState.asStateFlow()
 
     val onboardingCompleted: StateFlow<Boolean?> = repository.onboardingCompleted
         .map<Boolean, Boolean?> { it }
@@ -592,6 +607,58 @@ class TimerViewModel @JvmOverloads constructor(
 
     fun dismissAchievementCelebration() {
         _newlyUnlockedAchievements.value = emptyList()
+    }
+
+    fun exportData(uri: Uri) {
+        val app = getApplication<Application>()
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val versionCode = app.packageManager
+                    .getPackageInfo(app.packageName, 0).longVersionCode.toInt()
+                val jsonString = backupManager.createBackupJson(versionCode)
+
+                app.contentResolver.openOutputStream(uri)?.use { stream ->
+                    stream.write(jsonString.toByteArray(Charsets.UTF_8))
+                } ?: throw Exception("Could not open file for writing")
+
+                _backupState.value = BackupUiState.ExportSuccess
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to export data", e)
+                _backupState.value = BackupUiState.Error(
+                    app.getString(R.string.backup_error, e.message ?: "Unknown error"),
+                )
+            }
+        }
+    }
+
+    fun importData(uri: Uri) {
+        val app = getApplication<Application>()
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val jsonString = app.contentResolver.openInputStream(uri)?.use { stream ->
+                    stream.bufferedReader(Charsets.UTF_8).readText()
+                } ?: throw Exception("Could not open file for reading")
+
+                when (val result = backupManager.restoreFromJson(jsonString)) {
+                    is ImportResult.Success -> {
+                        WidgetUpdater.requestUpdate(app)
+                        _backupState.value = BackupUiState.ImportSuccess
+                    }
+                    is ImportResult.Error -> {
+                        _backupState.value = BackupUiState.Error(app.getString(result.messageResId))
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to import data", e)
+                _backupState.value = BackupUiState.Error(
+                    app.getString(R.string.backup_error, e.message ?: "Unknown error"),
+                )
+            }
+        }
+    }
+
+    fun clearBackupState() {
+        _backupState.value = BackupUiState.Idle
     }
 
     fun completeOnboarding(level: FitnessLevel, selectedExercises: List<Exercise>) {

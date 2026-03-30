@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -207,6 +208,68 @@ class SettingsRepository(
             }
         }
     }
+
+    suspend fun snapshotForExport(): SettingsExportSnapshot {
+        val prefs = dataStore.data.first()
+        val exerciseList = exercises.first()
+
+        return SettingsExportSnapshot(
+            timerHours = prefs[KEY_TIMER_HOURS] ?: DEFAULT_HOURS,
+            timerMinutes = prefs[KEY_TIMER_MINUTES] ?: DEFAULT_MINUTES,
+            repsMin = prefs[KEY_REPS_MIN] ?: DEFAULT_REPS_MIN,
+            repsMax = prefs[KEY_REPS_MAX] ?: DEFAULT_REPS_MAX,
+            repsLinked = prefs[KEY_REPS_LINKED] ?: DEFAULT_REPS_LINKED,
+            exercises = exerciseList,
+            language = prefs[KEY_LANGUAGE] ?: LANGUAGE_SYSTEM,
+            themeMode = prefs[KEY_THEME_MODE] ?: THEME_SYSTEM,
+            beepVolume = prefs[KEY_BEEP_VOLUME] ?: DEFAULT_BEEP_VOLUME,
+            vibrationEnabled = prefs[KEY_VIBRATION_ENABLED] ?: DEFAULT_VIBRATION_ENABLED,
+            beepCount = prefs[KEY_BEEP_COUNT] ?: DEFAULT_BEEP_COUNT,
+            keepScreenOn = prefs[KEY_KEEP_SCREEN_ON] ?: DEFAULT_KEEP_SCREEN_ON,
+            autoRestart = prefs[KEY_AUTO_RESTART] ?: DEFAULT_AUTO_RESTART,
+            dynamicIncreaseEnabled = prefs[KEY_DYNAMIC_INCREASE_ENABLED] ?: DEFAULT_DYNAMIC_INCREASE_ENABLED,
+            breaksSinceLastIncrease = prefs[KEY_BREAKS_SINCE_LAST_INCREASE] ?: DEFAULT_BREAKS_SINCE_LAST_INCREASE,
+        )
+    }
+
+    suspend fun restoreFromBackup(data: BackupData) {
+        dataStore.edit { prefs ->
+            prefs[KEY_TIMER_HOURS] = data.timerHours
+            prefs[KEY_TIMER_MINUTES] = data.timerMinutes
+            prefs[KEY_REPS_MIN] = data.repsMin
+            prefs[KEY_REPS_MAX] = data.repsMax
+            prefs[KEY_REPS_LINKED] = data.repsLinked
+            prefs[KEY_EXERCISES] = json.encodeToString(data.exercises)
+            prefs[KEY_LANGUAGE] = data.language
+            prefs[KEY_THEME_MODE] = data.themeMode
+            prefs[KEY_BEEP_VOLUME] = data.beepVolume
+            prefs[KEY_VIBRATION_ENABLED] = data.vibrationEnabled
+            prefs[KEY_BEEP_COUNT] = data.beepCount
+            prefs[KEY_KEEP_SCREEN_ON] = data.keepScreenOn
+            prefs[KEY_AUTO_RESTART] = data.autoRestart
+            prefs[KEY_DYNAMIC_INCREASE_ENABLED] = data.dynamicIncreaseEnabled
+            prefs[KEY_BREAKS_SINCE_LAST_INCREASE] = data.breaksSinceLastIncrease
+            prefs[KEY_ONBOARDING_COMPLETED] = true
+        }
+    }
+
+    data class SettingsExportSnapshot(
+        val timerHours: Int,
+        val timerMinutes: Int,
+        val repsMin: Int,
+        val repsMax: Int,
+        val repsLinked: Boolean,
+        val exercises: List<Exercise>,
+        val language: String,
+        val themeMode: String,
+        val beepVolume: Int,
+        val vibrationEnabled: Boolean,
+        val beepCount: Int,
+        val keepScreenOn: Boolean,
+        val autoRestart: Boolean,
+        val dynamicIncreaseEnabled: Boolean,
+        val breaksSinceLastIncrease: Int,
+    )
 
     companion object {
         private val KEY_TIMER_HOURS = intPreferencesKey("timer_hours")

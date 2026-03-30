@@ -211,6 +211,19 @@
     <string name="achievement_mastery_100_title">Meister</string>
     <string name="achievement_mastery_100_desc">Mache eine Übung 100 mal</string>
 
+    <!-- Daten Export/Import -->
+    <string name="settings_data">Daten</string>
+    <string name="settings_export_data">Daten exportieren</string>
+    <string name="settings_import_data">Daten importieren</string>
+    <string name="import_confirm_title">Daten importieren?</string>
+    <string name="import_confirm_message">Alle aktuellen Einstellungen, Statistiken und Erfolge werden durch die Daten aus der Datei ersetzt.</string>
+    <string name="import_confirm_yes">Importieren</string>
+    <string name="export_success">Daten erfolgreich exportiert</string>
+    <string name="import_success">Daten erfolgreich importiert</string>
+    <string name="import_error_invalid_format">Die ausgewählte Datei ist keine gültige Office Break Sicherung</string>
+    <string name="import_error_newer_version">Diese Sicherung wurde mit einer neueren Version von Office Break erstellt. Bitte aktualisiere die App.</string>
+    <string name="backup_error">Etwas ist schiefgelaufen: %1$s</string>
+
     <!-- Widget -->
     <string name="widget_description">Pausen-Statistiken und Timer auf einen Blick</string>
     <string name="widget_today_breaks">%d Pausen heute</string>
