@@ -203,6 +203,50 @@ class StatsRepositoryTest {
     }
 
     @Test
+    fun `multiple breaks same day do not increment streak`() = runTest {
+        repository.recordBreak(record(dateString = "2026-03-30"))
+        repository.recordBreak(record(dateString = "2026-03-30", name = "Squats"))
+        repository.recordBreak(record(dateString = "2026-03-30", name = "Lunges"))
+
+        repository.statsSnapshot.test {
+            val snapshot = awaitItem()
+            assertEquals(1, snapshot.currentStreakDays)
+            assertEquals(3, snapshot.totalBreaksAllTime)
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `streak resets after two day gap`() = runTest {
+        repository.recordBreak(record(dateString = "2026-03-27"))
+        repository.recordBreak(record(dateString = "2026-03-28"))
+        // Skip 29, break on 30 → gap of 2 days, streak resets
+        repository.recordBreak(record(dateString = "2026-03-30"))
+
+        repository.statsSnapshot.test {
+            val snapshot = awaitItem()
+            assertEquals(1, snapshot.currentStreakDays)
+            assertEquals(2, snapshot.longestStreakDays)
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `per exercise reps aggregate across multiple breaks`() = runTest {
+        repository.recordBreak(record(name = "Push Ups", reps = 10))
+        repository.recordBreak(record(name = "Push Ups", reps = 15))
+        repository.recordBreak(record(name = "Squats", reps = 20))
+
+        repository.statsSnapshot.test {
+            val snapshot = awaitItem()
+            assertEquals(mapOf("Push Ups" to 25, "Squats" to 20), snapshot.perExerciseReps)
+            assertEquals(mapOf("Push Ups" to 2, "Squats" to 1), snapshot.perExerciseCounts)
+            assertEquals(45, snapshot.totalRepsAllTime)
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
     fun `yearly compaction moves old aggregates to yearly`() = runTest {
         // Use a clock after April 1st so yearly compaction runs
         val aprilClock = Clock.fixed(

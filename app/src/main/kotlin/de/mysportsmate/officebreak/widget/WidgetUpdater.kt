@@ -9,7 +9,7 @@ object WidgetUpdater {
     suspend fun requestUpdate(context: Context) {
         try {
             OfficeBreakWidget().updateAll(context.applicationContext)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.e("WidgetUpdater", "Widget update failed", e)
         }
     }

@@ -186,4 +186,106 @@ class AchievementEngineTest {
         val ids = AchievementRegistry.all.map { it.id }
         assertEquals(ids.size, ids.toSet().size)
     }
+
+    // --- Boundary & negative cases ---
+
+    @Test
+    fun `breaks_10 does NOT unlock at 9`() {
+        val snapshot = StatsSnapshot(totalBreaksAllTime = 9)
+        val result = AchievementEngine.evaluate(snapshot, baseContext(), emptySet())
+        assertTrue(result.none { it.id == "breaks_10" })
+    }
+
+    @Test
+    fun `breaks_10 unlocks at 10`() {
+        val snapshot = StatsSnapshot(totalBreaksAllTime = 10)
+        val result = AchievementEngine.evaluate(snapshot, baseContext(), emptySet())
+        assertTrue(result.any { it.id == "breaks_10" })
+    }
+
+    @Test
+    fun `streak_7 does NOT unlock at 6`() {
+        val snapshot = StatsSnapshot(currentStreakDays = 6, longestStreakDays = 6)
+        val result = AchievementEngine.evaluate(snapshot, baseContext(), emptySet())
+        assertTrue(result.none { it.id == "streak_7" })
+    }
+
+    @Test
+    fun `early bird at midnight (hour 0) should unlock`() {
+        val result = AchievementEngine.evaluate(StatsSnapshot(), baseContext(hourOfDay = 0), emptySet())
+        assertTrue(result.any { it.id == "daily_early_bird" })
+    }
+
+    @Test
+    fun `night owl at hour 23 should unlock`() {
+        val result = AchievementEngine.evaluate(StatsSnapshot(), baseContext(hourOfDay = 23), emptySet())
+        assertTrue(result.any { it.id == "daily_night_owl" })
+    }
+
+    @Test
+    fun `lunch hero does NOT unlock at hour 11`() {
+        val result = AchievementEngine.evaluate(StatsSnapshot(), baseContext(hourOfDay = 11), emptySet())
+        assertTrue(result.none { it.id == "daily_lunch_hero" })
+    }
+
+    @Test
+    fun `lunch hero does NOT unlock at hour 13`() {
+        val result = AchievementEngine.evaluate(StatsSnapshot(), baseContext(hourOfDay = 13), emptySet())
+        assertTrue(result.none { it.id == "daily_lunch_hero" })
+    }
+
+    @Test
+    fun `weekend warrior on sunday (dayOfWeek 7)`() {
+        val result = AchievementEngine.evaluate(StatsSnapshot(), baseContext(dayOfWeek = 7), emptySet())
+        assertTrue(result.any { it.id == "fun_weekend_warrior" })
+    }
+
+    @Test
+    fun `weekend warrior NOT on friday (dayOfWeek 5)`() {
+        val result = AchievementEngine.evaluate(StatsSnapshot(), baseContext(dayOfWeek = 5), emptySet())
+        assertTrue(result.none { it.id == "fun_weekend_warrior" })
+    }
+
+    @Test
+    fun `comeback with null daysSinceLastBreak does NOT unlock`() {
+        val result = AchievementEngine.evaluate(
+            StatsSnapshot(),
+            baseContext(daysSinceLastBreak = null),
+            emptySet(),
+        )
+        assertTrue(result.none { it.id == "fun_comeback" })
+    }
+
+    @Test
+    fun `full rotation at 6 unique exercises`() {
+        val snapshot = StatsSnapshot(uniqueExercisesUsed = setOf("A", "B", "C", "D", "E", "F"))
+        val result = AchievementEngine.evaluate(snapshot, baseContext(), emptySet())
+        assertTrue(result.any { it.id == "variety_full_rotation" })
+    }
+
+    @Test
+    fun `mastery at 50`() {
+        val snapshot = StatsSnapshot(perExerciseCounts = mapOf("Push Ups" to 50))
+        val result = AchievementEngine.evaluate(snapshot, baseContext(), emptySet())
+        assertTrue(result.any { it.id == "mastery_any_50" })
+    }
+
+    @Test
+    fun `mastery at 100`() {
+        val snapshot = StatsSnapshot(perExerciseCounts = mapOf("Push Ups" to 100))
+        val result = AchievementEngine.evaluate(snapshot, baseContext(), emptySet())
+        assertTrue(result.any { it.id == "mastery_any_100" })
+    }
+
+    @Test
+    fun `daily breaks at 5`() {
+        val result = AchievementEngine.evaluate(StatsSnapshot(), baseContext(breaksToday = 5), emptySet())
+        assertTrue(result.any { it.id == "daily_breaks_5" })
+    }
+
+    @Test
+    fun `daily breaks at 10`() {
+        val result = AchievementEngine.evaluate(StatsSnapshot(), baseContext(breaksToday = 10), emptySet())
+        assertTrue(result.any { it.id == "daily_breaks_10" })
+    }
 }

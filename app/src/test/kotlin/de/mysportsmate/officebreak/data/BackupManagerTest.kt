@@ -2,8 +2,10 @@ package de.mysportsmate.officebreak.data
 
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 
 class BackupManagerTest {
@@ -11,6 +13,19 @@ class BackupManagerTest {
     private val json = Json {
         ignoreUnknownKeys = true
         prettyPrint = true
+    }
+
+    private lateinit var settingsDataStore: FakeDataStore
+    private lateinit var statsDataStore: FakeDataStore
+    private lateinit var backupManager: BackupManager
+
+    @Before
+    fun setUp() {
+        settingsDataStore = FakeDataStore()
+        statsDataStore = FakeDataStore()
+        val settingsRepo = SettingsRepository(dataStore = settingsDataStore)
+        val statsRepo = StatsRepository(dataStore = statsDataStore)
+        backupManager = BackupManager(settingsRepo, statsRepo)
     }
 
     @Test
@@ -117,6 +132,42 @@ class BackupManagerTest {
         assertEquals(false, decoded.autoRestart)
         assertEquals(false, decoded.dynamicIncreaseEnabled)
         assertEquals(7, decoded.breaksSinceLastIncrease)
+    }
+
+    // --- Invalid import tests via BackupManager.restoreFromJson ---
+
+    @Test
+    fun `restoreFromJson with empty string returns error`() = runTest {
+        val result = backupManager.restoreFromJson("")
+        assertTrue(result is ImportResult.Error)
+    }
+
+    @Test
+    fun `restoreFromJson with random non-JSON text returns error`() = runTest {
+        val result = backupManager.restoreFromJson("this is not json at all!!")
+        assertTrue(result is ImportResult.Error)
+    }
+
+    @Test
+    fun `restoreFromJson with wrong JSON structure returns error`() = runTest {
+        val result = backupManager.restoreFromJson("""{"foo": "bar"}""")
+        assertTrue(result is ImportResult.Error)
+    }
+
+    @Test
+    fun `restoreFromJson with future formatVersion returns error`() = runTest {
+        val futureData = createSampleBackupData().copy(formatVersion = 999)
+        val encoded = json.encodeToString(futureData)
+        val result = backupManager.restoreFromJson(encoded)
+        assertTrue(result is ImportResult.Error)
+    }
+
+    @Test
+    fun `restoreFromJson with valid data returns success`() = runTest {
+        val validData = createSampleBackupData()
+        val encoded = json.encodeToString(validData)
+        val result = backupManager.restoreFromJson(encoded)
+        assertTrue(result is ImportResult.Success)
     }
 
     private fun createSampleBackupData() = BackupData(
