@@ -17,6 +17,7 @@ import de.mysportsmate.officebreak.service.DefaultTimerServiceController
 import de.mysportsmate.officebreak.service.TimerServiceController
 import de.mysportsmate.officebreak.service.TimerState
 import de.mysportsmate.officebreak.service.TimerStateHolder
+import de.mysportsmate.officebreak.widget.WidgetUpdater
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -402,6 +403,10 @@ class TimerViewModel @JvmOverloads constructor(
         if (totalSeconds <= 0) return
 
         serviceController.startTimer(totalSeconds, language.value)
+        viewModelScope.launch {
+            repository.setWidgetTimerStatus("running")
+            WidgetUpdater.requestUpdate(getApplication())
+        }
     }
 
     fun resetTimer() {
@@ -469,6 +474,7 @@ class TimerViewModel @JvmOverloads constructor(
                         if (newAchievements.isNotEmpty()) {
                             _newlyUnlockedAchievements.value = newAchievements
                         }
+                        WidgetUpdater.requestUpdate(getApplication())
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to record break stats", e)
@@ -495,7 +501,7 @@ class TimerViewModel @JvmOverloads constructor(
                 restartOrResetTimer()
             }
         } else {
-            restartOrResetTimer()
+            viewModelScope.launch { restartOrResetTimer() }
         }
     }
 
@@ -569,15 +575,19 @@ class TimerViewModel @JvmOverloads constructor(
         }
     }
 
-    private fun restartOrResetTimer() {
+    private suspend fun restartOrResetTimer() {
         if (!autoRestart.value) {
             serviceController.resetTimer()
+            repository.setWidgetTimerStatus("idle")
+            WidgetUpdater.requestUpdate(getApplication())
             return
         }
         val totalSeconds = (hours.value * 3600L) + (minutes.value * 60L)
         if (totalSeconds <= 0) return
 
         serviceController.restartTimer(totalSeconds, language.value)
+        repository.setWidgetTimerStatus("running")
+        WidgetUpdater.requestUpdate(getApplication())
     }
 
     fun dismissAchievementCelebration() {
@@ -614,6 +624,7 @@ class TimerViewModel @JvmOverloads constructor(
         viewModelScope.launch {
             try {
                 statsRepository.resetAllStats()
+                WidgetUpdater.requestUpdate(getApplication())
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to reset stats", e)
             }

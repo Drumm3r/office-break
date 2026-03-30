@@ -213,4 +213,16 @@
     <string name="achievement_mastery_50_desc">Do any exercise 50 times</string>
     <string name="achievement_mastery_100_title">Master</string>
     <string name="achievement_mastery_100_desc">Do any exercise 100 times</string>
+
+    <!-- Widget -->
+    <string name="widget_description">Shows your break stats and timer at a glance</string>
+    <string name="widget_today_breaks">%d breaks today</string>
+    <string name="widget_today_no_breaks">No breaks yet</string>
+    <string name="widget_streak">%d day streak</string>
+    <string name="widget_no_streak">No streak</string>
+    <string name="widget_timer_idle">Timer not running</string>
+    <string name="widget_timer_running">Timer is running</string>
+    <string name="widget_timer_expired">Break time!</string>
+    <string name="widget_start">Start</string>
+    <string name="widget_open">Open</string>
 </resources>

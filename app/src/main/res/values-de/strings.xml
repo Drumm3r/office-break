@@ -210,4 +210,16 @@
     <string name="achievement_mastery_50_desc">Mache eine Übung 50 mal</string>
     <string name="achievement_mastery_100_title">Meister</string>
     <string name="achievement_mastery_100_desc">Mache eine Übung 100 mal</string>
+
+    <!-- Widget -->
+    <string name="widget_description">Pausen-Statistiken und Timer auf einen Blick</string>
+    <string name="widget_today_breaks">%d Pausen heute</string>
+    <string name="widget_today_no_breaks">Noch keine Pausen</string>
+    <string name="widget_streak">%d Tage Serie</string>
+    <string name="widget_no_streak">Keine Serie</string>
+    <string name="widget_timer_idle">Timer nicht aktiv</string>
+    <string name="widget_timer_running">Timer läuft</string>
+    <string name="widget_timer_expired">Pausenzeit!</string>
+    <string name="widget_start">Start</string>
+    <string name="widget_open">Öffnen</string>
 </resources>

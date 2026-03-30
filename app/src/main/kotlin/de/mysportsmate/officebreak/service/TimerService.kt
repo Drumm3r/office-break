@@ -16,13 +16,16 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.core.app.NotificationCompat
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import de.mysportsmate.officebreak.MainActivity
 import de.mysportsmate.officebreak.OfficeBreakApp
 import de.mysportsmate.officebreak.R
 import de.mysportsmate.officebreak.data.SettingsRepository
 import de.mysportsmate.officebreak.data.dataStore
 import de.mysportsmate.officebreak.locale.LocaleHelper
+import de.mysportsmate.officebreak.widget.WidgetUpdater
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -94,6 +97,9 @@ class TimerService : Service() {
 
         timerJob = scope.launch {
             try {
+                writeWidgetTimerStatus("running")
+                WidgetUpdater.requestUpdate(this@TimerService)
+
                 var remaining = totalSeconds
                 while (remaining > 0) {
                     delay(1000L)
@@ -105,6 +111,8 @@ class TimerService : Service() {
                     updateNotification(localizedContext.getString(R.string.notification_text_running, formatTime(remaining)))
                 }
                 timerStateHolder.update(TimerState.Expired)
+                writeWidgetTimerStatus("expired")
+                WidgetUpdater.requestUpdate(this@TimerService)
                 wakeScreen()
                 updateNotification(localizedContext.getString(R.string.notification_text_expired))
                 showExpiredNotification()
@@ -132,8 +140,12 @@ class TimerService : Service() {
         releaseWakeLock()
         val manager = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
         manager.cancel(EXPIRED_NOTIFICATION_ID)
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
+        scope.launch {
+            writeWidgetTimerStatus("idle")
+            WidgetUpdater.requestUpdate(this@TimerService)
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+        }
     }
 
     private fun buildNotification(contentText: String): Notification {
@@ -335,7 +347,17 @@ class TimerService : Service() {
         super.onDestroy()
     }
 
+    private suspend fun writeWidgetTimerStatus(status: String) {
+        try {
+            dataStore.edit { it[KEY_WIDGET_TIMER_STATUS] = status }
+        } catch (_: Exception) {
+            // Non-critical
+        }
+    }
+
     companion object {
+        private val KEY_WIDGET_TIMER_STATUS = stringPreferencesKey("widget_timer_status")
+
         const val ACTION_START = "de.mysportsmate.officebreak.ACTION_START"
         const val ACTION_RESET = "de.mysportsmate.officebreak.ACTION_RESET"
         const val ACTION_RESTART = "de.mysportsmate.officebreak.ACTION_RESTART"
