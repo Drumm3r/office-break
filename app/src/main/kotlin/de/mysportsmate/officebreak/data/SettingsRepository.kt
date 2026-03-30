@@ -49,7 +49,7 @@ class SettingsRepository(
 
     val exercises: Flow<List<Exercise>> = dataStore.data.map { prefs ->
         val raw = prefs[KEY_EXERCISES]
-        if (raw != null) {
+        val list = if (raw != null) {
             try {
                 json.decodeFromString<List<Exercise>>(raw)
             } catch (_: Exception) {
@@ -58,14 +58,23 @@ class SettingsRepository(
         } else {
             defaultExercises
         }
+
+        list.map { exercise ->
+            if (exercise.nameResKey == null) {
+                val key = KNOWN_DEFAULT_NAMES[exercise.name]
+                if (key != null) exercise.copy(nameResKey = key) else exercise
+            } else {
+                exercise
+            }
+        }
     }
 
     val language: Flow<String> = dataStore.data.map { prefs ->
         prefs[KEY_LANGUAGE] ?: LANGUAGE_SYSTEM
     }
 
-    val soundEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
-        prefs[KEY_SOUND_ENABLED] ?: DEFAULT_SOUND_ENABLED
+    val beepVolume: Flow<Int> = dataStore.data.map { prefs ->
+        prefs[KEY_BEEP_VOLUME] ?: DEFAULT_BEEP_VOLUME
     }
 
     val vibrationEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
@@ -86,6 +95,10 @@ class SettingsRepository(
 
     val beepCount: Flow<Int> = dataStore.data.map { prefs ->
         prefs[KEY_BEEP_COUNT] ?: DEFAULT_BEEP_COUNT
+    }
+
+    val onboardingCompleted: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[KEY_ONBOARDING_COMPLETED] ?: prefs.asMap().isNotEmpty()
     }
 
     val usedExerciseNames: Flow<Set<String>> = dataStore.data.map { prefs ->
@@ -133,8 +146,8 @@ class SettingsRepository(
         dataStore.edit { it[KEY_LANGUAGE] = language }
     }
 
-    suspend fun setSoundEnabled(value: Boolean) {
-        dataStore.edit { it[KEY_SOUND_ENABLED] = value }
+    suspend fun setBeepVolume(value: Int) {
+        dataStore.edit { it[KEY_BEEP_VOLUME] = value }
     }
 
     suspend fun setVibrationEnabled(value: Boolean) {
@@ -155,6 +168,10 @@ class SettingsRepository(
 
     suspend fun setBeepCount(value: Int) {
         dataStore.edit { it[KEY_BEEP_COUNT] = value }
+    }
+
+    suspend fun setOnboardingCompleted(completed: Boolean) {
+        dataStore.edit { it[KEY_ONBOARDING_COMPLETED] = completed }
     }
 
     suspend fun setUsedExerciseNames(names: Set<String>) {
@@ -179,7 +196,7 @@ class SettingsRepository(
         private val KEY_REPS_LINKED = booleanPreferencesKey("reps_linked")
         private val KEY_EXERCISES = stringPreferencesKey("exercises")
         private val KEY_LANGUAGE = stringPreferencesKey("language")
-        private val KEY_SOUND_ENABLED = booleanPreferencesKey("sound_enabled")
+        private val KEY_BEEP_VOLUME = intPreferencesKey("beep_volume")
         private val KEY_VIBRATION_ENABLED = booleanPreferencesKey("vibration_enabled")
         private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
         private val KEY_KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
@@ -187,6 +204,7 @@ class SettingsRepository(
         private val KEY_BEEP_COUNT = intPreferencesKey("beep_count")
         private val KEY_USED_EXERCISE_NAMES = stringPreferencesKey("used_exercise_names")
         private val KEY_LAST_PICKED_NAME = stringPreferencesKey("last_picked_name")
+        private val KEY_ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
 
         const val DEFAULT_HOURS = 0
         const val DEFAULT_MINUTES = 30
@@ -194,7 +212,7 @@ class SettingsRepository(
         const val DEFAULT_REPS_MAX = 10
         const val DEFAULT_REPS_LINKED = true
 
-        const val DEFAULT_SOUND_ENABLED = true
+        const val DEFAULT_BEEP_VOLUME = 80
         const val DEFAULT_VIBRATION_ENABLED = true
 
         const val LANGUAGE_SYSTEM = "system"
@@ -208,5 +226,20 @@ class SettingsRepository(
         const val DEFAULT_KEEP_SCREEN_ON = false
         const val DEFAULT_AUTO_RESTART = true
         const val DEFAULT_BEEP_COUNT = 3
+
+        private val KNOWN_DEFAULT_NAMES: Map<String, String> = mapOf(
+            // English
+            "Push Ups" to "exercise_push_ups",
+            "Squats" to "exercise_squats",
+            "Deadlifts" to "exercise_deadlifts",
+            "Lunges" to "exercise_lunges",
+            "Sit Ups" to "exercise_sit_ups",
+            "Superman Angels" to "exercise_superman_angels",
+            // German
+            "Liegestütze" to "exercise_push_ups",
+            "Kniebeuge" to "exercise_squats",
+            "Kreuzheben" to "exercise_deadlifts",
+            "Ausfallschritt" to "exercise_lunges",
+        )
     }
 }

@@ -7,10 +7,11 @@ class DefaultTimerServiceController(
     private val context: Context,
 ) : TimerServiceController {
 
-    override fun startTimer(durationSeconds: Long) {
+    override fun startTimer(durationSeconds: Long, language: String) {
         val intent = Intent(context, TimerService::class.java).apply {
             action = TimerService.ACTION_START
             putExtra(TimerService.EXTRA_DURATION_SECONDS, durationSeconds)
+            putExtra(TimerService.EXTRA_LANGUAGE, language)
         }
         context.startForegroundService(intent)
     }
@@ -22,10 +23,11 @@ class DefaultTimerServiceController(
         context.startService(intent)
     }
 
-    override fun restartTimer(durationSeconds: Long) {
+    override fun restartTimer(durationSeconds: Long, language: String) {
         val intent = Intent(context, TimerService::class.java).apply {
             action = TimerService.ACTION_RESTART
             putExtra(TimerService.EXTRA_DURATION_SECONDS, durationSeconds)
+            putExtra(TimerService.EXTRA_LANGUAGE, language)
         }
         context.startForegroundService(intent)
     }

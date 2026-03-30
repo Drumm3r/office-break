@@ -12,8 +12,8 @@ class SettingsRepositoryTest {
     private lateinit var repository: SettingsRepository
 
     private val defaultExercises = listOf(
-        Exercise(name = "Push Ups"),
-        Exercise(name = "Squats"),
+        Exercise(name = "Push Ups", nameResKey = "exercise_push_ups"),
+        Exercise(name = "Squats", nameResKey = "exercise_squats"),
     )
 
     @Before
@@ -135,7 +135,7 @@ class SettingsRepositoryTest {
 
     @Test
     fun `setExercises persists and re-emits`() = runTest {
-        val newExercises = listOf(Exercise(name = "Lunges", isEnabled = false))
+        val newExercises = listOf(Exercise(name = "Custom Exercise", isEnabled = false))
 
         repository.exercises.test {
             assertEquals(defaultExercises, awaitItem())
@@ -218,6 +218,36 @@ class SettingsRepositoryTest {
 
             repository.setLastPickedName("Push Ups")
             assertEquals("Push Ups", awaitItem())
+
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `onboardingCompleted emits false when datastore is empty`() = runTest {
+        repository.onboardingCompleted.test {
+            assertEquals(false, awaitItem())
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `onboardingCompleted emits true when other prefs exist`() = runTest {
+        repository.setTimerHours(1)
+
+        repository.onboardingCompleted.test {
+            assertEquals(true, awaitItem())
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `setOnboardingCompleted persists and re-emits`() = runTest {
+        repository.onboardingCompleted.test {
+            assertEquals(false, awaitItem())
+
+            repository.setOnboardingCompleted(true)
+            assertEquals(true, awaitItem())
 
             cancelAndConsumeRemainingEvents()
         }

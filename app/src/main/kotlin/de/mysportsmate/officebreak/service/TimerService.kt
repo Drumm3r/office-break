@@ -15,9 +15,14 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.core.app.NotificationCompat
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import de.mysportsmate.officebreak.MainActivity
 import de.mysportsmate.officebreak.OfficeBreakApp
 import de.mysportsmate.officebreak.R
+import de.mysportsmate.officebreak.data.SettingsRepository
+import de.mysportsmate.officebreak.data.dataStore
+import de.mysportsmate.officebreak.locale.LocaleHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -27,9 +32,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
-import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.intPreferencesKey
-import de.mysportsmate.officebreak.data.dataStore
 
 sealed interface TimerState {
     data object Idle : TimerState
@@ -45,10 +47,14 @@ class TimerService : Service() {
     private var alarmTrack: AudioTrack? = null
     private var vibrator: Vibrator? = null
     private val timerStateHolder = TimerStateHolder.instance
+    private var localizedContext: Context = this
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val language = intent?.getStringExtra(EXTRA_LANGUAGE) ?: SettingsRepository.LANGUAGE_SYSTEM
+        localizedContext = LocaleHelper.createLocalizedContext(this, language)
+
         when (intent?.action) {
             ACTION_START -> {
                 val totalSeconds = intent.getLongExtra(EXTRA_DURATION_SECONDS, 0L)
@@ -80,7 +86,7 @@ class TimerService : Service() {
         manager.cancel(EXPIRED_NOTIFICATION_ID)
         acquireWakeLock(totalSeconds)
 
-        startForeground(NOTIFICATION_ID, buildNotification(getString(R.string.notification_text_running, formatTime(totalSeconds))))
+        startForeground(NOTIFICATION_ID, buildNotification(localizedContext.getString(R.string.notification_text_running, formatTime(totalSeconds))))
         timerStateHolder.update(TimerState.Running(
             remainingSeconds = totalSeconds,
             totalSeconds = totalSeconds,
@@ -96,17 +102,17 @@ class TimerService : Service() {
                         remainingSeconds = remaining,
                         totalSeconds = totalSeconds,
                     ))
-                    updateNotification(getString(R.string.notification_text_running, formatTime(remaining)))
+                    updateNotification(localizedContext.getString(R.string.notification_text_running, formatTime(remaining)))
                 }
                 timerStateHolder.update(TimerState.Expired)
                 wakeScreen()
-                updateNotification(getString(R.string.notification_text_expired))
+                updateNotification(localizedContext.getString(R.string.notification_text_expired))
                 showExpiredNotification()
                 val prefs = dataStore.data.first()
-                val soundOn = prefs[booleanPreferencesKey("sound_enabled")] ?: true
+                val beepVolume = prefs[intPreferencesKey("beep_volume")] ?: SettingsRepository.DEFAULT_BEEP_VOLUME
                 val vibrationOn = prefs[booleanPreferencesKey("vibration_enabled")] ?: true
                 val beepCount = prefs[intPreferencesKey("beep_count")] ?: 3
-                if (soundOn) playAlarmSound(beepCount)
+                if (beepVolume > 0) playAlarmSound(beepCount, beepVolume / 100.0)
                 if (vibrationOn) triggerVibration()
             } catch (e: CancellationException) {
                 throw e
@@ -141,7 +147,7 @@ class TimerService : Service() {
         )
 
         return NotificationCompat.Builder(this, OfficeBreakApp.CHANNEL_ID)
-            .setContentTitle(getString(R.string.notification_title))
+            .setContentTitle(localizedContext.getString(R.string.notification_title))
             .setContentText(contentText)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(pendingIntent)
@@ -186,8 +192,8 @@ class TimerService : Service() {
         )
 
         val notification = NotificationCompat.Builder(this, OfficeBreakApp.ALERT_CHANNEL_ID)
-            .setContentTitle(getString(R.string.notification_title))
-            .setContentText(getString(R.string.notification_text_expired))
+            .setContentTitle(localizedContext.getString(R.string.notification_title))
+            .setContentText(localizedContext.getString(R.string.notification_text_expired))
             .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(contentIntent)
             .setFullScreenIntent(fullScreenIntent, true)
@@ -202,7 +208,7 @@ class TimerService : Service() {
         manager.notify(EXPIRED_NOTIFICATION_ID, notification)
     }
 
-    private fun playAlarmSound(beepCount: Int = 3) {
+    private fun playAlarmSound(beepCount: Int = 3, volume: Double = 0.8) {
         stopAlarmSound()
         try {
             val sampleRate = 44100
@@ -219,7 +225,7 @@ class TimerService : Service() {
             for (beep in 0 until beepCount) {
                 for (i in 0 until beepSamples) {
                     val angle = 2.0 * Math.PI * frequency * i / sampleRate
-                    samples[offset + i] = (Math.sin(angle) * Short.MAX_VALUE * 0.8).toInt().toShort()
+                    samples[offset + i] = (Math.sin(angle) * Short.MAX_VALUE * volume).toInt().toShort()
                 }
                 offset += beepSamples
                 if (beep < beepCount - 1) {
@@ -334,6 +340,7 @@ class TimerService : Service() {
         const val ACTION_RESET = "de.mysportsmate.officebreak.ACTION_RESET"
         const val ACTION_RESTART = "de.mysportsmate.officebreak.ACTION_RESTART"
         const val EXTRA_DURATION_SECONDS = "duration_seconds"
+        const val EXTRA_LANGUAGE = "language"
         const val NOTIFICATION_ID = 1
         const val EXPIRED_NOTIFICATION_ID = 2
 

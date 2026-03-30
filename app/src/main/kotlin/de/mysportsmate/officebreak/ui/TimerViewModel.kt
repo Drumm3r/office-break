@@ -5,8 +5,14 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import de.mysportsmate.officebreak.data.AchievementDefinition
+import de.mysportsmate.officebreak.data.AchievementState
+import de.mysportsmate.officebreak.data.BreakRecord
 import de.mysportsmate.officebreak.data.Exercise
+import de.mysportsmate.officebreak.data.FitnessLevel
 import de.mysportsmate.officebreak.data.SettingsRepository
+import de.mysportsmate.officebreak.data.StatsRepository
+import de.mysportsmate.officebreak.data.StatsSnapshot
 import de.mysportsmate.officebreak.service.DefaultTimerServiceController
 import de.mysportsmate.officebreak.service.TimerServiceController
 import de.mysportsmate.officebreak.service.TimerState
@@ -16,15 +22,18 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.time.LocalDate
 
 class TimerViewModel @JvmOverloads constructor(
     application: Application,
     private val savedStateHandle: SavedStateHandle,
     private val repository: SettingsRepository = SettingsRepository(application),
+    private val statsRepository: StatsRepository = StatsRepository(application),
     private val timerStateHolder: TimerStateHolder = TimerStateHolder.instance,
     private val serviceController: TimerServiceController = DefaultTimerServiceController(application),
 ) : AndroidViewModel(application) {
@@ -37,6 +46,10 @@ class TimerViewModel @JvmOverloads constructor(
     }
 
     private val json = Json { ignoreUnknownKeys = true }
+
+    val onboardingCompleted: StateFlow<Boolean?> = repository.onboardingCompleted
+        .map<Boolean, Boolean?> { it }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     val timerState: StateFlow<TimerState> = timerStateHolder.state
 
@@ -61,8 +74,8 @@ class TimerViewModel @JvmOverloads constructor(
     val language: StateFlow<String> = repository.language
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.LANGUAGE_SYSTEM)
 
-    val soundEnabled: StateFlow<Boolean> = repository.soundEnabled
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_SOUND_ENABLED)
+    val beepVolume: StateFlow<Int> = repository.beepVolume
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_BEEP_VOLUME)
 
     val vibrationEnabled: StateFlow<Boolean> = repository.vibrationEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_VIBRATION_ENABLED)
@@ -78,6 +91,21 @@ class TimerViewModel @JvmOverloads constructor(
 
     val beepCount: StateFlow<Int> = repository.beepCount
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_BEEP_COUNT)
+
+    val trackingEnabled: StateFlow<Boolean> = statsRepository.trackingEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StatsRepository.DEFAULT_TRACKING_ENABLED)
+
+    val statsSnapshot: StateFlow<StatsSnapshot> = statsRepository.statsSnapshot
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StatsSnapshot())
+
+    val achievementState: StateFlow<AchievementState> = statsRepository.achievementState
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AchievementState())
+
+    val breakRecords: StateFlow<List<BreakRecord>> = statsRepository.breakRecords
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private val _newlyUnlockedAchievements = MutableStateFlow<List<AchievementDefinition>>(emptyList())
+    val newlyUnlockedAchievements: StateFlow<List<AchievementDefinition>> = _newlyUnlockedAchievements.asStateFlow()
 
     private val _currentExercise = MutableStateFlow(
         savedStateHandle.get<String>(KEY_CURRENT_EXERCISE)?.let {
@@ -110,6 +138,13 @@ class TimerViewModel @JvmOverloads constructor(
         viewModelScope.launch {
             usedExerciseNames.addAll(repository.usedExerciseNames.first())
             lastPickedName = repository.lastPickedName.first()
+        }
+        viewModelScope.launch {
+            try {
+                statsRepository.runYearlyCompaction()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to run yearly compaction", e)
+            }
         }
     }
 
@@ -182,12 +217,56 @@ class TimerViewModel @JvmOverloads constructor(
         }
     }
 
-    fun setSoundEnabled(value: Boolean) {
+    fun setBeepVolume(value: Int) {
         viewModelScope.launch {
             try {
-                repository.setSoundEnabled(value)
+                repository.setBeepVolume(value.coerceIn(0, 100))
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to set sound enabled", e)
+                Log.e(TAG, "Failed to set beep volume", e)
+            }
+        }
+    }
+
+    fun playPreviewBeep(volume: Int) {
+        if (volume <= 0) return
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val sampleRate = 44100
+                val beepDurationMs = 150
+                val frequency = 1000.0
+                val amplitude = volume / 100.0
+
+                val beepSamples = (sampleRate * beepDurationMs) / 1000
+                val samples = ShortArray(beepSamples)
+                for (i in 0 until beepSamples) {
+                    val angle = 2.0 * Math.PI * frequency * i / sampleRate
+                    samples[i] = (Math.sin(angle) * Short.MAX_VALUE * amplitude).toInt().toShort()
+                }
+
+                val track = android.media.AudioTrack.Builder()
+                    .setAudioAttributes(
+                        android.media.AudioAttributes.Builder()
+                            .setUsage(android.media.AudioAttributes.USAGE_ALARM)
+                            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .build(),
+                    )
+                    .setAudioFormat(
+                        android.media.AudioFormat.Builder()
+                            .setSampleRate(sampleRate)
+                            .setEncoding(android.media.AudioFormat.ENCODING_PCM_16BIT)
+                            .setChannelMask(android.media.AudioFormat.CHANNEL_OUT_MONO)
+                            .build(),
+                    )
+                    .setBufferSizeInBytes(samples.size * 2)
+                    .setTransferMode(android.media.AudioTrack.MODE_STATIC)
+                    .build()
+                track.write(samples, 0, samples.size)
+                track.play()
+                kotlinx.coroutines.delay(beepDurationMs.toLong() + 50)
+                track.stop()
+                track.release()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to play preview beep", e)
             }
         }
     }
@@ -265,6 +344,7 @@ class TimerViewModel @JvmOverloads constructor(
                 val current = exercises.value.toMutableList()
                 current.add(Exercise(name = trimmed))
                 repository.setExercises(current)
+                statsRepository.markCustomExerciseCreated()
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to add exercise", e)
             }
@@ -289,7 +369,7 @@ class TimerViewModel @JvmOverloads constructor(
         val totalSeconds = (hours.value * 3600L) + (minutes.value * 60L)
         if (totalSeconds <= 0) return
 
-        serviceController.startTimer(totalSeconds)
+        serviceController.startTimer(totalSeconds, language.value)
     }
 
     fun resetTimer() {
@@ -336,8 +416,34 @@ class TimerViewModel @JvmOverloads constructor(
     }
 
     fun onExerciseDone() {
+        val exercise = _currentExercise.value
+        val reps = _currentReps.value
         _currentExercise.value = null
         _currentReps.value = null
+
+        if (exercise != null && reps != null) {
+            viewModelScope.launch {
+                try {
+                    val enabled = statsRepository.trackingEnabled.first()
+                    if (enabled) {
+                        val now = System.currentTimeMillis()
+                        val record = BreakRecord(
+                            exerciseName = exercise.name,
+                            reps = reps,
+                            timestampMillis = now,
+                            dateString = LocalDate.now().toString(),
+                        )
+                        val newAchievements = statsRepository.recordBreak(record)
+                        if (newAchievements.isNotEmpty()) {
+                            _newlyUnlockedAchievements.value = newAchievements
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to record break stats", e)
+                }
+            }
+        }
+
         if (!autoRestart.value) {
             serviceController.resetTimer()
             return
@@ -345,6 +451,46 @@ class TimerViewModel @JvmOverloads constructor(
         val totalSeconds = (hours.value * 3600L) + (minutes.value * 60L)
         if (totalSeconds <= 0) return
 
-        serviceController.restartTimer(totalSeconds)
+        serviceController.restartTimer(totalSeconds, language.value)
+    }
+
+    fun dismissAchievementCelebration() {
+        _newlyUnlockedAchievements.value = emptyList()
+    }
+
+    fun completeOnboarding(level: FitnessLevel, selectedExercises: List<Exercise>) {
+        viewModelScope.launch {
+            try {
+                repository.setTimerHours(level.hours)
+                repository.setTimerMinutes(level.minutes)
+                repository.setRepsMin(level.reps)
+                repository.setRepsMax(level.reps)
+                repository.setRepsLinked(true)
+                repository.setExercises(selectedExercises)
+                repository.setOnboardingCompleted(true)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to complete onboarding", e)
+            }
+        }
+    }
+
+    fun setTrackingEnabled(value: Boolean) {
+        viewModelScope.launch {
+            try {
+                statsRepository.setTrackingEnabled(value)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set tracking enabled", e)
+            }
+        }
+    }
+
+    fun resetStats() {
+        viewModelScope.launch {
+            try {
+                statsRepository.resetAllStats()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to reset stats", e)
+            }
+        }
     }
 }

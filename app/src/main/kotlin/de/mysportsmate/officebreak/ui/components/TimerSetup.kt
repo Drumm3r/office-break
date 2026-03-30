@@ -120,32 +120,27 @@ fun TimerSetup(
             onValueChange = onRepsMinChange,
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            SliderRow(
-                label = stringResource(R.string.reps_max_label),
-                value = if (repsLinked) repsMin else repsMax,
-                range = 1f..50f,
-                onValueChange = onRepsMaxChange,
-                enabled = !repsLinked,
-                modifier = Modifier.weight(1f),
-            )
-
-            IconButton(
-                onClick = { onRepsLinkedChange(!repsLinked) },
-                modifier = Modifier.size(48.dp),
-            ) {
-                Icon(
-                    imageVector = if (repsLinked) Icons.Outlined.Link else Icons.Outlined.LinkOff,
-                    contentDescription = stringResource(R.string.reps_link_description),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            }
-        }
+        SliderRow(
+            label = stringResource(R.string.reps_max_label),
+            value = if (repsLinked) repsMin else repsMax,
+            range = 1f..50f,
+            onValueChange = onRepsMaxChange,
+            enabled = !repsLinked,
+            trailingLabelContent = {
+                IconButton(
+                    onClick = { onRepsLinkedChange(!repsLinked) },
+                    modifier = Modifier.size(24.dp),
+                ) {
+                    Icon(
+                        imageVector = if (repsLinked) Icons.Outlined.Link else Icons.Outlined.LinkOff,
+                        contentDescription = stringResource(R.string.reps_link_description),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            },
+        )
     }
 }
 
@@ -215,7 +210,7 @@ private fun TimeInputDialog(
                     onConfirm(h, m)
                 },
             ) {
-                Text("OK")
+                Text(stringResource(R.string.dialog_confirm_ok))
             }
         },
         dismissButton = {
@@ -234,6 +229,7 @@ private fun SliderRow(
     onValueChange: (Int) -> Unit,
     enabled: Boolean = true,
     modifier: Modifier = Modifier,
+    trailingLabelContent: (@Composable () -> Unit)? = null,
 ) {
     Column(
         modifier = modifier
@@ -242,15 +238,20 @@ private fun SliderRow(
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.titleMedium,
             )
+            if (trailingLabelContent != null) {
+                Spacer(modifier = Modifier.width(8.dp))
+                trailingLabelContent()
+            }
+            Spacer(modifier = Modifier.weight(1f))
             Text(
                 text = "$value",
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
             )
         }

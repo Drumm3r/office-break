@@ -1,10 +1,10 @@
 package de.mysportsmate.officebreak
 
 import android.Manifest
+import android.app.Activity
+import android.app.KeyguardManager
 import android.content.Context
 import android.content.pm.PackageManager
-import android.content.res.Configuration
-import android.app.KeyguardManager
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
@@ -13,25 +13,32 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import de.mysportsmate.officebreak.data.SettingsRepository
+import de.mysportsmate.officebreak.locale.LocaleHelper
 import de.mysportsmate.officebreak.ui.TimerViewModel
+import de.mysportsmate.officebreak.ui.screen.OnboardingScreen
 import de.mysportsmate.officebreak.ui.screen.TimerScreen
 import de.mysportsmate.officebreak.ui.theme.OfficeBreakTheme
-import java.util.Locale
 
 class MainActivity : ComponentActivity() {
+
+    private var currentLanguage: String? = null
 
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { /* No action needed */ }
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LocaleHelper.applyLocaleToContext(newBase))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,16 +50,30 @@ class MainActivity : ComponentActivity() {
             val viewModel: TimerViewModel = viewModel()
             val language by viewModel.language.collectAsState()
             val themeMode by viewModel.themeMode.collectAsState()
+            val onboardingCompleted by viewModel.onboardingCompleted.collectAsState()
+            val exercises by viewModel.exercises.collectAsState()
 
-            LocaleWrapper(language = language) {
-                OfficeBreakTheme(
-                    darkTheme = when (themeMode) {
-                        SettingsRepository.THEME_DARK -> true
-                        SettingsRepository.THEME_LIGHT -> false
-                        else -> isSystemInDarkTheme()
-                    },
-                ) {
-                    TimerScreen(viewModel = viewModel)
+            LaunchedEffect(language) {
+                if (currentLanguage != null && currentLanguage != language) {
+                    (this@MainActivity as? Activity)?.recreate()
+                }
+                currentLanguage = language
+            }
+
+            OfficeBreakTheme(
+                darkTheme = when (themeMode) {
+                    SettingsRepository.THEME_DARK -> true
+                    SettingsRepository.THEME_LIGHT -> false
+                    else -> isSystemInDarkTheme()
+                },
+            ) {
+                when (onboardingCompleted) {
+                    null -> Box(Modifier.fillMaxSize())
+                    true -> TimerScreen(viewModel = viewModel)
+                    false -> OnboardingScreen(
+                        exercises = exercises,
+                        onComplete = viewModel::completeOnboarding,
+                    )
                 }
             }
         }
@@ -84,32 +105,5 @@ class MainActivity : ComponentActivity() {
                 notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
-    }
-}
-
-@Composable
-private fun LocaleWrapper(
-    language: String,
-    content: @Composable () -> Unit,
-) {
-    val context = LocalContext.current
-
-    if (language == SettingsRepository.LANGUAGE_SYSTEM) {
-        content()
-
-        return
-    }
-
-    val locale = Locale.forLanguageTag(language)
-    val config = Configuration(context.resources.configuration).apply {
-        setLocale(locale)
-    }
-    val localizedContext = context.createConfigurationContext(config)
-
-    CompositionLocalProvider(
-        LocalContext provides localizedContext,
-        LocalConfiguration provides config,
-    ) {
-        content()
     }
 }

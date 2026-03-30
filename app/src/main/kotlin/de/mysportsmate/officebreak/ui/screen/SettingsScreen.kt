@@ -19,6 +19,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -28,6 +30,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -36,27 +39,43 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.mysportsmate.officebreak.R
 import de.mysportsmate.officebreak.data.SettingsRepository
+import de.mysportsmate.officebreak.ui.components.ConfirmResetStatsDialog
 import kotlin.math.roundToInt
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     language: String,
-    soundEnabled: Boolean,
+    beepVolume: Int,
     vibrationEnabled: Boolean,
     themeMode: String,
     keepScreenOn: Boolean,
     autoRestart: Boolean,
     beepCount: Int,
+    trackingEnabled: Boolean,
     onLanguageChange: (String) -> Unit,
-    onSoundEnabledChange: (Boolean) -> Unit,
+    onBeepVolumeChange: (Int) -> Unit,
+    onBeepVolumePreview: (Int) -> Unit,
     onVibrationEnabledChange: (Boolean) -> Unit,
     onThemeModeChange: (String) -> Unit,
     onKeepScreenOnChange: (Boolean) -> Unit,
     onAutoRestartChange: (Boolean) -> Unit,
     onBeepCountChange: (Int) -> Unit,
+    onTrackingEnabledChange: (Boolean) -> Unit,
+    onResetStats: () -> Unit,
     onBack: () -> Unit,
 ) {
+    var showResetStatsDialog by rememberSaveable { mutableStateOf(false) }
+
+    if (showResetStatsDialog) {
+        ConfirmResetStatsDialog(
+            onConfirm = {
+                showResetStatsDialog = false
+                onResetStats()
+            },
+            onDismiss = { showResetStatsDialog = false },
+        )
+    }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -137,10 +156,10 @@ fun SettingsScreen(
                 modifier = Modifier.padding(bottom = 8.dp),
             )
 
-            SettingsToggleRow(
-                label = stringResource(R.string.settings_sound),
-                checked = soundEnabled,
-                onCheckedChange = onSoundEnabledChange,
+            BeepVolumeSlider(
+                beepVolume = beepVolume,
+                onBeepVolumeChange = onBeepVolumeChange,
+                onBeepVolumePreview = onBeepVolumePreview,
             )
 
             SettingsToggleRow(
@@ -151,9 +170,42 @@ fun SettingsScreen(
 
             BeepCountSlider(
                 beepCount = beepCount,
-                enabled = soundEnabled,
+                enabled = beepVolume > 0,
                 onBeepCountChange = onBeepCountChange,
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = stringResource(R.string.settings_statistics),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+
+            SettingsToggleRow(
+                label = stringResource(R.string.settings_tracking_enabled),
+                checked = trackingEnabled,
+                onCheckedChange = onTrackingEnabledChange,
+            )
+
+            Text(
+                text = stringResource(R.string.settings_tracking_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+
+            OutlinedButton(
+                onClick = { showResetStatsDialog = true },
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error,
+                ),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(text = stringResource(R.string.settings_reset_stats))
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
         }
@@ -253,6 +305,49 @@ private fun ThemeDropdown(
                     },
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun BeepVolumeSlider(
+    beepVolume: Int,
+    onBeepVolumeChange: (Int) -> Unit,
+    onBeepVolumePreview: (Int) -> Unit,
+) {
+    var sliderValue by remember(beepVolume) { mutableStateOf(beepVolume.toFloat()) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.settings_beep_volume),
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Slider(
+                value = sliderValue,
+                onValueChange = {
+                    sliderValue = it
+                    onBeepVolumeChange(it.roundToInt())
+                },
+                onValueChangeFinished = {
+                    onBeepVolumePreview(sliderValue.roundToInt())
+                },
+                valueRange = 0f..100f,
+                steps = 19,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = "${sliderValue.roundToInt()}%",
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(start = 8.dp),
+            )
         }
     }
 }

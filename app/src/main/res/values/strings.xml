@@ -41,7 +41,7 @@
     <string name="settings_keep_screen_on">Keep screen on</string>
     <string name="settings_auto_restart">Auto-restart timer</string>
     <string name="settings_notifications">Notifications</string>
-    <string name="settings_sound">Sound</string>
+    <string name="settings_beep_volume">Beep volume</string>
     <string name="settings_vibration">Vibration</string>
     <string name="settings_beep_count">Number of beeps</string>
 
@@ -56,4 +56,150 @@
     <string name="exercise_lunges">Lunges</string>
     <string name="exercise_sit_ups">Sit Ups</string>
     <string name="exercise_superman_angels">Superman Angels</string>
+
+    <string name="dialog_confirm_ok">OK</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_welcome">Welcome to Office Break!</string>
+    <string name="onboarding_fitness_question">How fit are you?</string>
+    <string name="onboarding_level_beginner">Beginner</string>
+    <string name="onboarding_level_beginner_desc">Longer breaks, fewer reps\n1h interval, 5 reps</string>
+    <string name="onboarding_level_moderate">Moderate</string>
+    <string name="onboarding_level_moderate_desc">Balanced workout breaks\n45min interval, 10 reps</string>
+    <string name="onboarding_level_athletic">Athletic</string>
+    <string name="onboarding_level_athletic_desc">Shorter intervals, more reps\n30min interval, 15 reps</string>
+    <string name="onboarding_exercises_title">Choose your exercises</string>
+    <string name="onboarding_exercises_subtitle">You can change these later in settings</string>
+    <string name="onboarding_summary_title">You\'re all set!</string>
+    <string name="onboarding_summary_interval">Break every %1$s</string>
+    <string name="onboarding_summary_reps">%d reps per exercise</string>
+    <string name="onboarding_summary_exercises">%d exercises selected</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_back">Back</string>
+    <string name="onboarding_start">Let\'s go!</string>
+
+    <!-- Statistics -->
+    <string name="stats_title">Statistics</string>
+    <string name="stats_overview">Overview</string>
+    <string name="stats_total_breaks">Total breaks</string>
+    <string name="stats_total_reps">Total reps</string>
+    <string name="stats_current_streak">Current streak</string>
+    <string name="stats_longest_streak">Longest streak</string>
+    <string name="stats_days">%d days</string>
+    <string name="stats_this_week">This Week</string>
+    <string name="stats_breaks_this_week">Breaks this week</string>
+    <string name="stats_average_per_day">Average per day</string>
+    <string name="stats_favorite_exercise">Favorite Exercise</string>
+    <string name="stats_times_format">%d times</string>
+    <string name="stats_exercise_distribution">Exercise Distribution</string>
+    <string name="stats_exercise_detail">%1$d times / %2$d reps</string>
+    <string name="stats_recent_activity">Recent Activity</string>
+    <string name="stats_breaks_count">%d breaks</string>
+    <string name="stats_no_data">No data yet. Complete your first break!</string>
+
+    <!-- Statistics Settings -->
+    <string name="settings_statistics">Statistics</string>
+    <string name="settings_tracking_enabled">Save statistics locally</string>
+    <string name="settings_tracking_hint">All data stays on your device</string>
+    <string name="settings_reset_stats">Reset statistics</string>
+    <string name="reset_stats_confirm_title">Reset statistics?</string>
+    <string name="reset_stats_confirm_message">All statistics and achievements will be permanently deleted.</string>
+    <string name="reset_stats_confirm_yes">Reset</string>
+
+    <!-- Achievements -->
+    <string name="achievements_title">Achievements</string>
+    <string name="achievements_title_with_count">Achievements (%1$d/%2$d)</string>
+    <string name="achievement_unlocked">Achievement Unlocked!</string>
+    <string name="achievement_awesome">Awesome!</string>
+
+    <!-- Achievement Categories -->
+    <string name="achievement_category_breaks">Break Milestones</string>
+    <string name="achievement_category_streaks">Streak Milestones</string>
+    <string name="achievement_category_reps">Rep Milestones</string>
+    <string name="achievement_category_variety">Variety</string>
+    <string name="achievement_category_daily">Daily Challenges</string>
+    <string name="achievement_category_fun">Fun &amp; Seasonal</string>
+    <string name="achievement_category_mastery">Exercise Mastery</string>
+
+    <!-- Break Milestones -->
+    <string name="achievement_breaks_1_title">First Step</string>
+    <string name="achievement_breaks_1_desc">Complete your first break</string>
+    <string name="achievement_breaks_10_title">Getting Started</string>
+    <string name="achievement_breaks_10_desc">Complete 10 breaks</string>
+    <string name="achievement_breaks_25_title">Warming Up</string>
+    <string name="achievement_breaks_25_desc">Complete 25 breaks</string>
+    <string name="achievement_breaks_50_title">Half Century</string>
+    <string name="achievement_breaks_50_desc">Complete 50 breaks</string>
+    <string name="achievement_breaks_100_title">Century</string>
+    <string name="achievement_breaks_100_desc">Complete 100 breaks</string>
+    <string name="achievement_breaks_500_title">Break Machine</string>
+    <string name="achievement_breaks_500_desc">Complete 500 breaks</string>
+    <string name="achievement_breaks_1000_title">Legendary</string>
+    <string name="achievement_breaks_1000_desc">Complete 1000 breaks</string>
+
+    <!-- Streak Milestones -->
+    <string name="achievement_streak_3_title">On a Roll</string>
+    <string name="achievement_streak_3_desc">3 days in a row</string>
+    <string name="achievement_streak_7_title">Full Week</string>
+    <string name="achievement_streak_7_desc">7 days in a row</string>
+    <string name="achievement_streak_14_title">Fortnight</string>
+    <string name="achievement_streak_14_desc">14 days in a row</string>
+    <string name="achievement_streak_30_title">Monthly Dedication</string>
+    <string name="achievement_streak_30_desc">30 days in a row</string>
+    <string name="achievement_streak_60_title">Iron Will</string>
+    <string name="achievement_streak_60_desc">60 days in a row</string>
+    <string name="achievement_streak_100_title">Century Streak</string>
+    <string name="achievement_streak_100_desc">100 days in a row</string>
+    <string name="achievement_streak_365_title">Year-Round</string>
+    <string name="achievement_streak_365_desc">365 days in a row</string>
+
+    <!-- Rep Milestones -->
+    <string name="achievement_reps_100_title">First Hundred</string>
+    <string name="achievement_reps_100_desc">Complete 100 total reps</string>
+    <string name="achievement_reps_1000_title">Rep Machine</string>
+    <string name="achievement_reps_1000_desc">Complete 1,000 total reps</string>
+    <string name="achievement_reps_5000_title">Five Thousand Club</string>
+    <string name="achievement_reps_5000_desc">Complete 5,000 total reps</string>
+    <string name="achievement_reps_10000_title">Ten Thousand</string>
+    <string name="achievement_reps_10000_desc">Complete 10,000 total reps</string>
+
+    <!-- Variety -->
+    <string name="achievement_all_rounder_title">All-Rounder</string>
+    <string name="achievement_all_rounder_desc">Use at least 3 different exercises</string>
+    <string name="achievement_daily_mix_title">Daily Mix</string>
+    <string name="achievement_daily_mix_desc">Do 3 different exercises in one day</string>
+    <string name="achievement_full_rotation_title">Full Rotation</string>
+    <string name="achievement_full_rotation_desc">Use at least 6 different exercises</string>
+    <string name="achievement_custom_creator_title">Custom Creator</string>
+    <string name="achievement_custom_creator_desc">Add your first custom exercise</string>
+
+    <!-- Daily Challenges -->
+    <string name="achievement_daily_3_title">Triple Threat</string>
+    <string name="achievement_daily_3_desc">3 breaks in one day</string>
+    <string name="achievement_daily_5_title">High Five</string>
+    <string name="achievement_daily_5_desc">5 breaks in one day</string>
+    <string name="achievement_daily_10_title">Power Ten</string>
+    <string name="achievement_daily_10_desc">10 breaks in one day</string>
+    <string name="achievement_early_bird_title">Early Bird</string>
+    <string name="achievement_early_bird_desc">Complete a break before 8 AM</string>
+    <string name="achievement_night_owl_title">Night Owl</string>
+    <string name="achievement_night_owl_desc">Complete a break after 8 PM</string>
+    <string name="achievement_lunch_hero_title">Lunch Break Hero</string>
+    <string name="achievement_lunch_hero_desc">Complete a break between 12 and 1 PM</string>
+
+    <!-- Fun &amp; Seasonal -->
+    <string name="achievement_new_year_title">New Year, New Me</string>
+    <string name="achievement_new_year_desc">First break of the year on January 1st</string>
+    <string name="achievement_weekend_warrior_title">Weekend Warrior</string>
+    <string name="achievement_weekend_warrior_desc">Complete a break on a weekend</string>
+    <string name="achievement_comeback_title">Comeback</string>
+    <string name="achievement_comeback_desc">Return after 7 or more days of inactivity</string>
+
+    <!-- Exercise Mastery -->
+    <string name="achievement_mastery_10_title">Apprentice</string>
+    <string name="achievement_mastery_10_desc">Do any exercise 10 times</string>
+    <string name="achievement_mastery_50_title">Regular</string>
+    <string name="achievement_mastery_50_desc">Do any exercise 50 times</string>
+    <string name="achievement_mastery_100_title">Master</string>
+    <string name="achievement_mastery_100_desc">Do any exercise 100 times</string>
 </resources>

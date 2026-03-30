@@ -6,7 +6,9 @@ import app.cash.turbine.test
 import de.mysportsmate.officebreak.MainDispatcherRule
 import de.mysportsmate.officebreak.data.Exercise
 import de.mysportsmate.officebreak.data.FakeDataStore
+import de.mysportsmate.officebreak.data.FitnessLevel
 import de.mysportsmate.officebreak.data.SettingsRepository
+import de.mysportsmate.officebreak.data.StatsRepository
 import de.mysportsmate.officebreak.service.TimerState
 import de.mysportsmate.officebreak.service.TimerStateHolder
 import io.mockk.mockk
@@ -33,14 +35,16 @@ class TimerViewModelTest {
     private lateinit var application: Application
     private lateinit var savedStateHandle: SavedStateHandle
     private lateinit var dataStore: FakeDataStore
+    private lateinit var statsDataStore: FakeDataStore
     private lateinit var repository: SettingsRepository
+    private lateinit var statsRepository: StatsRepository
     private lateinit var timerStateHolder: TimerStateHolder
     private lateinit var serviceController: FakeTimerServiceController
     private lateinit var viewModel: TimerViewModel
 
     private val defaultExercises = listOf(
-        Exercise(name = "Push Ups"),
-        Exercise(name = "Squats"),
+        Exercise(name = "Push Ups", nameResKey = "exercise_push_ups"),
+        Exercise(name = "Squats", nameResKey = "exercise_squats"),
     )
 
     @Before
@@ -48,16 +52,19 @@ class TimerViewModelTest {
         application = mockk(relaxed = true)
         savedStateHandle = SavedStateHandle()
         dataStore = FakeDataStore()
+        statsDataStore = FakeDataStore()
         repository = SettingsRepository(
             dataStore = dataStore,
             defaultExercises = defaultExercises,
         )
+        statsRepository = StatsRepository(dataStore = statsDataStore)
         timerStateHolder = TimerStateHolder()
         serviceController = FakeTimerServiceController()
         viewModel = TimerViewModel(
             application = application,
             savedStateHandle = savedStateHandle,
             repository = repository,
+            statsRepository = statsRepository,
             timerStateHolder = timerStateHolder,
             serviceController = serviceController,
         )
@@ -540,6 +547,81 @@ class TimerViewModelTest {
     }
 
     @Test
+    fun `onboardingCompleted emits null then false for fresh install`() = runTest {
+        viewModel.onboardingCompleted.test {
+            val first = awaitItem()
+            if (first == null) {
+                assertEquals(false, awaitItem())
+            } else {
+                assertEquals(false, first)
+            }
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `completeOnboarding applies fitness level presets`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        val onboardingCollector = launch { viewModel.onboardingCompleted.collect {} }
+        advanceUntilIdle()
+
+        val selectedExercises = listOf(
+            Exercise(name = "Push Ups", isEnabled = true, nameResKey = "exercise_push_ups"),
+            Exercise(name = "Squats", isEnabled = false, nameResKey = "exercise_squats"),
+        )
+
+        viewModel.completeOnboarding(FitnessLevel.MODERATE, selectedExercises)
+        advanceUntilIdle()
+
+        assertEquals(0, viewModel.hours.value)
+        assertEquals(45, viewModel.minutes.value)
+        assertEquals(10, viewModel.repsMin.value)
+        assertEquals(10, viewModel.repsMax.value)
+        assertEquals(true, viewModel.repsLinked.value)
+        assertEquals(selectedExercises, viewModel.exercises.value)
+        assertEquals(true, viewModel.onboardingCompleted.value)
+
+        onboardingCollector.cancel()
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `completeOnboarding applies beginner presets`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        val onboardingCollector = launch { viewModel.onboardingCompleted.collect {} }
+        advanceUntilIdle()
+
+        viewModel.completeOnboarding(FitnessLevel.BEGINNER, defaultExercises)
+        advanceUntilIdle()
+
+        assertEquals(1, viewModel.hours.value)
+        assertEquals(0, viewModel.minutes.value)
+        assertEquals(5, viewModel.repsMin.value)
+        assertEquals(5, viewModel.repsMax.value)
+
+        onboardingCollector.cancel()
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `completeOnboarding applies athletic presets`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        val onboardingCollector = launch { viewModel.onboardingCompleted.collect {} }
+        advanceUntilIdle()
+
+        viewModel.completeOnboarding(FitnessLevel.ATHLETIC, defaultExercises)
+        advanceUntilIdle()
+
+        assertEquals(0, viewModel.hours.value)
+        assertEquals(30, viewModel.minutes.value)
+        assertEquals(15, viewModel.repsMin.value)
+        assertEquals(15, viewModel.repsMax.value)
+
+        onboardingCollector.cancel()
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
     fun `currentExercise survives SavedStateHandle roundtrip`() {
         val exercise = Exercise(name = "Push Ups", isEnabled = true)
         val json = Json { ignoreUnknownKeys = true }
@@ -550,6 +632,7 @@ class TimerViewModelTest {
             application = application,
             savedStateHandle = restoredHandle,
             repository = repository,
+            statsRepository = statsRepository,
             timerStateHolder = timerStateHolder,
             serviceController = serviceController,
         )

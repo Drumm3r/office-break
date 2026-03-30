@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="timer_start">Starten</string>
+    <string name="timer_reset">Zurücksetzen</string>
     <string name="notification_channel_description">Countdown-Timer für Bewegungspausen</string>
     <string name="notification_channel_alert_name">Pausen-Alarm</string>
     <string name="notification_channel_alert_description">Benachrichtigung wenn es Zeit für eine Pause ist</string>
@@ -36,7 +38,7 @@
     <string name="settings_keep_screen_on">Bildschirm anlassen</string>
     <string name="settings_auto_restart">Timer automatisch neustarten</string>
     <string name="settings_notifications">Benachrichtigungen</string>
-    <string name="settings_sound">Ton</string>
+    <string name="settings_beep_volume">Signalton-Lautstärke</string>
     <string name="settings_vibration">Vibration</string>
     <string name="settings_beep_count">Anzahl der Signaltöne</string>
 
@@ -51,4 +53,150 @@
     <string name="exercise_lunges">Ausfallschritt</string>
     <string name="exercise_sit_ups">Sit Ups</string>
     <string name="exercise_superman_angels">Superman Angels</string>
+
+    <string name="dialog_confirm_ok">OK</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_welcome">Willkommen bei Office Break!</string>
+    <string name="onboarding_fitness_question">Wie fit bist du?</string>
+    <string name="onboarding_level_beginner">Anfänger</string>
+    <string name="onboarding_level_beginner_desc">Längere Pausen, weniger Wiederholungen\n1h Intervall, 5 Wdh.</string>
+    <string name="onboarding_level_moderate">Moderat</string>
+    <string name="onboarding_level_moderate_desc">Ausgewogene Bewegungspausen\n45min Intervall, 10 Wdh.</string>
+    <string name="onboarding_level_athletic">Sportlich</string>
+    <string name="onboarding_level_athletic_desc">Kürzere Intervalle, mehr Wiederholungen\n30min Intervall, 15 Wdh.</string>
+    <string name="onboarding_exercises_title">Wähle deine Übungen</string>
+    <string name="onboarding_exercises_subtitle">Du kannst das später in den Einstellungen ändern</string>
+    <string name="onboarding_summary_title">Alles bereit!</string>
+    <string name="onboarding_summary_interval">Pause alle %1$s</string>
+    <string name="onboarding_summary_reps">%d Wiederholungen pro Übung</string>
+    <string name="onboarding_summary_exercises">%d Übungen ausgewählt</string>
+    <string name="onboarding_next">Weiter</string>
+    <string name="onboarding_back">Zurück</string>
+    <string name="onboarding_start">Los geht\'s!</string>
+
+    <!-- Statistics -->
+    <string name="stats_title">Statistiken</string>
+    <string name="stats_overview">Übersicht</string>
+    <string name="stats_total_breaks">Pausen gesamt</string>
+    <string name="stats_total_reps">Wiederholungen gesamt</string>
+    <string name="stats_current_streak">Aktuelle Serie</string>
+    <string name="stats_longest_streak">Längste Serie</string>
+    <string name="stats_days">%d Tage</string>
+    <string name="stats_this_week">Diese Woche</string>
+    <string name="stats_breaks_this_week">Pausen diese Woche</string>
+    <string name="stats_average_per_day">Durchschnitt pro Tag</string>
+    <string name="stats_favorite_exercise">Lieblingsübung</string>
+    <string name="stats_times_format">%d mal</string>
+    <string name="stats_exercise_distribution">Übungsverteilung</string>
+    <string name="stats_exercise_detail">%1$d mal / %2$d Wdh.</string>
+    <string name="stats_recent_activity">Letzte Aktivität</string>
+    <string name="stats_breaks_count">%d Pausen</string>
+    <string name="stats_no_data">Noch keine Daten. Schließe deine erste Pause ab!</string>
+
+    <!-- Statistics Settings -->
+    <string name="settings_statistics">Statistiken</string>
+    <string name="settings_tracking_enabled">Statistiken lokal speichern</string>
+    <string name="settings_tracking_hint">Alle Daten bleiben auf deinem Gerät</string>
+    <string name="settings_reset_stats">Statistiken zurücksetzen</string>
+    <string name="reset_stats_confirm_title">Statistiken zurücksetzen?</string>
+    <string name="reset_stats_confirm_message">Alle Statistiken und Erfolge werden unwiderruflich gelöscht.</string>
+    <string name="reset_stats_confirm_yes">Zurücksetzen</string>
+
+    <!-- Achievements -->
+    <string name="achievements_title">Erfolge</string>
+    <string name="achievements_title_with_count">Erfolge (%1$d/%2$d)</string>
+    <string name="achievement_unlocked">Erfolg freigeschaltet!</string>
+    <string name="achievement_awesome">Super!</string>
+
+    <!-- Achievement Categories -->
+    <string name="achievement_category_breaks">Pausen-Meilensteine</string>
+    <string name="achievement_category_streaks">Serien-Meilensteine</string>
+    <string name="achievement_category_reps">Wiederholungs-Meilensteine</string>
+    <string name="achievement_category_variety">Vielfalt</string>
+    <string name="achievement_category_daily">Tages-Herausforderungen</string>
+    <string name="achievement_category_fun">Spaß &amp; Saisonales</string>
+    <string name="achievement_category_mastery">Übungsmeisterschaft</string>
+
+    <!-- Break Milestones -->
+    <string name="achievement_breaks_1_title">Erster Schritt</string>
+    <string name="achievement_breaks_1_desc">Schließe deine erste Pause ab</string>
+    <string name="achievement_breaks_10_title">Gut dabei</string>
+    <string name="achievement_breaks_10_desc">Schließe 10 Pausen ab</string>
+    <string name="achievement_breaks_25_title">Aufgewärmt</string>
+    <string name="achievement_breaks_25_desc">Schließe 25 Pausen ab</string>
+    <string name="achievement_breaks_50_title">Halbes Hundert</string>
+    <string name="achievement_breaks_50_desc">Schließe 50 Pausen ab</string>
+    <string name="achievement_breaks_100_title">Hundert</string>
+    <string name="achievement_breaks_100_desc">Schließe 100 Pausen ab</string>
+    <string name="achievement_breaks_500_title">Pausen-Maschine</string>
+    <string name="achievement_breaks_500_desc">Schließe 500 Pausen ab</string>
+    <string name="achievement_breaks_1000_title">Legendär</string>
+    <string name="achievement_breaks_1000_desc">Schließe 1000 Pausen ab</string>
+
+    <!-- Streak Milestones -->
+    <string name="achievement_streak_3_title">In Fahrt</string>
+    <string name="achievement_streak_3_desc">3 Tage am Stück</string>
+    <string name="achievement_streak_7_title">Volle Woche</string>
+    <string name="achievement_streak_7_desc">7 Tage am Stück</string>
+    <string name="achievement_streak_14_title">Zwei Wochen</string>
+    <string name="achievement_streak_14_desc">14 Tage am Stück</string>
+    <string name="achievement_streak_30_title">Monatliche Hingabe</string>
+    <string name="achievement_streak_30_desc">30 Tage am Stück</string>
+    <string name="achievement_streak_60_title">Eiserner Wille</string>
+    <string name="achievement_streak_60_desc">60 Tage am Stück</string>
+    <string name="achievement_streak_100_title">Hundert-Tage-Serie</string>
+    <string name="achievement_streak_100_desc">100 Tage am Stück</string>
+    <string name="achievement_streak_365_title">Das ganze Jahr</string>
+    <string name="achievement_streak_365_desc">365 Tage am Stück</string>
+
+    <!-- Rep Milestones -->
+    <string name="achievement_reps_100_title">Erstes Hundert</string>
+    <string name="achievement_reps_100_desc">Insgesamt 100 Wiederholungen</string>
+    <string name="achievement_reps_1000_title">Wiederholungs-Maschine</string>
+    <string name="achievement_reps_1000_desc">Insgesamt 1.000 Wiederholungen</string>
+    <string name="achievement_reps_5000_title">Fünftausend-Club</string>
+    <string name="achievement_reps_5000_desc">Insgesamt 5.000 Wiederholungen</string>
+    <string name="achievement_reps_10000_title">Zehntausend</string>
+    <string name="achievement_reps_10000_desc">Insgesamt 10.000 Wiederholungen</string>
+
+    <!-- Variety -->
+    <string name="achievement_all_rounder_title">Allrounder</string>
+    <string name="achievement_all_rounder_desc">Nutze mindestens 3 verschiedene Übungen</string>
+    <string name="achievement_daily_mix_title">Tagesmix</string>
+    <string name="achievement_daily_mix_desc">Mache 3 verschiedene Übungen an einem Tag</string>
+    <string name="achievement_full_rotation_title">Volle Rotation</string>
+    <string name="achievement_full_rotation_desc">Nutze mindestens 6 verschiedene Übungen</string>
+    <string name="achievement_custom_creator_title">Eigene Übung</string>
+    <string name="achievement_custom_creator_desc">Füge deine erste eigene Übung hinzu</string>
+
+    <!-- Daily Challenges -->
+    <string name="achievement_daily_3_title">Dreifach-Bedrohung</string>
+    <string name="achievement_daily_3_desc">3 Pausen an einem Tag</string>
+    <string name="achievement_daily_5_title">High Five</string>
+    <string name="achievement_daily_5_desc">5 Pausen an einem Tag</string>
+    <string name="achievement_daily_10_title">Power Ten</string>
+    <string name="achievement_daily_10_desc">10 Pausen an einem Tag</string>
+    <string name="achievement_early_bird_title">Frühaufsteher</string>
+    <string name="achievement_early_bird_desc">Schließe eine Pause vor 8 Uhr ab</string>
+    <string name="achievement_night_owl_title">Nachteule</string>
+    <string name="achievement_night_owl_desc">Schließe eine Pause nach 20 Uhr ab</string>
+    <string name="achievement_lunch_hero_title">Mittagspausen-Held</string>
+    <string name="achievement_lunch_hero_desc">Schließe eine Pause zwischen 12 und 13 Uhr ab</string>
+
+    <!-- Fun &amp; Seasonal -->
+    <string name="achievement_new_year_title">Neues Jahr, neues Ich</string>
+    <string name="achievement_new_year_desc">Erste Pause des Jahres am 1. Januar</string>
+    <string name="achievement_weekend_warrior_title">Wochenend-Krieger</string>
+    <string name="achievement_weekend_warrior_desc">Schließe eine Pause am Wochenende ab</string>
+    <string name="achievement_comeback_title">Comeback</string>
+    <string name="achievement_comeback_desc">Rückkehr nach 7 oder mehr Tagen Inaktivität</string>
+
+    <!-- Exercise Mastery -->
+    <string name="achievement_mastery_10_title">Lehrling</string>
+    <string name="achievement_mastery_10_desc">Mache eine Übung 10 mal</string>
+    <string name="achievement_mastery_50_title">Fortgeschritten</string>
+    <string name="achievement_mastery_50_desc">Mache eine Übung 50 mal</string>
+    <string name="achievement_mastery_100_title">Meister</string>
+    <string name="achievement_mastery_100_desc">Mache eine Übung 100 mal</string>
 </resources>
