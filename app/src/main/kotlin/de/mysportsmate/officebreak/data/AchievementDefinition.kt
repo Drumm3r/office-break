@@ -13,8 +13,8 @@ enum class AchievementCategory {
 data class AchievementDefinition(
     val id: String,
     val category: AchievementCategory,
-    val titleResKey: String,
-    val descriptionResKey: String,
+    val titleResId: Int,
+    val descriptionResId: Int,
     val iconName: String,
     val condition: (StatsSnapshot, BreakContext) -> Boolean,
     val progressExtractor: ((StatsSnapshot) -> Pair<Int, Int>)? = null,

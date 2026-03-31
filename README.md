@@ -40,7 +40,7 @@ Exercises can be customized in the app via the settings screen.
 
 ## Tech Stack
 
-- Kotlin 2.1
+- Kotlin 2.2
 - Jetpack Compose + Material 3
 - Jetpack DataStore (Preferences)
 - kotlinx.serialization
