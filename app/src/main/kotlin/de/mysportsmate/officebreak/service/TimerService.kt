@@ -15,9 +15,17 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.core.app.NotificationCompat
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import de.mysportsmate.officebreak.MainActivity
 import de.mysportsmate.officebreak.OfficeBreakApp
 import de.mysportsmate.officebreak.R
+import de.mysportsmate.officebreak.data.SettingsRepository
+import de.mysportsmate.officebreak.data.dataStore
+import de.mysportsmate.officebreak.locale.LocaleHelper
+import de.mysportsmate.officebreak.widget.WidgetUpdater
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -27,9 +35,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
-import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.intPreferencesKey
-import de.mysportsmate.officebreak.data.dataStore
 
 sealed interface TimerState {
     data object Idle : TimerState
@@ -45,10 +50,14 @@ class TimerService : Service() {
     private var alarmTrack: AudioTrack? = null
     private var vibrator: Vibrator? = null
     private val timerStateHolder = TimerStateHolder.instance
+    private var localizedContext: Context = this
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val language = intent?.getStringExtra(EXTRA_LANGUAGE) ?: SettingsRepository.LANGUAGE_SYSTEM
+        localizedContext = LocaleHelper.createLocalizedContext(this, language)
+
         when (intent?.action) {
             ACTION_START -> {
                 val totalSeconds = intent.getLongExtra(EXTRA_DURATION_SECONDS, 0L)
@@ -80,7 +89,7 @@ class TimerService : Service() {
         manager.cancel(EXPIRED_NOTIFICATION_ID)
         acquireWakeLock(totalSeconds)
 
-        startForeground(NOTIFICATION_ID, buildNotification(getString(R.string.notification_text_running, formatTime(totalSeconds))))
+        startForeground(NOTIFICATION_ID, buildNotification(localizedContext.getString(R.string.notification_text_running, formatTime(totalSeconds))))
         timerStateHolder.update(TimerState.Running(
             remainingSeconds = totalSeconds,
             totalSeconds = totalSeconds,
@@ -88,6 +97,9 @@ class TimerService : Service() {
 
         timerJob = scope.launch {
             try {
+                writeWidgetTimerStatus("running")
+                WidgetUpdater.requestUpdate(this@TimerService)
+
                 var remaining = totalSeconds
                 while (remaining > 0) {
                     delay(1000L)
@@ -96,17 +108,19 @@ class TimerService : Service() {
                         remainingSeconds = remaining,
                         totalSeconds = totalSeconds,
                     ))
-                    updateNotification(getString(R.string.notification_text_running, formatTime(remaining)))
+                    updateNotification(localizedContext.getString(R.string.notification_text_running, formatTime(remaining)))
                 }
                 timerStateHolder.update(TimerState.Expired)
+                writeWidgetTimerStatus("expired")
+                WidgetUpdater.requestUpdate(this@TimerService)
                 wakeScreen()
-                updateNotification(getString(R.string.notification_text_expired))
+                updateNotification(localizedContext.getString(R.string.notification_text_expired))
                 showExpiredNotification()
                 val prefs = dataStore.data.first()
-                val soundOn = prefs[booleanPreferencesKey("sound_enabled")] ?: true
+                val beepVolume = prefs[intPreferencesKey("beep_volume")] ?: SettingsRepository.DEFAULT_BEEP_VOLUME
                 val vibrationOn = prefs[booleanPreferencesKey("vibration_enabled")] ?: true
                 val beepCount = prefs[intPreferencesKey("beep_count")] ?: 3
-                if (soundOn) playAlarmSound(beepCount)
+                if (beepVolume > 0) playAlarmSound(beepCount, beepVolume / 100.0)
                 if (vibrationOn) triggerVibration()
             } catch (e: CancellationException) {
                 throw e
@@ -126,8 +140,12 @@ class TimerService : Service() {
         releaseWakeLock()
         val manager = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
         manager.cancel(EXPIRED_NOTIFICATION_ID)
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
+        scope.launch {
+            writeWidgetTimerStatus("idle")
+            WidgetUpdater.requestUpdate(this@TimerService)
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+        }
     }
 
     private fun buildNotification(contentText: String): Notification {
@@ -136,12 +154,13 @@ class TimerService : Service() {
             0,
             Intent(this, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+                setPackage(packageName)
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
         return NotificationCompat.Builder(this, OfficeBreakApp.CHANNEL_ID)
-            .setContentTitle(getString(R.string.notification_title))
+            .setContentTitle(localizedContext.getString(R.string.notification_title))
             .setContentText(contentText)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(pendingIntent)
@@ -161,6 +180,7 @@ class TimerService : Service() {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                 Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
                 Intent.FLAG_ACTIVITY_SINGLE_TOP
+            setPackage(packageName)
         }
         startActivity(activityIntent)
 
@@ -172,6 +192,7 @@ class TimerService : Service() {
                     Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
                     Intent.FLAG_ACTIVITY_SINGLE_TOP
                 addFlags(Intent.FLAG_ACTIVITY_NO_USER_ACTION)
+                setPackage(packageName)
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
@@ -181,13 +202,14 @@ class TimerService : Service() {
             0,
             Intent(this, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                setPackage(packageName)
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
         val notification = NotificationCompat.Builder(this, OfficeBreakApp.ALERT_CHANNEL_ID)
-            .setContentTitle(getString(R.string.notification_title))
-            .setContentText(getString(R.string.notification_text_expired))
+            .setContentTitle(localizedContext.getString(R.string.notification_title))
+            .setContentText(localizedContext.getString(R.string.notification_text_expired))
             .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(contentIntent)
             .setFullScreenIntent(fullScreenIntent, true)
@@ -202,7 +224,7 @@ class TimerService : Service() {
         manager.notify(EXPIRED_NOTIFICATION_ID, notification)
     }
 
-    private fun playAlarmSound(beepCount: Int = 3) {
+    private fun playAlarmSound(beepCount: Int = 3, volume: Double = 0.8) {
         stopAlarmSound()
         try {
             val sampleRate = 44100
@@ -219,7 +241,7 @@ class TimerService : Service() {
             for (beep in 0 until beepCount) {
                 for (i in 0 until beepSamples) {
                     val angle = 2.0 * Math.PI * frequency * i / sampleRate
-                    samples[offset + i] = (Math.sin(angle) * Short.MAX_VALUE * 0.8).toInt().toShort()
+                    samples[offset + i] = (Math.sin(angle) * Short.MAX_VALUE * volume).toInt().toShort()
                 }
                 offset += beepSamples
                 if (beep < beepCount - 1) {
@@ -228,7 +250,7 @@ class TimerService : Service() {
             }
 
             val bufferSize = samples.size * 2
-            alarmTrack = AudioTrack.Builder()
+            val track = AudioTrack.Builder()
                 .setAudioAttributes(
                     AudioAttributes.Builder()
                         .setUsage(AudioAttributes.USAGE_ALARM)
@@ -245,10 +267,9 @@ class TimerService : Service() {
                 .setBufferSizeInBytes(bufferSize)
                 .setTransferMode(AudioTrack.MODE_STATIC)
                 .build()
-                .apply {
-                    write(samples, 0, samples.size)
-                    play()
-                }
+            alarmTrack = track
+            track.write(samples, 0, samples.size)
+            track.play()
         } catch (e: Exception) {
             android.util.Log.e("TimerService", "Failed to play beep sound", e)
         }
@@ -290,13 +311,15 @@ class TimerService : Service() {
         alarmTrack = null
     }
 
+    // Uses deprecated flags because setTurnScreenOn() is Activity-only and this is a Service.
+    // The full-screen notification intent (showExpiredNotification) is the primary screen-wake
+    // mechanism; this is a fallback for devices that don't honor full-screen intents.
     @Suppress("DEPRECATION")
     private fun wakeScreen() {
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
         val screenLock = pm.newWakeLock(
-            PowerManager.FULL_WAKE_LOCK or
-                PowerManager.ACQUIRE_CAUSES_WAKEUP or
-                PowerManager.ON_AFTER_RELEASE,
+            PowerManager.SCREEN_BRIGHT_WAKE_LOCK or
+                PowerManager.ACQUIRE_CAUSES_WAKEUP,
             "OfficeBreak::ScreenWakeLock",
         )
         screenLock.acquire(5000L)
@@ -329,11 +352,22 @@ class TimerService : Service() {
         super.onDestroy()
     }
 
+    private suspend fun writeWidgetTimerStatus(status: String) {
+        try {
+            dataStore.edit { it[KEY_WIDGET_TIMER_STATUS] = status }
+        } catch (_: Exception) {
+            // Non-critical
+        }
+    }
+
     companion object {
+        private val KEY_WIDGET_TIMER_STATUS = stringPreferencesKey("widget_timer_status")
+
         const val ACTION_START = "de.mysportsmate.officebreak.ACTION_START"
         const val ACTION_RESET = "de.mysportsmate.officebreak.ACTION_RESET"
         const val ACTION_RESTART = "de.mysportsmate.officebreak.ACTION_RESTART"
         const val EXTRA_DURATION_SECONDS = "duration_seconds"
+        const val EXTRA_LANGUAGE = "language"
         const val NOTIFICATION_ID = 1
         const val EXPIRED_NOTIFICATION_ID = 2
 

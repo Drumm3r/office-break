@@ -9,9 +9,10 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import android.util.Log
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
@@ -25,7 +26,7 @@ class SettingsRepository(
         defaultExercises = ExerciseConfig.defaultExercises(context),
     )
 
-    private val json = Json { ignoreUnknownKeys = true }
+    private val json = AppJson
 
     val timerHours: Flow<Int> = dataStore.data.map { prefs ->
         prefs[KEY_TIMER_HOURS] ?: DEFAULT_HOURS
@@ -49,14 +50,24 @@ class SettingsRepository(
 
     val exercises: Flow<List<Exercise>> = dataStore.data.map { prefs ->
         val raw = prefs[KEY_EXERCISES]
-        if (raw != null) {
+        val list = if (raw != null) {
             try {
                 json.decodeFromString<List<Exercise>>(raw)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.w("SettingsRepository", "Failed to decode exercises, using defaults", e)
                 defaultExercises
             }
         } else {
             defaultExercises
+        }
+
+        list.map { exercise ->
+            if (exercise.nameResKey == null) {
+                val key = KNOWN_DEFAULT_NAMES[exercise.name]
+                if (key != null) exercise.copy(nameResKey = key) else exercise
+            } else {
+                exercise
+            }
         }
     }
 
@@ -64,8 +75,8 @@ class SettingsRepository(
         prefs[KEY_LANGUAGE] ?: LANGUAGE_SYSTEM
     }
 
-    val soundEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
-        prefs[KEY_SOUND_ENABLED] ?: DEFAULT_SOUND_ENABLED
+    val beepVolume: Flow<Int> = dataStore.data.map { prefs ->
+        prefs[KEY_BEEP_VOLUME] ?: DEFAULT_BEEP_VOLUME
     }
 
     val vibrationEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
@@ -88,12 +99,25 @@ class SettingsRepository(
         prefs[KEY_BEEP_COUNT] ?: DEFAULT_BEEP_COUNT
     }
 
+    val dynamicIncreaseEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[KEY_DYNAMIC_INCREASE_ENABLED] ?: DEFAULT_DYNAMIC_INCREASE_ENABLED
+    }
+
+    val breaksSinceLastIncrease: Flow<Int> = dataStore.data.map { prefs ->
+        prefs[KEY_BREAKS_SINCE_LAST_INCREASE] ?: DEFAULT_BREAKS_SINCE_LAST_INCREASE
+    }
+
+    val onboardingCompleted: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[KEY_ONBOARDING_COMPLETED] ?: prefs.asMap().isNotEmpty()
+    }
+
     val usedExerciseNames: Flow<Set<String>> = dataStore.data.map { prefs ->
         val raw = prefs[KEY_USED_EXERCISE_NAMES]
         if (raw != null) {
             try {
                 json.decodeFromString<List<String>>(raw).toSet()
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.w("SettingsRepository", "Failed to decode used exercise names", e)
                 emptySet()
             }
         } else {
@@ -133,8 +157,8 @@ class SettingsRepository(
         dataStore.edit { it[KEY_LANGUAGE] = language }
     }
 
-    suspend fun setSoundEnabled(value: Boolean) {
-        dataStore.edit { it[KEY_SOUND_ENABLED] = value }
+    suspend fun setBeepVolume(value: Int) {
+        dataStore.edit { it[KEY_BEEP_VOLUME] = value }
     }
 
     suspend fun setVibrationEnabled(value: Boolean) {
@@ -157,8 +181,24 @@ class SettingsRepository(
         dataStore.edit { it[KEY_BEEP_COUNT] = value }
     }
 
+    suspend fun setDynamicIncreaseEnabled(value: Boolean) {
+        dataStore.edit { it[KEY_DYNAMIC_INCREASE_ENABLED] = value }
+    }
+
+    suspend fun setBreaksSinceLastIncrease(value: Int) {
+        dataStore.edit { it[KEY_BREAKS_SINCE_LAST_INCREASE] = value }
+    }
+
+    suspend fun setOnboardingCompleted(completed: Boolean) {
+        dataStore.edit { it[KEY_ONBOARDING_COMPLETED] = completed }
+    }
+
     suspend fun setUsedExerciseNames(names: Set<String>) {
         dataStore.edit { it[KEY_USED_EXERCISE_NAMES] = json.encodeToString(names.toList()) }
+    }
+
+    suspend fun setWidgetTimerStatus(status: String) {
+        dataStore.edit { it[KEY_WIDGET_TIMER_STATUS] = status }
     }
 
     suspend fun setLastPickedName(name: String?) {
@@ -171,6 +211,68 @@ class SettingsRepository(
         }
     }
 
+    suspend fun snapshotForExport(): SettingsExportSnapshot {
+        val prefs = dataStore.data.first()
+        val exerciseList = exercises.first()
+
+        return SettingsExportSnapshot(
+            timerHours = prefs[KEY_TIMER_HOURS] ?: DEFAULT_HOURS,
+            timerMinutes = prefs[KEY_TIMER_MINUTES] ?: DEFAULT_MINUTES,
+            repsMin = prefs[KEY_REPS_MIN] ?: DEFAULT_REPS_MIN,
+            repsMax = prefs[KEY_REPS_MAX] ?: DEFAULT_REPS_MAX,
+            repsLinked = prefs[KEY_REPS_LINKED] ?: DEFAULT_REPS_LINKED,
+            exercises = exerciseList,
+            language = prefs[KEY_LANGUAGE] ?: LANGUAGE_SYSTEM,
+            themeMode = prefs[KEY_THEME_MODE] ?: THEME_SYSTEM,
+            beepVolume = prefs[KEY_BEEP_VOLUME] ?: DEFAULT_BEEP_VOLUME,
+            vibrationEnabled = prefs[KEY_VIBRATION_ENABLED] ?: DEFAULT_VIBRATION_ENABLED,
+            beepCount = prefs[KEY_BEEP_COUNT] ?: DEFAULT_BEEP_COUNT,
+            keepScreenOn = prefs[KEY_KEEP_SCREEN_ON] ?: DEFAULT_KEEP_SCREEN_ON,
+            autoRestart = prefs[KEY_AUTO_RESTART] ?: DEFAULT_AUTO_RESTART,
+            dynamicIncreaseEnabled = prefs[KEY_DYNAMIC_INCREASE_ENABLED] ?: DEFAULT_DYNAMIC_INCREASE_ENABLED,
+            breaksSinceLastIncrease = prefs[KEY_BREAKS_SINCE_LAST_INCREASE] ?: DEFAULT_BREAKS_SINCE_LAST_INCREASE,
+        )
+    }
+
+    suspend fun restoreFromBackup(data: BackupData) {
+        dataStore.edit { prefs ->
+            prefs[KEY_TIMER_HOURS] = data.timerHours
+            prefs[KEY_TIMER_MINUTES] = data.timerMinutes
+            prefs[KEY_REPS_MIN] = data.repsMin
+            prefs[KEY_REPS_MAX] = data.repsMax
+            prefs[KEY_REPS_LINKED] = data.repsLinked
+            prefs[KEY_EXERCISES] = json.encodeToString(data.exercises)
+            prefs[KEY_LANGUAGE] = data.language
+            prefs[KEY_THEME_MODE] = data.themeMode
+            prefs[KEY_BEEP_VOLUME] = data.beepVolume
+            prefs[KEY_VIBRATION_ENABLED] = data.vibrationEnabled
+            prefs[KEY_BEEP_COUNT] = data.beepCount
+            prefs[KEY_KEEP_SCREEN_ON] = data.keepScreenOn
+            prefs[KEY_AUTO_RESTART] = data.autoRestart
+            prefs[KEY_DYNAMIC_INCREASE_ENABLED] = data.dynamicIncreaseEnabled
+            prefs[KEY_BREAKS_SINCE_LAST_INCREASE] = data.breaksSinceLastIncrease
+            prefs[KEY_ONBOARDING_COMPLETED] = true
+        }
+    }
+
+    data class SettingsExportSnapshot(
+        val timerHours: Int,
+        val timerMinutes: Int,
+        val repsMin: Int,
+        val repsMax: Int,
+        val repsLinked: Boolean,
+        val exercises: List<Exercise>,
+        val language: String,
+        val themeMode: String,
+        val beepVolume: Int,
+        val vibrationEnabled: Boolean,
+        val beepCount: Int,
+        val keepScreenOn: Boolean,
+        val autoRestart: Boolean,
+        val dynamicIncreaseEnabled: Boolean,
+        val breaksSinceLastIncrease: Int,
+    )
+
     companion object {
         private val KEY_TIMER_HOURS = intPreferencesKey("timer_hours")
         private val KEY_TIMER_MINUTES = intPreferencesKey("timer_minutes")
@@ -179,14 +281,18 @@ class SettingsRepository(
         private val KEY_REPS_LINKED = booleanPreferencesKey("reps_linked")
         private val KEY_EXERCISES = stringPreferencesKey("exercises")
         private val KEY_LANGUAGE = stringPreferencesKey("language")
-        private val KEY_SOUND_ENABLED = booleanPreferencesKey("sound_enabled")
+        private val KEY_BEEP_VOLUME = intPreferencesKey("beep_volume")
         private val KEY_VIBRATION_ENABLED = booleanPreferencesKey("vibration_enabled")
         private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
         private val KEY_KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
         private val KEY_AUTO_RESTART = booleanPreferencesKey("auto_restart")
         private val KEY_BEEP_COUNT = intPreferencesKey("beep_count")
+        private val KEY_DYNAMIC_INCREASE_ENABLED = booleanPreferencesKey("dynamic_increase_enabled")
+        private val KEY_BREAKS_SINCE_LAST_INCREASE = intPreferencesKey("breaks_since_last_increase")
+        private val KEY_WIDGET_TIMER_STATUS = stringPreferencesKey("widget_timer_status")
         private val KEY_USED_EXERCISE_NAMES = stringPreferencesKey("used_exercise_names")
         private val KEY_LAST_PICKED_NAME = stringPreferencesKey("last_picked_name")
+        private val KEY_ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
 
         const val DEFAULT_HOURS = 0
         const val DEFAULT_MINUTES = 30
@@ -194,7 +300,7 @@ class SettingsRepository(
         const val DEFAULT_REPS_MAX = 10
         const val DEFAULT_REPS_LINKED = true
 
-        const val DEFAULT_SOUND_ENABLED = true
+        const val DEFAULT_BEEP_VOLUME = 80
         const val DEFAULT_VIBRATION_ENABLED = true
 
         const val LANGUAGE_SYSTEM = "system"
@@ -208,5 +314,23 @@ class SettingsRepository(
         const val DEFAULT_KEEP_SCREEN_ON = false
         const val DEFAULT_AUTO_RESTART = true
         const val DEFAULT_BEEP_COUNT = 3
+
+        const val DEFAULT_DYNAMIC_INCREASE_ENABLED = true
+        const val DEFAULT_BREAKS_SINCE_LAST_INCREASE = 0
+
+        private val KNOWN_DEFAULT_NAMES: Map<String, String> = mapOf(
+            // English
+            "Push Ups" to "exercise_push_ups",
+            "Squats" to "exercise_squats",
+            "Deadlifts" to "exercise_deadlifts",
+            "Lunges" to "exercise_lunges",
+            "Sit Ups" to "exercise_sit_ups",
+            "Superman Angels" to "exercise_superman_angels",
+            // German
+            "Liegestütze" to "exercise_push_ups",
+            "Kniebeuge" to "exercise_squats",
+            "Kreuzheben" to "exercise_deadlifts",
+            "Ausfallschritt" to "exercise_lunges",
+        )
     }
 }

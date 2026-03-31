@@ -4,23 +4,68 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Clock circle -->
+    <!-- Clock ring -->
     <path
-        android:fillColor="#009900"
-        android:pathData="M54,54m-28,0a28,28 0,1 1,56 0a28,28 0,1 1,-56 0" />
-    <!-- Clock hands -->
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.5"
+        android:pathData="M54,32a22,22 0,1,1 0,44a22,22 0,1,1 0,-44" />
+    <!-- Tick at 12 o'clock -->
     <path
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="3"
+        android:strokeWidth="2"
         android:strokeLineCap="round"
-        android:pathData="M54,54L54,38" />
+        android:pathData="M54,32L54,35" />
+    <!-- Tick at 3 o'clock -->
     <path
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="3"
+        android:strokeWidth="2"
         android:strokeLineCap="round"
-        android:pathData="M54,54L66,54" />
-    <!-- Center dot -->
+        android:pathData="M76,54L73,54" />
+    <!-- Tick at 6 o'clock -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M54,76L54,73" />
+    <!-- Tick at 9 o'clock -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M32,54L35,54" />
+    <!-- Figure: head -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M54,54m-2.5,0a2.5,2.5 0,1 1,5 0a2.5,2.5 0,1 1,-5 0" />
+        android:pathData="M54,42m-3.5,0a3.5,3.5 0,1,1 7,0a3.5,3.5 0,1,1 -7,0" />
+    <!-- Figure: body -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M54,49L54,60" />
+    <!-- Figure: left arm raised -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M54,51L45,42" />
+    <!-- Figure: right arm raised -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M54,51L63,42" />
+    <!-- Figure: left leg -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M54,60L46,70" />
+    <!-- Figure: right leg -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M54,60L62,70" />
 </vector>

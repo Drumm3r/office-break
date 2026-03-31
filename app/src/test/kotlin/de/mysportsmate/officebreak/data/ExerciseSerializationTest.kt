@@ -57,4 +57,38 @@ class ExerciseSerializationTest {
         assertTrue(encoded.contains("\"name\""))
         assertTrue(encoded.contains("\"isEnabled\""))
     }
+
+    @Test
+    fun `serialize and deserialize exercise with nameResKey roundtrip`() {
+        val exercise = Exercise(name = "Push Ups", isEnabled = true, nameResKey = "exercise_push_ups")
+        val encoded = json.encodeToString(exercise)
+        val decoded = json.decodeFromString<Exercise>(encoded)
+
+        assertEquals(exercise, decoded)
+        assertEquals("exercise_push_ups", decoded.nameResKey)
+    }
+
+    @Test
+    fun `deserialize without nameResKey defaults to null`() {
+        val rawJson = """{"name":"Custom Exercise","isEnabled":true}"""
+        val exercise = json.decodeFromString<Exercise>(rawJson)
+
+        assertEquals("Custom Exercise", exercise.name)
+        assertTrue(exercise.isEnabled)
+        assertEquals(null, exercise.nameResKey)
+    }
+
+    @Test
+    fun `serialize list with mixed nameResKey roundtrip`() {
+        val exercises = listOf(
+            Exercise(name = "Push Ups", isEnabled = true, nameResKey = "exercise_push_ups"),
+            Exercise(name = "Custom", isEnabled = false),
+        )
+        val encoded = json.encodeToString(exercises)
+        val decoded = json.decodeFromString<List<Exercise>>(encoded)
+
+        assertEquals(exercises, decoded)
+        assertEquals("exercise_push_ups", decoded[0].nameResKey)
+        assertEquals(null, decoded[1].nameResKey)
+    }
 }

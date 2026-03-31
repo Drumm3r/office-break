@@ -1,42 +1,84 @@
 package de.mysportsmate.officebreak.ui
 
 import android.app.Application
+import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import de.mysportsmate.officebreak.R
+import de.mysportsmate.officebreak.data.AchievementDefinition
+import de.mysportsmate.officebreak.data.AchievementState
+import de.mysportsmate.officebreak.data.BackupManager
+import de.mysportsmate.officebreak.data.BreakRecord
 import de.mysportsmate.officebreak.data.Exercise
+import de.mysportsmate.officebreak.data.FitnessLevel
+import de.mysportsmate.officebreak.data.ImportResult
 import de.mysportsmate.officebreak.data.SettingsRepository
+import de.mysportsmate.officebreak.data.StatsRepository
+import de.mysportsmate.officebreak.data.StatsSnapshot
 import de.mysportsmate.officebreak.service.DefaultTimerServiceController
 import de.mysportsmate.officebreak.service.TimerServiceController
 import de.mysportsmate.officebreak.service.TimerState
 import de.mysportsmate.officebreak.service.TimerStateHolder
+import de.mysportsmate.officebreak.widget.WidgetUpdater
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import de.mysportsmate.officebreak.data.AppJson
+import java.time.LocalDate
+
+sealed interface BackupUiState {
+    data object Idle : BackupUiState
+    data object ExportSuccess : BackupUiState
+    data object ImportSuccess : BackupUiState
+    data class Error(val message: String) : BackupUiState
+}
+
+sealed interface DynamicIncreaseOffer {
+    data class Both(val newReps: Int, val newIntervalMinutes: Int) : DynamicIncreaseOffer
+    data class RepsOnly(val newReps: Int) : DynamicIncreaseOffer
+    data class IntervalOnly(val newIntervalMinutes: Int) : DynamicIncreaseOffer
+}
 
 class TimerViewModel @JvmOverloads constructor(
     application: Application,
     private val savedStateHandle: SavedStateHandle,
     private val repository: SettingsRepository = SettingsRepository(application),
+    private val statsRepository: StatsRepository = StatsRepository(application),
     private val timerStateHolder: TimerStateHolder = TimerStateHolder.instance,
     private val serviceController: TimerServiceController = DefaultTimerServiceController(application),
 ) : AndroidViewModel(application) {
 
     companion object {
         const val MAX_EXERCISE_NAME_LENGTH = 100
+        const val REPS_INCREASE = 2
+        const val INTERVAL_DECREASE_MINUTES = 5
+        const val MAX_REPS = 50
+        const val MIN_INTERVAL_MINUTES = 5
         private const val TAG = "TimerViewModel"
         private const val KEY_CURRENT_EXERCISE = "current_exercise"
         private const val KEY_CURRENT_REPS = "current_reps"
+        private const val WORK_DAY_MINUTES = 480
+        private const val WORK_DAYS_FOR_INCREASE = 3
+        private const val MIN_THRESHOLD = 5
     }
 
-    private val json = Json { ignoreUnknownKeys = true }
+    private val json = AppJson
+    private val backupManager = BackupManager(repository, statsRepository)
+
+    private val _backupState = MutableStateFlow<BackupUiState>(BackupUiState.Idle)
+    val backupState: StateFlow<BackupUiState> = _backupState.asStateFlow()
+
+    val onboardingCompleted: StateFlow<Boolean?> = repository.onboardingCompleted
+        .map<Boolean, Boolean?> { it }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     val timerState: StateFlow<TimerState> = timerStateHolder.state
 
@@ -61,8 +103,8 @@ class TimerViewModel @JvmOverloads constructor(
     val language: StateFlow<String> = repository.language
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.LANGUAGE_SYSTEM)
 
-    val soundEnabled: StateFlow<Boolean> = repository.soundEnabled
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_SOUND_ENABLED)
+    val beepVolume: StateFlow<Int> = repository.beepVolume
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_BEEP_VOLUME)
 
     val vibrationEnabled: StateFlow<Boolean> = repository.vibrationEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_VIBRATION_ENABLED)
@@ -78,6 +120,30 @@ class TimerViewModel @JvmOverloads constructor(
 
     val beepCount: StateFlow<Int> = repository.beepCount
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_BEEP_COUNT)
+
+    val dynamicIncreaseEnabled: StateFlow<Boolean> = repository.dynamicIncreaseEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_DYNAMIC_INCREASE_ENABLED)
+
+    private val breaksSinceLastIncrease: StateFlow<Int> = repository.breaksSinceLastIncrease
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_BREAKS_SINCE_LAST_INCREASE)
+
+    private val _dynamicIncreaseOffer = MutableStateFlow<DynamicIncreaseOffer?>(null)
+    val dynamicIncreaseOffer: StateFlow<DynamicIncreaseOffer?> = _dynamicIncreaseOffer.asStateFlow()
+
+    val trackingEnabled: StateFlow<Boolean> = statsRepository.trackingEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StatsRepository.DEFAULT_TRACKING_ENABLED)
+
+    val statsSnapshot: StateFlow<StatsSnapshot> = statsRepository.statsSnapshot
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StatsSnapshot())
+
+    val achievementState: StateFlow<AchievementState> = statsRepository.achievementState
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AchievementState())
+
+    val breakRecords: StateFlow<List<BreakRecord>> = statsRepository.breakRecords
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private val _newlyUnlockedAchievements = MutableStateFlow<List<AchievementDefinition>>(emptyList())
+    val newlyUnlockedAchievements: StateFlow<List<AchievementDefinition>> = _newlyUnlockedAchievements.asStateFlow()
 
     private val _currentExercise = MutableStateFlow(
         savedStateHandle.get<String>(KEY_CURRENT_EXERCISE)?.let {
@@ -110,6 +176,13 @@ class TimerViewModel @JvmOverloads constructor(
         viewModelScope.launch {
             usedExerciseNames.addAll(repository.usedExerciseNames.first())
             lastPickedName = repository.lastPickedName.first()
+        }
+        viewModelScope.launch {
+            try {
+                statsRepository.runYearlyCompaction()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to run yearly compaction", e)
+            }
         }
     }
 
@@ -182,12 +255,59 @@ class TimerViewModel @JvmOverloads constructor(
         }
     }
 
-    fun setSoundEnabled(value: Boolean) {
+    fun setBeepVolume(value: Int) {
         viewModelScope.launch {
             try {
-                repository.setSoundEnabled(value)
+                repository.setBeepVolume(value.coerceIn(0, 100))
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to set sound enabled", e)
+                Log.e(TAG, "Failed to set beep volume", e)
+            }
+        }
+    }
+
+    fun playPreviewBeep(volume: Int) {
+        if (volume <= 0) return
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val sampleRate = 44100
+                val beepDurationMs = 150
+                val frequency = 1000.0
+                val amplitude = volume / 100.0
+
+                val beepSamples = (sampleRate * beepDurationMs) / 1000
+                val samples = ShortArray(beepSamples)
+                for (i in 0 until beepSamples) {
+                    val angle = 2.0 * Math.PI * frequency * i / sampleRate
+                    samples[i] = (Math.sin(angle) * Short.MAX_VALUE * amplitude).toInt().toShort()
+                }
+
+                val track = android.media.AudioTrack.Builder()
+                    .setAudioAttributes(
+                        android.media.AudioAttributes.Builder()
+                            .setUsage(android.media.AudioAttributes.USAGE_ALARM)
+                            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .build(),
+                    )
+                    .setAudioFormat(
+                        android.media.AudioFormat.Builder()
+                            .setSampleRate(sampleRate)
+                            .setEncoding(android.media.AudioFormat.ENCODING_PCM_16BIT)
+                            .setChannelMask(android.media.AudioFormat.CHANNEL_OUT_MONO)
+                            .build(),
+                    )
+                    .setBufferSizeInBytes(samples.size * 2)
+                    .setTransferMode(android.media.AudioTrack.MODE_STATIC)
+                    .build()
+                try {
+                    track.write(samples, 0, samples.size)
+                    track.play()
+                    kotlinx.coroutines.delay(beepDurationMs.toLong() + 50)
+                } finally {
+                    track.stop()
+                    track.release()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to play preview beep", e)
             }
         }
     }
@@ -232,6 +352,16 @@ class TimerViewModel @JvmOverloads constructor(
         }
     }
 
+    fun setDynamicIncreaseEnabled(value: Boolean) {
+        viewModelScope.launch {
+            try {
+                repository.setDynamicIncreaseEnabled(value)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set dynamic increase enabled", e)
+            }
+        }
+    }
+
     fun setBeepCount(value: Int) {
         viewModelScope.launch {
             try {
@@ -265,6 +395,7 @@ class TimerViewModel @JvmOverloads constructor(
                 val current = exercises.value.toMutableList()
                 current.add(Exercise(name = trimmed))
                 repository.setExercises(current)
+                statsRepository.markCustomExerciseCreated()
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to add exercise", e)
             }
@@ -289,7 +420,11 @@ class TimerViewModel @JvmOverloads constructor(
         val totalSeconds = (hours.value * 3600L) + (minutes.value * 60L)
         if (totalSeconds <= 0) return
 
-        serviceController.startTimer(totalSeconds)
+        serviceController.startTimer(totalSeconds, language.value)
+        viewModelScope.launch {
+            repository.setWidgetTimerStatus("running")
+            WidgetUpdater.requestUpdate(getApplication())
+        }
     }
 
     fun resetTimer() {
@@ -336,15 +471,233 @@ class TimerViewModel @JvmOverloads constructor(
     }
 
     fun onExerciseDone() {
+        val exercise = _currentExercise.value
+        val reps = _currentReps.value
         _currentExercise.value = null
         _currentReps.value = null
+
+        if (exercise != null && reps != null) {
+            viewModelScope.launch {
+                try {
+                    val enabled = statsRepository.trackingEnabled.first()
+                    if (enabled) {
+                        val now = System.currentTimeMillis()
+                        val record = BreakRecord(
+                            exerciseName = exercise.name,
+                            reps = reps,
+                            timestampMillis = now,
+                            dateString = LocalDate.now().toString(),
+                        )
+                        val newAchievements = statsRepository.recordBreak(record)
+                        if (newAchievements.isNotEmpty()) {
+                            _newlyUnlockedAchievements.value = newAchievements
+                        }
+                        WidgetUpdater.requestUpdate(getApplication())
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to record break stats", e)
+                }
+
+                if (dynamicIncreaseEnabled.value) {
+                    try {
+                        val newCount = breaksSinceLastIncrease.value + 1
+                        repository.setBreaksSinceLastIncrease(newCount)
+
+                        if (newCount >= computeIncreaseThreshold()) {
+                            val offer = computeIncreaseOffer()
+                            if (offer != null) {
+                                _dynamicIncreaseOffer.value = offer
+                                return@launch
+                            }
+                            repository.setBreaksSinceLastIncrease(0)
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to check dynamic increase", e)
+                    }
+                }
+
+                restartOrResetTimer()
+            }
+        } else {
+            viewModelScope.launch { restartOrResetTimer() }
+        }
+    }
+
+    fun acceptIncreaseReps() {
+        viewModelScope.launch {
+            try {
+                val newMin = (repsMin.value + REPS_INCREASE).coerceAtMost(MAX_REPS)
+                val newMax = (repsMax.value + REPS_INCREASE).coerceAtMost(MAX_REPS)
+                repository.setRepsMin(newMin)
+                repository.setRepsMax(newMax)
+                repository.setBreaksSinceLastIncrease(0)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to increase reps", e)
+            }
+            _dynamicIncreaseOffer.value = null
+            restartOrResetTimer()
+        }
+    }
+
+    fun acceptDecreaseInterval() {
+        viewModelScope.launch {
+            try {
+                val totalMinutes = hours.value * 60 + minutes.value
+                val newTotalMinutes = (totalMinutes - INTERVAL_DECREASE_MINUTES).coerceAtLeast(MIN_INTERVAL_MINUTES)
+                repository.setTimerHours(newTotalMinutes / 60)
+                repository.setTimerMinutes(newTotalMinutes % 60)
+                repository.setBreaksSinceLastIncrease(0)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to decrease interval", e)
+            }
+            _dynamicIncreaseOffer.value = null
+            restartOrResetTimer()
+        }
+    }
+
+    fun declineDynamicIncrease() {
+        viewModelScope.launch {
+            try {
+                repository.setBreaksSinceLastIncrease(0)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to reset increase counter", e)
+            }
+            _dynamicIncreaseOffer.value = null
+            restartOrResetTimer()
+        }
+    }
+
+    private fun computeIncreaseThreshold(): Int {
+        val intervalMinutes = hours.value * 60 + minutes.value
+        if (intervalMinutes <= 0) return MIN_THRESHOLD
+
+        return maxOf(MIN_THRESHOLD, (WORK_DAY_MINUTES / intervalMinutes) * WORK_DAYS_FOR_INCREASE)
+    }
+
+    private fun computeIncreaseOffer(): DynamicIncreaseOffer? {
+        val currentMax = repsMax.value
+        val totalMinutes = hours.value * 60 + minutes.value
+        val canIncreaseReps = currentMax + REPS_INCREASE <= MAX_REPS
+        val canDecreaseInterval = totalMinutes - INTERVAL_DECREASE_MINUTES >= MIN_INTERVAL_MINUTES
+
+        return when {
+            canIncreaseReps && canDecreaseInterval -> DynamicIncreaseOffer.Both(
+                newReps = currentMax + REPS_INCREASE,
+                newIntervalMinutes = totalMinutes - INTERVAL_DECREASE_MINUTES,
+            )
+            canIncreaseReps -> DynamicIncreaseOffer.RepsOnly(newReps = currentMax + REPS_INCREASE)
+            canDecreaseInterval -> DynamicIncreaseOffer.IntervalOnly(
+                newIntervalMinutes = totalMinutes - INTERVAL_DECREASE_MINUTES,
+            )
+            else -> null
+        }
+    }
+
+    private suspend fun restartOrResetTimer() {
         if (!autoRestart.value) {
             serviceController.resetTimer()
+            repository.setWidgetTimerStatus("idle")
+            WidgetUpdater.requestUpdate(getApplication())
             return
         }
         val totalSeconds = (hours.value * 3600L) + (minutes.value * 60L)
         if (totalSeconds <= 0) return
 
-        serviceController.restartTimer(totalSeconds)
+        serviceController.restartTimer(totalSeconds, language.value)
+        repository.setWidgetTimerStatus("running")
+        WidgetUpdater.requestUpdate(getApplication())
+    }
+
+    fun dismissAchievementCelebration() {
+        _newlyUnlockedAchievements.value = emptyList()
+    }
+
+    fun exportData(uri: Uri) {
+        val app = getApplication<Application>()
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val versionCode = app.packageManager
+                    .getPackageInfo(app.packageName, 0).longVersionCode.toInt()
+                val jsonString = backupManager.createBackupJson(versionCode)
+
+                app.contentResolver.openOutputStream(uri)?.use { stream ->
+                    stream.write(jsonString.toByteArray(Charsets.UTF_8))
+                } ?: throw Exception("Could not open file for writing")
+
+                _backupState.value = BackupUiState.ExportSuccess
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to export data", e)
+                _backupState.value = BackupUiState.Error(
+                    app.getString(R.string.backup_error, e.message ?: "Unknown error"),
+                )
+            }
+        }
+    }
+
+    fun importData(uri: Uri) {
+        val app = getApplication<Application>()
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val jsonString = app.contentResolver.openInputStream(uri)?.use { stream ->
+                    stream.bufferedReader(Charsets.UTF_8).readText()
+                } ?: throw Exception("Could not open file for reading")
+
+                when (val result = backupManager.restoreFromJson(jsonString)) {
+                    is ImportResult.Success -> {
+                        WidgetUpdater.requestUpdate(app)
+                        _backupState.value = BackupUiState.ImportSuccess
+                    }
+                    is ImportResult.Error -> {
+                        _backupState.value = BackupUiState.Error(app.getString(result.messageResId))
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to import data", e)
+                _backupState.value = BackupUiState.Error(
+                    app.getString(R.string.backup_error, e.message ?: "Unknown error"),
+                )
+            }
+        }
+    }
+
+    fun clearBackupState() {
+        _backupState.value = BackupUiState.Idle
+    }
+
+    fun completeOnboarding(level: FitnessLevel, selectedExercises: List<Exercise>) {
+        viewModelScope.launch {
+            try {
+                repository.setTimerHours(level.hours)
+                repository.setTimerMinutes(level.minutes)
+                repository.setRepsMin(level.reps)
+                repository.setRepsMax(level.reps)
+                repository.setRepsLinked(true)
+                repository.setExercises(selectedExercises)
+                repository.setOnboardingCompleted(true)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to complete onboarding", e)
+            }
+        }
+    }
+
+    fun setTrackingEnabled(value: Boolean) {
+        viewModelScope.launch {
+            try {
+                statsRepository.setTrackingEnabled(value)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set tracking enabled", e)
+            }
+        }
+    }
+
+    fun resetStats() {
+        viewModelScope.launch {
+            try {
+                statsRepository.resetAllStats()
+                WidgetUpdater.requestUpdate(getApplication())
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to reset stats", e)
+            }
+        }
     }
 }
