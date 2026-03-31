@@ -9,6 +9,7 @@ import de.mysportsmate.officebreak.data.dataStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import java.util.Locale
 
 object LocaleHelper {
@@ -39,9 +40,11 @@ object LocaleHelper {
     private fun readLanguagePreference(context: Context): String {
         return try {
             runBlocking {
-                context.dataStore.data.map { prefs ->
-                    prefs[stringPreferencesKey("language")] ?: SettingsRepository.LANGUAGE_SYSTEM
-                }.first()
+                withTimeout(1000L) {
+                    context.dataStore.data.map { prefs ->
+                        prefs[stringPreferencesKey("language")] ?: SettingsRepository.LANGUAGE_SYSTEM
+                    }.first()
+                }
             }
         } catch (_: Exception) {
             SettingsRepository.LANGUAGE_SYSTEM

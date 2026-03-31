@@ -16,6 +16,7 @@
          <trust group="^org\.codehaus.*" regex="true"/>
          <trust group="^org\.gradle.*" regex="true"/>
          <trust group="^org\.jetbrains.*" regex="true"/>
+         <trust group="^org\.junit.*" regex="true"/>
       </trusted-artifacts>
    </configuration>
    <components>

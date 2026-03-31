@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import android.util.Log
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
@@ -26,7 +26,7 @@ class SettingsRepository(
         defaultExercises = ExerciseConfig.defaultExercises(context),
     )
 
-    private val json = Json { ignoreUnknownKeys = true }
+    private val json = AppJson
 
     val timerHours: Flow<Int> = dataStore.data.map { prefs ->
         prefs[KEY_TIMER_HOURS] ?: DEFAULT_HOURS
@@ -53,7 +53,8 @@ class SettingsRepository(
         val list = if (raw != null) {
             try {
                 json.decodeFromString<List<Exercise>>(raw)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.w("SettingsRepository", "Failed to decode exercises, using defaults", e)
                 defaultExercises
             }
         } else {
@@ -115,7 +116,8 @@ class SettingsRepository(
         if (raw != null) {
             try {
                 json.decodeFromString<List<String>>(raw).toSet()
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.w("SettingsRepository", "Failed to decode used exercise names", e)
                 emptySet()
             }
         } else {

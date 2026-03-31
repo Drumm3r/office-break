@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import android.util.Log
 import java.time.Clock
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
@@ -25,7 +25,7 @@ class StatsRepository(
 
     constructor(context: Context) : this(dataStore = context.statsDataStore)
 
-    private val json = Json { ignoreUnknownKeys = true }
+    private val json = AppJson
 
     val trackingEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[KEY_TRACKING_ENABLED] ?: DEFAULT_TRACKING_ENABLED
@@ -36,7 +36,8 @@ class StatsRepository(
         if (raw != null) {
             try {
                 json.decodeFromString<StatsSnapshot>(raw)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.w("StatsRepository", "Failed to decode stats snapshot", e)
                 StatsSnapshot()
             }
         } else {
@@ -49,7 +50,8 @@ class StatsRepository(
         if (raw != null) {
             try {
                 json.decodeFromString<AchievementState>(raw)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.w("StatsRepository", "Failed to decode achievement state", e)
                 AchievementState()
             }
         } else {
@@ -62,7 +64,8 @@ class StatsRepository(
         if (raw != null) {
             try {
                 json.decodeFromString<List<BreakRecord>>(raw)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.w("StatsRepository", "Failed to decode break records", e)
                 emptyList()
             }
         } else {
@@ -75,7 +78,8 @@ class StatsRepository(
         if (raw != null) {
             try {
                 json.decodeFromString<List<DailyAggregate>>(raw)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.w("StatsRepository", "Failed to decode daily aggregates", e)
                 emptyList()
             }
         } else {
@@ -88,7 +92,8 @@ class StatsRepository(
         if (raw != null) {
             try {
                 json.decodeFromString<List<YearlyAggregate>>(raw)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.w("StatsRepository", "Failed to decode yearly aggregates", e)
                 emptyList()
             }
         } else {
@@ -367,7 +372,8 @@ class StatsRepository(
         if (raw == null) return emptyList()
         return try {
             json.decodeFromString<List<T>>(raw)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w("StatsRepository", "Failed to decode list of ${T::class.simpleName}", e)
             emptyList()
         }
     }
@@ -376,7 +382,8 @@ class StatsRepository(
         if (raw == null) return default
         return try {
             json.decodeFromString<T>(raw)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w("StatsRepository", "Failed to decode ${T::class.simpleName}", e)
             default
         }
     }

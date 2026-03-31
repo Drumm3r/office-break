@@ -1,20 +1,23 @@
 # Office Break
 
-Android app for regular movement breaks at the office. Set a timer, start it, and get a random exercise when it expires. After confirming, the timer restarts automatically — endlessly, until you manually reset.
+[![Unit Tests](https://github.com/Drumm3r/office-break/actions/workflows/test.yml/badge.svg)](https://github.com/Drumm3r/office-break/actions/workflows/test.yml)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE.md)
+
+Android app for regular movement breaks at the office. Set a timer, start it, and get a random exercise when it expires. After confirming, the timer restarts automatically -- endlessly, until you manually reset.
 
 ## Features
 
 - Adjustable timer duration (hours + minutes) via sliders or manual input
 - Configurable repetition range (min/max) with linkable sliders for fixed or randomized reps
 - Circular countdown display
-- Shuffle-bag exercise selection — cycles through all enabled exercises before repeating, persisted across app restarts
-- Auto-restart after exercise confirmation (configurable — can be disabled)
+- Shuffle-bag exercise selection -- cycles through all enabled exercises before repeating, persisted across app restarts
+- Auto-restart after exercise confirmation (configurable -- can be disabled)
 - Foreground service with persistent notification (stays visible until manual reset)
-- Audible beep alert on timer expiry with configurable beep count (1–5)
+- Audible beep alert on timer expiry with configurable beep count (1-5)
 - Lock screen notification with screen wake-up on timer expiry
 - Exercise management (add, remove, enable/disable)
 - Achievements system with unlockable milestones
-- Stats tracking — weekly reps, week-over-week comparison, most frequent exercise (all data stored locally)
+- Stats tracking -- weekly reps, week-over-week comparison, most frequent exercise (all data stored locally)
 - Fitness levels with progression
 - Dynamic difficulty increase with adaptive threshold (optional)
 - Data export and import via JSON backup (SAF integration)
@@ -26,7 +29,7 @@ Android app for regular movement breaks at the office. Set a timer, start it, an
 
 ## Default Exercises
 
-- Push Ups / Liegestütze
+- Push Ups / Liegestuetze
 - Squats / Kniebeuge
 - Deadlifts / Kreuzheben
 - Lunges / Ausfallschritt
@@ -51,13 +54,33 @@ Exercises can be customized in the app via the settings screen.
 
 ### Release Build
 
-In Android Studio: **Build → Generate Signed Bundle / APK → APK → Release**
+In Android Studio: **Build > Generate Signed Bundle / APK > APK > Release**
+
+### Run Tests
+
+```bash
+./gradlew testDebugUnitTest
+```
+
+### Lint
+
+```bash
+./gradlew lintDebug
+```
 
 ## Install
 
 ```bash
 adb install app/build/outputs/apk/debug/app-debug.apk
 ```
+
+## Contributing
+
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## Security
+
+To report a security vulnerability, please see [SECURITY.md](SECURITY.md).
 
 ## Support
 
@@ -67,7 +90,7 @@ If you find this app useful, consider buying me a coffee:
 
 ## Also by the developer
 
-[mysportsmate](https://mysportsmate.de) — your digital fitness companion.
+[mysportsmate](https://mysportsmate.de) -- your digital fitness companion.
 
 ## License
 

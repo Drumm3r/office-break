@@ -82,7 +82,7 @@ fun AchievementsScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = null,
+                            contentDescription = stringResource(R.string.onboarding_back),
                         )
                     }
                 },
@@ -155,7 +155,7 @@ private fun AchievementItem(
         ) {
             Icon(
                 imageVector = icon,
-                contentDescription = null,
+                contentDescription = title,
                 tint = if (isUnlocked) {
                     MaterialTheme.colorScheme.primary
                 } else {

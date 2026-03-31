@@ -246,7 +246,7 @@ class TimerService : Service() {
             }
 
             val bufferSize = samples.size * 2
-            alarmTrack = AudioTrack.Builder()
+            val track = AudioTrack.Builder()
                 .setAudioAttributes(
                     AudioAttributes.Builder()
                         .setUsage(AudioAttributes.USAGE_ALARM)
@@ -263,10 +263,9 @@ class TimerService : Service() {
                 .setBufferSizeInBytes(bufferSize)
                 .setTransferMode(AudioTrack.MODE_STATIC)
                 .build()
-                .apply {
-                    write(samples, 0, samples.size)
-                    play()
-                }
+            alarmTrack = track
+            track.write(samples, 0, samples.size)
+            track.play()
         } catch (e: Exception) {
             android.util.Log.e("TimerService", "Failed to play beep sound", e)
         }
@@ -308,13 +307,15 @@ class TimerService : Service() {
         alarmTrack = null
     }
 
+    // Uses deprecated flags because setTurnScreenOn() is Activity-only and this is a Service.
+    // The full-screen notification intent (showExpiredNotification) is the primary screen-wake
+    // mechanism; this is a fallback for devices that don't honor full-screen intents.
     @Suppress("DEPRECATION")
     private fun wakeScreen() {
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
         val screenLock = pm.newWakeLock(
-            PowerManager.FULL_WAKE_LOCK or
-                PowerManager.ACQUIRE_CAUSES_WAKEUP or
-                PowerManager.ON_AFTER_RELEASE,
+            PowerManager.SCREEN_BRIGHT_WAKE_LOCK or
+                PowerManager.ACQUIRE_CAUSES_WAKEUP,
             "OfficeBreak::ScreenWakeLock",
         )
         screenLock.acquire(5000L)

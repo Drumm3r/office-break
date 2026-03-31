@@ -13,6 +13,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -36,6 +38,10 @@ fun DynamicIncreaseDialog(
         onDismissRequest = { /* Not dismissible */ },
         properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
     ) {
+        LaunchedEffect(Unit) {
+            delay(60_000L)
+            onDecline()
+        }
         Card(
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface,

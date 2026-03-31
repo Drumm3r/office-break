@@ -3,16 +3,14 @@ package de.mysportsmate.officebreak.data
 import de.mysportsmate.officebreak.R
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import android.util.Log
 
 class BackupManager(
     private val settingsRepository: SettingsRepository,
     private val statsRepository: StatsRepository,
 ) {
 
-    private val json = Json {
-        ignoreUnknownKeys = true
-        prettyPrint = true
-    }
+    private val json = Json(from = AppJson) { prettyPrint = true }
 
     suspend fun createBackupJson(appVersionCode: Int): String {
         val settings = settingsRepository.snapshotForExport()

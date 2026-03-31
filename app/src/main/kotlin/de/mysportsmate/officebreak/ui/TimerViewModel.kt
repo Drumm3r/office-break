@@ -31,7 +31,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import de.mysportsmate.officebreak.data.AppJson
 import java.time.LocalDate
 
 sealed interface BackupUiState {
@@ -70,7 +70,7 @@ class TimerViewModel @JvmOverloads constructor(
         private const val MIN_THRESHOLD = 5
     }
 
-    private val json = Json { ignoreUnknownKeys = true }
+    private val json = AppJson
     private val backupManager = BackupManager(repository, statsRepository)
 
     private val _backupState = MutableStateFlow<BackupUiState>(BackupUiState.Idle)
@@ -298,11 +298,14 @@ class TimerViewModel @JvmOverloads constructor(
                     .setBufferSizeInBytes(samples.size * 2)
                     .setTransferMode(android.media.AudioTrack.MODE_STATIC)
                     .build()
-                track.write(samples, 0, samples.size)
-                track.play()
-                kotlinx.coroutines.delay(beepDurationMs.toLong() + 50)
-                track.stop()
-                track.release()
+                try {
+                    track.write(samples, 0, samples.size)
+                    track.play()
+                    kotlinx.coroutines.delay(beepDurationMs.toLong() + 50)
+                } finally {
+                    track.stop()
+                    track.release()
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to play preview beep", e)
             }

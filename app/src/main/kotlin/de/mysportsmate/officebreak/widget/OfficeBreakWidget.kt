@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.glance.GlanceId
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.provideContent
+import de.mysportsmate.officebreak.data.AppJson
 import de.mysportsmate.officebreak.data.BreakRecord
 import de.mysportsmate.officebreak.data.SettingsRepository
 import de.mysportsmate.officebreak.data.StatsSnapshot
@@ -12,12 +13,11 @@ import de.mysportsmate.officebreak.data.dataStore
 import de.mysportsmate.officebreak.data.statsDataStore
 import de.mysportsmate.officebreak.locale.LocaleHelper
 import kotlinx.coroutines.flow.first
-import kotlinx.serialization.json.Json
 import java.time.LocalDate
 
 class OfficeBreakWidget : GlanceAppWidget() {
 
-    private val json = Json { ignoreUnknownKeys = true }
+    private val json = AppJson
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val statsPrefs = context.statsDataStore.data.first()

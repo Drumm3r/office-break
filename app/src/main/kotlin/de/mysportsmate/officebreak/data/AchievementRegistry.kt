@@ -101,7 +101,7 @@ object AchievementRegistry {
                 titleResKey = "achievement_lunch_hero_title",
                 descriptionResKey = "achievement_lunch_hero_desc",
                 iconName = "LunchDining",
-                condition = { _, ctx -> ctx.hourOfDay in 12..12 },
+                condition = { _, ctx -> ctx.hourOfDay == 12 },
             ),
         )
 
@@ -175,6 +175,7 @@ object AchievementRegistry {
                 titleResKey = titleResKey,
                 descriptionResKey = descriptionResKey,
                 iconName = "LocalFireDepartment",
+                // Intentional OR: unlocks based on best-ever streak so users keep credit after streak resets
                 condition = { stats, _ ->
                     stats.currentStreakDays >= target || stats.longestStreakDays >= target
                 },
