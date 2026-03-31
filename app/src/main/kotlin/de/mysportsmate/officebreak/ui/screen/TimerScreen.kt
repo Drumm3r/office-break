@@ -18,7 +18,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import android.app.Activity
+import androidx.activity.compose.LocalActivity
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.compose.runtime.Composable
@@ -92,7 +92,7 @@ fun TimerScreen(
         }
     }
 
-    val activity = LocalContext.current as? Activity
+    val activity = LocalActivity.current
     LaunchedEffect(keepScreenOn, timerState) {
         if (keepScreenOn && timerState is TimerState.Running) {
             activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)

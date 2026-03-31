@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="app_name">Office Break</string>
+    <string name="notification_channel_name">Timer</string>
+    <string name="notification_title">Office Break</string>
     <string name="timer_start">Starten</string>
     <string name="timer_reset">Zurücksetzen</string>
     <string name="notification_channel_description">Countdown-Timer für Bewegungspausen</string>
