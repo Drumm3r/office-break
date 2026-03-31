@@ -42,7 +42,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -128,11 +127,8 @@ private fun AchievementItem(
     unlockTimestamp: Long?,
     snapshot: StatsSnapshot,
 ) {
-    val context = LocalContext.current
-    val titleResId = getStringResId(context, achievement.titleResKey)
-    val descResId = getStringResId(context, achievement.descriptionResKey)
-    val title = if (titleResId != 0) stringResource(titleResId) else achievement.titleResKey
-    val description = if (descResId != 0) stringResource(descResId) else achievement.descriptionResKey
+    val title = stringResource(achievement.titleResId)
+    val description = stringResource(achievement.descriptionResId)
 
     val alpha = if (isUnlocked) 1f else 0.5f
     val icon = if (isUnlocked) iconForName(achievement.iconName) else Icons.Default.Lock
@@ -252,9 +248,6 @@ private fun iconForName(name: String): ImageVector {
     }
 }
 
-private fun getStringResId(context: android.content.Context, resKey: String): Int {
-    return context.resources.getIdentifier(resKey, "string", context.packageName)
-}
 
 @Preview(showBackground = true)
 @Composable

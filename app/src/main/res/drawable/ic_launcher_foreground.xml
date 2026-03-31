@@ -43,7 +43,7 @@
         android:strokeColor="#FFFFFF"
         android:strokeWidth="3"
         android:strokeLineCap="round"
-        android:pathData="M54,49L54,60" />
+        android:pathData="M54,49L54,57" />
     <!-- Figure: left arm raised -->
     <path
         android:strokeColor="#FFFFFF"
@@ -56,16 +56,28 @@
         android:strokeWidth="3"
         android:strokeLineCap="round"
         android:pathData="M54,51L63,42" />
-    <!-- Figure: left leg -->
+    <!-- Desk: surface -->
     <path
         android:strokeColor="#FFFFFF"
         android:strokeWidth="3"
         android:strokeLineCap="round"
-        android:pathData="M54,60L46,70" />
-    <!-- Figure: right leg -->
+        android:pathData="M41,61L67,61" />
+    <!-- Desk: surface between legs -->
     <path
         android:strokeColor="#FFFFFF"
         android:strokeWidth="3"
         android:strokeLineCap="round"
-        android:pathData="M54,60L62,70" />
+        android:pathData="M43,64L65,64" />
+    <!-- Desk: left leg -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M43,62L43,69" />
+    <!-- Desk: right leg -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M65,62L65,69" />
 </vector>

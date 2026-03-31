@@ -124,12 +124,9 @@ fun TimerScreen(
     }
 
     if (newlyUnlockedAchievements.isNotEmpty()) {
-        val context = LocalContext.current
         val first = newlyUnlockedAchievements.first()
-        val titleResId = context.resources.getIdentifier(first.titleResKey, "string", context.packageName)
-        val descResId = context.resources.getIdentifier(first.descriptionResKey, "string", context.packageName)
-        val title = if (titleResId != 0) context.getString(titleResId) else first.titleResKey
-        val description = if (descResId != 0) context.getString(descResId) else first.descriptionResKey
+        val title = stringResource(first.titleResId)
+        val description = stringResource(first.descriptionResId)
 
         AchievementUnlockDialog(
             title = title,
