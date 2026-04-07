@@ -10,65 +10,63 @@
         android:strokeColor="#FFFFFF"
         android:strokeWidth="3"
         android:strokeLineCap="round"
-        android:pathData="M33,73 A25,25 0 1 1 66,36" />
-    <!-- Clock ring segment 2: ~2:30 to ~3 (after right arm cutout) -->
-
+        android:pathData="M39,73 A25,25 0 1 1 72,36" />
     <!-- Tick at 12 o'clock -->
     <path
         android:strokeColor="#FFFFFF"
         android:strokeWidth="2.5"
         android:strokeLineCap="round"
-        android:pathData="M48,30L48,34" />
+        android:pathData="M54,30L54,34" />
     <!-- Tick at 9 o'clock -->
     <path
         android:strokeColor="#FFFFFF"
         android:strokeWidth="2.5"
         android:strokeLineCap="round"
-        android:pathData="M23,54L28,54" />
+        android:pathData="M29,54L34,54" />
     <!-- Figure: head -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M57,44m-4.5,0a4.5,4.5 0,1,1 9,0a4.5,4.5 0,1,1 -9,0" />
+        android:pathData="M63,44m-4.5,0a4.5,4.5 0,1,1 9,0a4.5,4.5 0,1,1 -9,0" />
     <!-- Figure: body -->
     <path
         android:strokeColor="#FFFFFF"
         android:strokeWidth="3.5"
         android:strokeLineCap="round"
-        android:pathData="M57,53L57,64" />
+        android:pathData="M63,53L63,64" />
     <!-- Figure: left arm raised -->
     <path
         android:strokeColor="#FFFFFF"
         android:strokeWidth="3.5"
         android:strokeLineCap="round"
-        android:pathData="M57,56L45,44" />
+        android:pathData="M63,56L51,44" />
     <!-- Figure: right arm raised -->
     <path
         android:strokeColor="#FFFFFF"
         android:strokeWidth="3.5"
         android:strokeLineCap="round"
-        android:pathData="M57,56L69,44" />
+        android:pathData="M63,56L75,44" />
     <!-- Desk: surface -->
     <path
         android:strokeColor="#FFFFFF"
         android:strokeWidth="3.5"
         android:strokeLineCap="round"
-        android:pathData="M40,69L74,69" />
+        android:pathData="M46,69L80,69" />
     <!-- Desk: surface between legs -->
     <path
         android:strokeColor="#FFFFFF"
         android:strokeWidth="3.5"
         android:strokeLineCap="round"
-        android:pathData="M43,73L71,73" />
+        android:pathData="M49,73L77,73" />
     <!-- Desk: left leg -->
     <path
         android:strokeColor="#FFFFFF"
         android:strokeWidth="3.5"
         android:strokeLineCap="round"
-        android:pathData="M43,70L43,80" />
+        android:pathData="M49,70L49,80" />
     <!-- Desk: right leg -->
     <path
         android:strokeColor="#FFFFFF"
         android:strokeWidth="3.5"
         android:strokeLineCap="round"
-        android:pathData="M71,70L71,80" />
+        android:pathData="M77,70L77,80" />
 </vector>
