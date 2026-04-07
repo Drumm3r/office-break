@@ -9,11 +9,11 @@
     <string name="notification_text_running">Next break in %1$s</string>
     <string name="notification_text_expired">Time for a break!</string>
     <string name="timer_start">Start</string>
-    <string name="timer_reset">Reset</string>
+    <string name="timer_reset">Stop</string>
     <string name="exercise_done">Done!</string>
-    <string name="reset_confirm_title">Reset timer?</string>
-    <string name="reset_confirm_message">The current timer will be stopped and reset.</string>
-    <string name="reset_confirm_yes">Reset</string>
+    <string name="reset_confirm_title">Stop timer?</string>
+    <string name="reset_confirm_message">The current timer will be stopped.</string>
+    <string name="reset_confirm_yes">Stop</string>
     <string name="reset_confirm_no">Cancel</string>
     <string name="hours_label">Hours</string>
     <string name="minutes_label">Minutes</string>
@@ -21,6 +21,8 @@
     <string name="reps_min_label">Min Repetitions</string>
     <string name="reps_max_label">Max Repetitions</string>
     <string name="reps_link_description">Link repetitions</string>
+    <string name="timer_interval_label">Break interval</string>
+    <string name="timer_interval_hint">Sets how often you\'ll be reminded to take an active break. The timer repeats until you stop it.</string>
     <string name="tap_to_enter">Tap to enter</string>
     <string name="enter_time">Enter time</string>
     <string name="exercise_heading">Time for an active break!</string>
@@ -41,10 +43,33 @@
     <string name="settings_keep_screen_on">Keep screen on</string>
     <string name="settings_auto_restart">Auto-restart timer</string>
     <string name="settings_dynamic_increase">Dynamic difficulty increase</string>
+    <string name="settings_dynamic_increase_hint">After completing several breaks, you\'ll be asked if you want to increase reps or shorten the interval</string>
     <string name="settings_notifications">Notifications</string>
     <string name="settings_beep_volume">Beep volume</string>
     <string name="settings_vibration">Vibration</string>
     <string name="settings_beep_count">Number of beeps</string>
+    <string name="volume_mute">Mute</string>
+    <string name="volume_unmute">Unmute</string>
+    <string name="settings_tts_enabled">Read exercise aloud</string>
+    <string name="settings_tts_hint">Uses text-to-speech to announce exercises when a break starts</string>
+    <string name="settings_notification_sound">Notification sound</string>
+    <string name="settings_custom_sound_select">Select custom sound</string>
+    <string name="settings_custom_sound_reset">Reset to default</string>
+    <string name="settings_custom_sound_preview">Preview</string>
+    <string name="settings_custom_sound_current">Current: %1$s</string>
+    <string name="settings_work_schedule">Work Schedule</string>
+    <string name="settings_work_schedule_enabled">Work schedule</string>
+    <string name="settings_work_schedule_hint">Automatically pause during lunch and stop at end of day</string>
+    <string name="settings_work_start">Work start</string>
+    <string name="settings_work_end">Work end</string>
+    <string name="settings_lunch_start">Lunch start</string>
+    <string name="settings_lunch_end">Lunch end</string>
+    <string name="notification_text_lunch_pause">Paused for lunch break</string>
+    <string name="notification_work_start_title">Time to start working!</string>
+    <string name="notification_work_start_text">Start your break timer for the day</string>
+    <string name="timer_paused_lunch">Lunch break</string>
+    <string name="onboarding_schedule_title">Set your work schedule</string>
+    <string name="onboarding_schedule_subtitle">Optional — you can set this up later in settings</string>
 
     <!-- Dynamic Increase -->
     <string name="dynamic_increase_title">You\'re getting stronger!</string>
@@ -69,13 +94,19 @@
 
     <!-- Onboarding -->
     <string name="onboarding_welcome">Welcome to Office Break!</string>
-    <string name="onboarding_fitness_question">How fit are you?</string>
-    <string name="onboarding_level_beginner">Beginner</string>
-    <string name="onboarding_level_beginner_desc">Longer breaks, fewer reps\n1h interval, 5 reps</string>
+    <string name="onboarding_fitness_question">How intense should your breaks be?</string>
+    <string name="onboarding_fitness_hint">Choose the intensity that fits your daily routine. You can change everything later in settings.</string>
+    <string name="onboarding_level_beginner">Gentle</string>
+    <string name="onboarding_level_beginner_desc">Longer intervals, fewer reps</string>
+    <string name="onboarding_level_beginner_detail">1h interval, 5 reps</string>
     <string name="onboarding_level_moderate">Moderate</string>
-    <string name="onboarding_level_moderate_desc">Balanced workout breaks\n45min interval, 10 reps</string>
-    <string name="onboarding_level_athletic">Athletic</string>
-    <string name="onboarding_level_athletic_desc">Shorter intervals, more reps\n30min interval, 15 reps</string>
+    <string name="onboarding_level_moderate_desc">Balanced active breaks</string>
+    <string name="onboarding_level_moderate_detail">45min interval, 10 reps</string>
+    <string name="onboarding_level_athletic">Intense</string>
+    <string name="onboarding_level_athletic_desc">Shorter intervals, more reps</string>
+    <string name="onboarding_level_athletic_detail">30min interval, 15 reps</string>
+    <string name="onboarding_show_details">Show details</string>
+    <string name="onboarding_hide_details">Hide details</string>
     <string name="onboarding_exercises_title">Choose your exercises</string>
     <string name="onboarding_exercises_subtitle">You can change these later in settings</string>
     <string name="onboarding_summary_title">You\'re all set!</string>

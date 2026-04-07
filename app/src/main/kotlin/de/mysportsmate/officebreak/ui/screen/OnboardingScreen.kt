@@ -29,7 +29,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -47,23 +49,40 @@ import androidx.compose.ui.unit.dp
 import de.mysportsmate.officebreak.R
 import de.mysportsmate.officebreak.data.Exercise
 import de.mysportsmate.officebreak.data.FitnessLevel
+import de.mysportsmate.officebreak.data.SettingsRepository
+
+data class WorkScheduleOnboardingState(
+    val enabled: Boolean = false,
+    val workStartHour: Int = SettingsRepository.DEFAULT_WORK_START_HOUR,
+    val workStartMinute: Int = SettingsRepository.DEFAULT_WORK_START_MINUTE,
+    val workEndHour: Int = SettingsRepository.DEFAULT_WORK_END_HOUR,
+    val workEndMinute: Int = SettingsRepository.DEFAULT_WORK_END_MINUTE,
+    val lunchStartHour: Int = SettingsRepository.DEFAULT_LUNCH_START_HOUR,
+    val lunchStartMinute: Int = SettingsRepository.DEFAULT_LUNCH_START_MINUTE,
+    val lunchEndHour: Int = SettingsRepository.DEFAULT_LUNCH_END_HOUR,
+    val lunchEndMinute: Int = SettingsRepository.DEFAULT_LUNCH_END_MINUTE,
+)
 
 @Composable
 fun OnboardingScreen(
     exercises: List<Exercise>,
     onComplete: (FitnessLevel, List<Exercise>) -> Unit,
+    onWorkScheduleConfigured: (WorkScheduleOnboardingState) -> Unit = {},
 ) {
     var currentStep by rememberSaveable { mutableIntStateOf(0) }
     var selectedLevelOrdinal by rememberSaveable { mutableIntStateOf(-1) }
     var exerciseToggles by rememberSaveable(exercises) {
         mutableStateOf(exercises.map { it.isEnabled })
     }
+    var workSchedule by rememberSaveable { mutableStateOf(WorkScheduleOnboardingState()) }
 
     val selectedLevel = if (selectedLevelOrdinal >= 0) {
         FitnessLevel.entries[selectedLevelOrdinal]
     } else {
         null
     }
+
+    val totalSteps = 4
 
     Scaffold { innerPadding ->
         Column(
@@ -73,7 +92,7 @@ fun OnboardingScreen(
                 .padding(horizontal = 24.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            StepIndicator(currentStep = currentStep, totalSteps = 3)
+            StepIndicator(currentStep = currentStep, totalSteps = totalSteps)
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -96,7 +115,11 @@ fun OnboardingScreen(
                             }
                         },
                     )
-                    2 -> SummaryStep(
+                    2 -> WorkScheduleStep(
+                        state = workSchedule,
+                        onStateChange = { workSchedule = it },
+                    )
+                    3 -> SummaryStep(
                         level = selectedLevel!!,
                         exerciseCount = exerciseToggles.count { it },
                     )
@@ -107,6 +130,7 @@ fun OnboardingScreen(
 
             NavigationButtons(
                 currentStep = currentStep,
+                totalSteps = totalSteps,
                 canAdvance = when (currentStep) {
                     0 -> selectedLevel != null
                     1 -> exerciseToggles.any { it }
@@ -118,6 +142,7 @@ fun OnboardingScreen(
                     val selected = exercises.mapIndexed { index, exercise ->
                         exercise.copy(isEnabled = exerciseToggles.getOrElse(index) { true })
                     }
+                    onWorkScheduleConfigured(workSchedule)
                     onComplete(selectedLevel!!, selected)
                 },
             )
@@ -153,6 +178,8 @@ private fun FitnessLevelStep(
     selectedLevel: FitnessLevel?,
     onSelect: (FitnessLevel) -> Unit,
 ) {
+    var showDetails by rememberSaveable { mutableStateOf(false) }
+
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -172,15 +199,35 @@ private fun FitnessLevelStep(
             textAlign = TextAlign.Center,
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            text = stringResource(R.string.onboarding_fitness_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
 
         FitnessLevel.entries.forEach { level ->
             FitnessLevelCard(
                 level = level,
                 isSelected = level == selectedLevel,
+                showDetails = showDetails,
                 onClick = { onSelect(level) },
             )
             Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        TextButton(onClick = { showDetails = !showDetails }) {
+            Text(
+                text = if (showDetails) {
+                    stringResource(R.string.onboarding_hide_details)
+                } else {
+                    stringResource(R.string.onboarding_show_details)
+                },
+            )
         }
     }
 }
@@ -189,27 +236,32 @@ private fun FitnessLevelStep(
 private fun FitnessLevelCard(
     level: FitnessLevel,
     isSelected: Boolean,
+    showDetails: Boolean,
     onClick: () -> Unit,
 ) {
     val icon: ImageVector
     val labelRes: Int
     val descRes: Int
+    val detailRes: Int
 
     when (level) {
         FitnessLevel.BEGINNER -> {
             icon = Icons.AutoMirrored.Filled.DirectionsWalk
             labelRes = R.string.onboarding_level_beginner
             descRes = R.string.onboarding_level_beginner_desc
+            detailRes = R.string.onboarding_level_beginner_detail
         }
         FitnessLevel.MODERATE -> {
             icon = Icons.AutoMirrored.Filled.DirectionsRun
             labelRes = R.string.onboarding_level_moderate
             descRes = R.string.onboarding_level_moderate_desc
+            detailRes = R.string.onboarding_level_moderate_detail
         }
         FitnessLevel.ATHLETIC -> {
             icon = Icons.Default.FitnessCenter
             labelRes = R.string.onboarding_level_athletic
             descRes = R.string.onboarding_level_athletic_desc
+            detailRes = R.string.onboarding_level_athletic_detail
         }
     }
 
@@ -267,6 +319,17 @@ private fun FitnessLevelCard(
                         MaterialTheme.colorScheme.onSurfaceVariant
                     },
                 )
+                if (showDetails) {
+                    Text(
+                        text = stringResource(detailRes),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (isSelected) {
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    )
+                }
             }
         }
     }
@@ -322,6 +385,150 @@ private fun ExerciseSelectionStep(
             }
         }
     }
+}
+
+@Composable
+private fun WorkScheduleStep(
+    state: WorkScheduleOnboardingState,
+    onStateChange: (WorkScheduleOnboardingState) -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = stringResource(R.string.onboarding_schedule_title),
+            style = MaterialTheme.typography.headlineMedium,
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = stringResource(R.string.onboarding_schedule_subtitle),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.settings_work_schedule_enabled),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f),
+            )
+            Switch(
+                checked = state.enabled,
+                onCheckedChange = { onStateChange(state.copy(enabled = it)) },
+            )
+        }
+
+        if (state.enabled) {
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OnboardingTimeRow(
+                label = stringResource(R.string.settings_work_start),
+                hour = state.workStartHour,
+                minute = state.workStartMinute,
+                onTimeChange = { h, m -> onStateChange(state.copy(workStartHour = h, workStartMinute = m)) },
+            )
+            OnboardingTimeRow(
+                label = stringResource(R.string.settings_work_end),
+                hour = state.workEndHour,
+                minute = state.workEndMinute,
+                onTimeChange = { h, m -> onStateChange(state.copy(workEndHour = h, workEndMinute = m)) },
+            )
+            OnboardingTimeRow(
+                label = stringResource(R.string.settings_lunch_start),
+                hour = state.lunchStartHour,
+                minute = state.lunchStartMinute,
+                onTimeChange = { h, m -> onStateChange(state.copy(lunchStartHour = h, lunchStartMinute = m)) },
+            )
+            OnboardingTimeRow(
+                label = stringResource(R.string.settings_lunch_end),
+                hour = state.lunchEndHour,
+                minute = state.lunchEndMinute,
+                onTimeChange = { h, m -> onStateChange(state.copy(lunchEndHour = h, lunchEndMinute = m)) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun OnboardingTimeRow(
+    label: String,
+    hour: Int,
+    minute: Int,
+    onTimeChange: (Int, Int) -> Unit,
+) {
+    var editing by rememberSaveable { mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f),
+        )
+        OutlinedButton(onClick = { editing = true }) {
+            Text(text = "%02d:%02d".format(hour, minute))
+        }
+    }
+
+    if (editing) {
+        OnboardingTimePicker(
+            initialHour = hour,
+            initialMinute = minute,
+            onConfirm = { h, m ->
+                onTimeChange(h, m)
+                editing = false
+            },
+            onDismiss = { editing = false },
+        )
+    }
+}
+
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun OnboardingTimePicker(
+    initialHour: Int,
+    initialMinute: Int,
+    onConfirm: (Int, Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val state = androidx.compose.material3.rememberTimePickerState(
+        initialHour = initialHour,
+        initialMinute = initialMinute,
+        is24Hour = true,
+    )
+
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = { onConfirm(state.hour, state.minute) }) {
+                Text(text = stringResource(R.string.dialog_confirm_ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(text = stringResource(R.string.reset_confirm_no))
+            }
+        },
+        text = {
+            androidx.compose.material3.TimePicker(state = state)
+        },
+    )
 }
 
 @Composable
@@ -417,11 +624,14 @@ private fun SummaryRow(
 @Composable
 private fun NavigationButtons(
     currentStep: Int,
+    totalSteps: Int,
     canAdvance: Boolean,
     onBack: () -> Unit,
     onNext: () -> Unit,
     onComplete: () -> Unit,
 ) {
+    val lastStep = totalSteps - 1
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -436,12 +646,12 @@ private fun NavigationButtons(
         }
 
         Button(
-            onClick = if (currentStep == 2) onComplete else onNext,
+            onClick = if (currentStep == lastStep) onComplete else onNext,
             enabled = canAdvance,
             modifier = Modifier.weight(1f),
         ) {
             Text(
-                if (currentStep == 2) {
+                if (currentStep == lastStep) {
                     stringResource(R.string.onboarding_start)
                 } else {
                     stringResource(R.string.onboarding_next)

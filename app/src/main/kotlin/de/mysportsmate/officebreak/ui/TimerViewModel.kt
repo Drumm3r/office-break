@@ -7,6 +7,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import de.mysportsmate.officebreak.R
+import android.content.Intent
 import de.mysportsmate.officebreak.data.AchievementDefinition
 import de.mysportsmate.officebreak.data.AchievementState
 import de.mysportsmate.officebreak.data.BackupManager
@@ -18,6 +19,7 @@ import de.mysportsmate.officebreak.data.SettingsRepository
 import de.mysportsmate.officebreak.data.StatsRepository
 import de.mysportsmate.officebreak.data.StatsSnapshot
 import de.mysportsmate.officebreak.service.DefaultTimerServiceController
+import de.mysportsmate.officebreak.service.WorkScheduleManager
 import de.mysportsmate.officebreak.service.TimerServiceController
 import de.mysportsmate.officebreak.service.TimerState
 import de.mysportsmate.officebreak.service.TimerStateHolder
@@ -120,6 +122,39 @@ class TimerViewModel @JvmOverloads constructor(
 
     val beepCount: StateFlow<Int> = repository.beepCount
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_BEEP_COUNT)
+
+    val ttsEnabled: StateFlow<Boolean> = repository.ttsEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_TTS_ENABLED)
+
+    val customSoundUri: StateFlow<String?> = repository.customSoundUri
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val workScheduleEnabled: StateFlow<Boolean> = repository.workScheduleEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_WORK_SCHEDULE_ENABLED)
+
+    val workStartHour: StateFlow<Int> = repository.workStartHour
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_WORK_START_HOUR)
+
+    val workStartMinute: StateFlow<Int> = repository.workStartMinute
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_WORK_START_MINUTE)
+
+    val workEndHour: StateFlow<Int> = repository.workEndHour
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_WORK_END_HOUR)
+
+    val workEndMinute: StateFlow<Int> = repository.workEndMinute
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_WORK_END_MINUTE)
+
+    val lunchStartHour: StateFlow<Int> = repository.lunchStartHour
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_LUNCH_START_HOUR)
+
+    val lunchStartMinute: StateFlow<Int> = repository.lunchStartMinute
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_LUNCH_START_MINUTE)
+
+    val lunchEndHour: StateFlow<Int> = repository.lunchEndHour
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_LUNCH_END_HOUR)
+
+    val lunchEndMinute: StateFlow<Int> = repository.lunchEndMinute
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_LUNCH_END_MINUTE)
 
     val dynamicIncreaseEnabled: StateFlow<Boolean> = repository.dynamicIncreaseEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_DYNAMIC_INCREASE_ENABLED)
@@ -348,6 +383,139 @@ class TimerViewModel @JvmOverloads constructor(
                 repository.setAutoRestart(value)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to set auto restart", e)
+            }
+        }
+    }
+
+    fun setCustomSoundUri(uri: android.net.Uri) {
+        viewModelScope.launch {
+            try {
+                val app = getApplication<Application>()
+                app.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                )
+                repository.setCustomSoundUri(uri.toString())
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set custom sound URI", e)
+            }
+        }
+    }
+
+    fun clearCustomSound() {
+        viewModelScope.launch {
+            try {
+                repository.setCustomSoundUri(null)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to clear custom sound", e)
+            }
+        }
+    }
+
+    fun playPreviewSound(volume: Int) {
+        val uri = customSoundUri.value
+        if (volume <= 0) return
+        if (uri != null) {
+            viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                try {
+                    val app = getApplication<Application>()
+                    val player = android.media.MediaPlayer().apply {
+                        setAudioAttributes(
+                            android.media.AudioAttributes.Builder()
+                                .setUsage(android.media.AudioAttributes.USAGE_ALARM)
+                                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                .build(),
+                        )
+                        setDataSource(app, android.net.Uri.parse(uri))
+                        prepare()
+                        val vol = volume / 100f
+                        setVolume(vol, vol)
+                    }
+                    player.setOnCompletionListener { it.release() }
+                    player.start()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to play custom sound preview, falling back to beep", e)
+                    playPreviewBeep(volume)
+                }
+            }
+        } else {
+            playPreviewBeep(volume)
+        }
+    }
+
+    fun setTtsEnabled(value: Boolean) {
+        viewModelScope.launch {
+            try {
+                repository.setTtsEnabled(value)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set TTS enabled", e)
+            }
+        }
+    }
+
+    fun setWorkScheduleEnabled(value: Boolean) {
+        viewModelScope.launch {
+            try {
+                repository.setWorkScheduleEnabled(value)
+                val app = getApplication<Application>()
+                if (value) {
+                    WorkScheduleManager.scheduleNextWorkStartReminder(
+                        app, workStartHour.value, workStartMinute.value,
+                    )
+                } else {
+                    WorkScheduleManager.cancelWorkStartReminder(app)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set work schedule enabled", e)
+            }
+        }
+    }
+
+    fun setWorkStartTime(hour: Int, minute: Int) {
+        viewModelScope.launch {
+            try {
+                repository.setWorkStartHour(hour)
+                repository.setWorkStartMinute(minute)
+                if (workScheduleEnabled.value) {
+                    WorkScheduleManager.scheduleNextWorkStartReminder(
+                        getApplication(), hour, minute,
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set work start time", e)
+            }
+        }
+    }
+
+    fun setWorkEndTime(hour: Int, minute: Int) {
+        viewModelScope.launch {
+            try {
+                repository.setWorkEndHour(hour)
+                repository.setWorkEndMinute(minute)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set work end time", e)
+            }
+        }
+    }
+
+    fun setLunchStartTime(hour: Int, minute: Int) {
+        viewModelScope.launch {
+            try {
+                repository.setLunchStartHour(hour)
+                repository.setLunchStartMinute(minute)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set lunch start time", e)
+            }
+        }
+    }
+
+    fun setLunchEndTime(hour: Int, minute: Int) {
+        viewModelScope.launch {
+            try {
+                repository.setLunchEndHour(hour)
+                repository.setLunchEndMinute(minute)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set lunch end time", e)
             }
         }
     }
@@ -662,6 +830,35 @@ class TimerViewModel @JvmOverloads constructor(
 
     fun clearBackupState() {
         _backupState.value = BackupUiState.Idle
+    }
+
+    fun applyWorkSchedule(
+        enabled: Boolean,
+        startH: Int, startM: Int,
+        endH: Int, endM: Int,
+        lunchStartH: Int, lunchStartM: Int,
+        lunchEndH: Int, lunchEndM: Int,
+    ) {
+        viewModelScope.launch {
+            try {
+                repository.setWorkScheduleEnabled(enabled)
+                repository.setWorkStartHour(startH)
+                repository.setWorkStartMinute(startM)
+                repository.setWorkEndHour(endH)
+                repository.setWorkEndMinute(endM)
+                repository.setLunchStartHour(lunchStartH)
+                repository.setLunchStartMinute(lunchStartM)
+                repository.setLunchEndHour(lunchEndH)
+                repository.setLunchEndMinute(lunchEndM)
+                if (enabled) {
+                    WorkScheduleManager.scheduleNextWorkStartReminder(
+                        getApplication(), startH, startM,
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to apply work schedule", e)
+            }
+        }
     }
 
     fun completeOnboarding(level: FitnessLevel, selectedExercises: List<Exercise>) {

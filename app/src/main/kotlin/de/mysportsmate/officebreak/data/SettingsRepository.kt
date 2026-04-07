@@ -99,6 +99,50 @@ class SettingsRepository(
         prefs[KEY_BEEP_COUNT] ?: DEFAULT_BEEP_COUNT
     }
 
+    val ttsEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[KEY_TTS_ENABLED] ?: DEFAULT_TTS_ENABLED
+    }
+
+    val customSoundUri: Flow<String?> = dataStore.data.map { prefs ->
+        prefs[KEY_CUSTOM_SOUND_URI]
+    }
+
+    val workScheduleEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[KEY_WORK_SCHEDULE_ENABLED] ?: DEFAULT_WORK_SCHEDULE_ENABLED
+    }
+
+    val workStartHour: Flow<Int> = dataStore.data.map { prefs ->
+        prefs[KEY_WORK_START_HOUR] ?: DEFAULT_WORK_START_HOUR
+    }
+
+    val workStartMinute: Flow<Int> = dataStore.data.map { prefs ->
+        prefs[KEY_WORK_START_MINUTE] ?: DEFAULT_WORK_START_MINUTE
+    }
+
+    val workEndHour: Flow<Int> = dataStore.data.map { prefs ->
+        prefs[KEY_WORK_END_HOUR] ?: DEFAULT_WORK_END_HOUR
+    }
+
+    val workEndMinute: Flow<Int> = dataStore.data.map { prefs ->
+        prefs[KEY_WORK_END_MINUTE] ?: DEFAULT_WORK_END_MINUTE
+    }
+
+    val lunchStartHour: Flow<Int> = dataStore.data.map { prefs ->
+        prefs[KEY_LUNCH_START_HOUR] ?: DEFAULT_LUNCH_START_HOUR
+    }
+
+    val lunchStartMinute: Flow<Int> = dataStore.data.map { prefs ->
+        prefs[KEY_LUNCH_START_MINUTE] ?: DEFAULT_LUNCH_START_MINUTE
+    }
+
+    val lunchEndHour: Flow<Int> = dataStore.data.map { prefs ->
+        prefs[KEY_LUNCH_END_HOUR] ?: DEFAULT_LUNCH_END_HOUR
+    }
+
+    val lunchEndMinute: Flow<Int> = dataStore.data.map { prefs ->
+        prefs[KEY_LUNCH_END_MINUTE] ?: DEFAULT_LUNCH_END_MINUTE
+    }
+
     val dynamicIncreaseEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[KEY_DYNAMIC_INCREASE_ENABLED] ?: DEFAULT_DYNAMIC_INCREASE_ENABLED
     }
@@ -181,6 +225,56 @@ class SettingsRepository(
         dataStore.edit { it[KEY_BEEP_COUNT] = value }
     }
 
+    suspend fun setTtsEnabled(value: Boolean) {
+        dataStore.edit { it[KEY_TTS_ENABLED] = value }
+    }
+
+    suspend fun setWorkScheduleEnabled(value: Boolean) {
+        dataStore.edit { it[KEY_WORK_SCHEDULE_ENABLED] = value }
+    }
+
+    suspend fun setWorkStartHour(value: Int) {
+        dataStore.edit { it[KEY_WORK_START_HOUR] = value }
+    }
+
+    suspend fun setWorkStartMinute(value: Int) {
+        dataStore.edit { it[KEY_WORK_START_MINUTE] = value }
+    }
+
+    suspend fun setWorkEndHour(value: Int) {
+        dataStore.edit { it[KEY_WORK_END_HOUR] = value }
+    }
+
+    suspend fun setWorkEndMinute(value: Int) {
+        dataStore.edit { it[KEY_WORK_END_MINUTE] = value }
+    }
+
+    suspend fun setLunchStartHour(value: Int) {
+        dataStore.edit { it[KEY_LUNCH_START_HOUR] = value }
+    }
+
+    suspend fun setLunchStartMinute(value: Int) {
+        dataStore.edit { it[KEY_LUNCH_START_MINUTE] = value }
+    }
+
+    suspend fun setLunchEndHour(value: Int) {
+        dataStore.edit { it[KEY_LUNCH_END_HOUR] = value }
+    }
+
+    suspend fun setLunchEndMinute(value: Int) {
+        dataStore.edit { it[KEY_LUNCH_END_MINUTE] = value }
+    }
+
+    suspend fun setCustomSoundUri(uri: String?) {
+        dataStore.edit {
+            if (uri != null) {
+                it[KEY_CUSTOM_SOUND_URI] = uri
+            } else {
+                it.remove(KEY_CUSTOM_SOUND_URI)
+            }
+        }
+    }
+
     suspend fun setDynamicIncreaseEnabled(value: Boolean) {
         dataStore.edit { it[KEY_DYNAMIC_INCREASE_ENABLED] = value }
     }
@@ -231,6 +325,17 @@ class SettingsRepository(
             autoRestart = prefs[KEY_AUTO_RESTART] ?: DEFAULT_AUTO_RESTART,
             dynamicIncreaseEnabled = prefs[KEY_DYNAMIC_INCREASE_ENABLED] ?: DEFAULT_DYNAMIC_INCREASE_ENABLED,
             breaksSinceLastIncrease = prefs[KEY_BREAKS_SINCE_LAST_INCREASE] ?: DEFAULT_BREAKS_SINCE_LAST_INCREASE,
+            ttsEnabled = prefs[KEY_TTS_ENABLED] ?: DEFAULT_TTS_ENABLED,
+            customSoundUri = prefs[KEY_CUSTOM_SOUND_URI],
+            workScheduleEnabled = prefs[KEY_WORK_SCHEDULE_ENABLED] ?: DEFAULT_WORK_SCHEDULE_ENABLED,
+            workStartHour = prefs[KEY_WORK_START_HOUR] ?: DEFAULT_WORK_START_HOUR,
+            workStartMinute = prefs[KEY_WORK_START_MINUTE] ?: DEFAULT_WORK_START_MINUTE,
+            workEndHour = prefs[KEY_WORK_END_HOUR] ?: DEFAULT_WORK_END_HOUR,
+            workEndMinute = prefs[KEY_WORK_END_MINUTE] ?: DEFAULT_WORK_END_MINUTE,
+            lunchStartHour = prefs[KEY_LUNCH_START_HOUR] ?: DEFAULT_LUNCH_START_HOUR,
+            lunchStartMinute = prefs[KEY_LUNCH_START_MINUTE] ?: DEFAULT_LUNCH_START_MINUTE,
+            lunchEndHour = prefs[KEY_LUNCH_END_HOUR] ?: DEFAULT_LUNCH_END_HOUR,
+            lunchEndMinute = prefs[KEY_LUNCH_END_MINUTE] ?: DEFAULT_LUNCH_END_MINUTE,
         )
     }
 
@@ -251,6 +356,17 @@ class SettingsRepository(
             prefs[KEY_AUTO_RESTART] = data.autoRestart
             prefs[KEY_DYNAMIC_INCREASE_ENABLED] = data.dynamicIncreaseEnabled
             prefs[KEY_BREAKS_SINCE_LAST_INCREASE] = data.breaksSinceLastIncrease
+            prefs[KEY_TTS_ENABLED] = data.ttsEnabled
+            // customSoundUri is device-specific, not restored from backup
+            prefs[KEY_WORK_SCHEDULE_ENABLED] = data.workScheduleEnabled
+            prefs[KEY_WORK_START_HOUR] = data.workStartHour
+            prefs[KEY_WORK_START_MINUTE] = data.workStartMinute
+            prefs[KEY_WORK_END_HOUR] = data.workEndHour
+            prefs[KEY_WORK_END_MINUTE] = data.workEndMinute
+            prefs[KEY_LUNCH_START_HOUR] = data.lunchStartHour
+            prefs[KEY_LUNCH_START_MINUTE] = data.lunchStartMinute
+            prefs[KEY_LUNCH_END_HOUR] = data.lunchEndHour
+            prefs[KEY_LUNCH_END_MINUTE] = data.lunchEndMinute
             prefs[KEY_ONBOARDING_COMPLETED] = true
         }
     }
@@ -271,6 +387,17 @@ class SettingsRepository(
         val autoRestart: Boolean,
         val dynamicIncreaseEnabled: Boolean,
         val breaksSinceLastIncrease: Int,
+        val ttsEnabled: Boolean,
+        val customSoundUri: String?,
+        val workScheduleEnabled: Boolean,
+        val workStartHour: Int,
+        val workStartMinute: Int,
+        val workEndHour: Int,
+        val workEndMinute: Int,
+        val lunchStartHour: Int,
+        val lunchStartMinute: Int,
+        val lunchEndHour: Int,
+        val lunchEndMinute: Int,
     )
 
     companion object {
@@ -287,6 +414,17 @@ class SettingsRepository(
         private val KEY_KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
         private val KEY_AUTO_RESTART = booleanPreferencesKey("auto_restart")
         private val KEY_BEEP_COUNT = intPreferencesKey("beep_count")
+        private val KEY_TTS_ENABLED = booleanPreferencesKey("tts_enabled")
+        private val KEY_CUSTOM_SOUND_URI = stringPreferencesKey("custom_sound_uri")
+        private val KEY_WORK_SCHEDULE_ENABLED = booleanPreferencesKey("work_schedule_enabled")
+        private val KEY_WORK_START_HOUR = intPreferencesKey("work_start_hour")
+        private val KEY_WORK_START_MINUTE = intPreferencesKey("work_start_minute")
+        private val KEY_WORK_END_HOUR = intPreferencesKey("work_end_hour")
+        private val KEY_WORK_END_MINUTE = intPreferencesKey("work_end_minute")
+        private val KEY_LUNCH_START_HOUR = intPreferencesKey("lunch_start_hour")
+        private val KEY_LUNCH_START_MINUTE = intPreferencesKey("lunch_start_minute")
+        private val KEY_LUNCH_END_HOUR = intPreferencesKey("lunch_end_hour")
+        private val KEY_LUNCH_END_MINUTE = intPreferencesKey("lunch_end_minute")
         private val KEY_DYNAMIC_INCREASE_ENABLED = booleanPreferencesKey("dynamic_increase_enabled")
         private val KEY_BREAKS_SINCE_LAST_INCREASE = intPreferencesKey("breaks_since_last_increase")
         private val KEY_WIDGET_TIMER_STATUS = stringPreferencesKey("widget_timer_status")
@@ -314,6 +452,18 @@ class SettingsRepository(
         const val DEFAULT_KEEP_SCREEN_ON = false
         const val DEFAULT_AUTO_RESTART = true
         const val DEFAULT_BEEP_COUNT = 3
+
+        const val DEFAULT_TTS_ENABLED = false
+
+        const val DEFAULT_WORK_SCHEDULE_ENABLED = false
+        const val DEFAULT_WORK_START_HOUR = 8
+        const val DEFAULT_WORK_START_MINUTE = 0
+        const val DEFAULT_WORK_END_HOUR = 17
+        const val DEFAULT_WORK_END_MINUTE = 0
+        const val DEFAULT_LUNCH_START_HOUR = 12
+        const val DEFAULT_LUNCH_START_MINUTE = 0
+        const val DEFAULT_LUNCH_END_HOUR = 13
+        const val DEFAULT_LUNCH_END_MINUTE = 0
 
         const val DEFAULT_DYNAMIC_INCREASE_ENABLED = true
         const val DEFAULT_BREAKS_SINCE_LAST_INCREASE = 0

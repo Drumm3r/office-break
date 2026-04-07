@@ -1,6 +1,7 @@
 package de.mysportsmate.officebreak.ui.screen
 
 import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
@@ -22,8 +23,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -38,6 +43,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.mysportsmate.officebreak.R
@@ -58,6 +64,7 @@ fun SettingsScreen(
     autoRestart: Boolean,
     dynamicIncreaseEnabled: Boolean,
     beepCount: Int,
+    ttsEnabled: Boolean,
     trackingEnabled: Boolean,
     onLanguageChange: (String) -> Unit,
     onBeepVolumeChange: (Int) -> Unit,
@@ -68,6 +75,25 @@ fun SettingsScreen(
     onAutoRestartChange: (Boolean) -> Unit,
     onDynamicIncreaseEnabledChange: (Boolean) -> Unit,
     onBeepCountChange: (Int) -> Unit,
+    onTtsEnabledChange: (Boolean) -> Unit,
+    customSoundUri: String?,
+    onCustomSoundSelected: (Uri) -> Unit,
+    onCustomSoundCleared: () -> Unit,
+    onCustomSoundPreview: (Int) -> Unit,
+    workScheduleEnabled: Boolean,
+    workStartHour: Int,
+    workStartMinute: Int,
+    workEndHour: Int,
+    workEndMinute: Int,
+    lunchStartHour: Int,
+    lunchStartMinute: Int,
+    lunchEndHour: Int,
+    lunchEndMinute: Int,
+    onWorkScheduleEnabledChange: (Boolean) -> Unit,
+    onWorkStartTimeChange: (Int, Int) -> Unit,
+    onWorkEndTimeChange: (Int, Int) -> Unit,
+    onLunchStartTimeChange: (Int, Int) -> Unit,
+    onLunchEndTimeChange: (Int, Int) -> Unit,
     onTrackingEnabledChange: (Boolean) -> Unit,
     onResetStats: () -> Unit,
     onExportToUri: (Uri) -> Unit,
@@ -76,6 +102,12 @@ fun SettingsScreen(
 ) {
     var showResetStatsDialog by rememberSaveable { mutableStateOf(false) }
     var showImportConfirmDialog by rememberSaveable { mutableStateOf(false) }
+
+    val soundPickerLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) onCustomSoundSelected(uri)
+    }
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json"),
@@ -184,6 +216,63 @@ fun SettingsScreen(
                 onCheckedChange = onDynamicIncreaseEnabledChange,
             )
 
+            Text(
+                text = stringResource(R.string.settings_dynamic_increase_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = stringResource(R.string.settings_work_schedule),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+
+            SettingsToggleRow(
+                label = stringResource(R.string.settings_work_schedule_enabled),
+                checked = workScheduleEnabled,
+                onCheckedChange = onWorkScheduleEnabledChange,
+            )
+
+            Text(
+                text = stringResource(R.string.settings_work_schedule_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+
+            if (workScheduleEnabled) {
+                TimePickerRow(
+                    label = stringResource(R.string.settings_work_start),
+                    hour = workStartHour,
+                    minute = workStartMinute,
+                    onTimeSelected = onWorkStartTimeChange,
+                )
+                TimePickerRow(
+                    label = stringResource(R.string.settings_work_end),
+                    hour = workEndHour,
+                    minute = workEndMinute,
+                    onTimeSelected = onWorkEndTimeChange,
+                )
+                TimePickerRow(
+                    label = stringResource(R.string.settings_lunch_start),
+                    hour = lunchStartHour,
+                    minute = lunchStartMinute,
+                    onTimeSelected = onLunchStartTimeChange,
+                )
+                TimePickerRow(
+                    label = stringResource(R.string.settings_lunch_end),
+                    hour = lunchEndHour,
+                    minute = lunchEndMinute,
+                    onTimeSelected = onLunchEndTimeChange,
+                )
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
             HorizontalDivider()
             Spacer(modifier = Modifier.height(16.dp))
@@ -211,6 +300,81 @@ fun SettingsScreen(
                 enabled = beepVolume > 0,
                 onBeepCountChange = onBeepCountChange,
             )
+
+            SettingsToggleRow(
+                label = stringResource(R.string.settings_tts_enabled),
+                checked = ttsEnabled,
+                onCheckedChange = onTtsEnabledChange,
+            )
+
+            Text(
+                text = stringResource(R.string.settings_tts_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = stringResource(R.string.settings_notification_sound),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+
+            if (customSoundUri != null) {
+                val context = LocalContext.current
+                val fileName = remember(customSoundUri) {
+                    try {
+                        context.contentResolver.query(
+                            Uri.parse(customSoundUri),
+                            arrayOf(OpenableColumns.DISPLAY_NAME),
+                            null, null, null,
+                        )?.use { cursor ->
+                            if (cursor.moveToFirst()) {
+                                cursor.getString(
+                                    cursor.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME),
+                                )
+                            } else null
+                        }
+                    } catch (_: Exception) {
+                        null
+                    } ?: customSoundUri.substringAfterLast('/')
+                }
+
+                Text(
+                    text = stringResource(R.string.settings_custom_sound_current, fileName),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+                ) {
+                    OutlinedButton(
+                        onClick = { onCustomSoundPreview(beepVolume) },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(text = stringResource(R.string.settings_custom_sound_preview))
+                    }
+
+                    OutlinedButton(
+                        onClick = onCustomSoundCleared,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(text = stringResource(R.string.settings_custom_sound_reset))
+                    }
+                }
+            } else {
+                OutlinedButton(
+                    onClick = { soundPickerLauncher.launch(arrayOf("audio/*")) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(text = stringResource(R.string.settings_custom_sound_select))
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
             HorizontalDivider()
@@ -461,6 +625,61 @@ private fun BeepCountSlider(
                 modifier = Modifier.padding(start = 8.dp),
             )
         }
+    }
+}
+
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun TimePickerRow(
+    label: String,
+    hour: Int,
+    minute: Int,
+    onTimeSelected: (Int, Int) -> Unit,
+) {
+    var showDialog by rememberSaveable { mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f),
+        )
+        OutlinedButton(onClick = { showDialog = true }) {
+            Text(text = "%02d:%02d".format(hour, minute))
+        }
+    }
+
+    if (showDialog) {
+        val timePickerState = rememberTimePickerState(
+            initialHour = hour,
+            initialMinute = minute,
+            is24Hour = true,
+        )
+
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    onTimeSelected(timePickerState.hour, timePickerState.minute)
+                    showDialog = false
+                }) {
+                    Text(text = stringResource(R.string.dialog_confirm_ok))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text(text = stringResource(R.string.reset_confirm_no))
+                }
+            },
+            text = {
+                TimePicker(state = timePickerState)
+            },
+        )
     }
 }
 

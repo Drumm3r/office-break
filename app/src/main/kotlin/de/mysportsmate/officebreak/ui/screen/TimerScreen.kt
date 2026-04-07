@@ -22,6 +22,7 @@ import androidx.activity.compose.LocalActivity
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -51,6 +52,9 @@ import de.mysportsmate.officebreak.ui.components.CountdownDisplay
 import de.mysportsmate.officebreak.ui.components.DynamicIncreaseDialog
 import de.mysportsmate.officebreak.ui.components.ExerciseDialog
 import de.mysportsmate.officebreak.ui.components.TimerSetup
+import de.mysportsmate.officebreak.ui.components.VolumeBar
+import de.mysportsmate.officebreak.locale.LocaleHelper
+import de.mysportsmate.officebreak.tts.BreakTtsManager
 
 @Composable
 fun TimerScreen(
@@ -77,9 +81,26 @@ fun TimerScreen(
     val achievementState by viewModel.achievementState.collectAsState()
     val breakRecords by viewModel.breakRecords.collectAsState()
     val dynamicIncreaseEnabled by viewModel.dynamicIncreaseEnabled.collectAsState()
+    val ttsEnabled by viewModel.ttsEnabled.collectAsState()
+    val customSoundUri by viewModel.customSoundUri.collectAsState()
+    val workScheduleEnabled by viewModel.workScheduleEnabled.collectAsState()
+    val workStartHour by viewModel.workStartHour.collectAsState()
+    val workStartMinute by viewModel.workStartMinute.collectAsState()
+    val workEndHour by viewModel.workEndHour.collectAsState()
+    val workEndMinute by viewModel.workEndMinute.collectAsState()
+    val lunchStartHour by viewModel.lunchStartHour.collectAsState()
+    val lunchStartMinute by viewModel.lunchStartMinute.collectAsState()
+    val lunchEndHour by viewModel.lunchEndHour.collectAsState()
+    val lunchEndMinute by viewModel.lunchEndMinute.collectAsState()
     val dynamicIncreaseOffer by viewModel.dynamicIncreaseOffer.collectAsState()
     val newlyUnlockedAchievements by viewModel.newlyUnlockedAchievements.collectAsState()
     val backupState by viewModel.backupState.collectAsState()
+    val ttsContext = LocalContext.current
+    val ttsManager = remember { BreakTtsManager(ttsContext) }
+    DisposableEffect(Unit) {
+        onDispose { ttsManager.shutdown() }
+    }
+
     var showResetDialog by rememberSaveable { mutableStateOf(false) }
     var showExerciseSettings by rememberSaveable { mutableStateOf(false) }
     var showSettings by rememberSaveable { mutableStateOf(false) }
@@ -116,9 +137,20 @@ fun TimerScreen(
     }
 
     if (currentExercise != null) {
+        val exerciseName = currentExercise!!.displayName(LocalContext.current)
+        val reps = currentReps ?: repsMin
+
+        LaunchedEffect(currentExercise) {
+            if (ttsEnabled) {
+                val locale = LocaleHelper.resolveLocale(language)
+                val heading = ttsContext.getString(R.string.exercise_heading)
+                ttsManager.speak("$heading $reps $exerciseName", locale)
+            }
+        }
+
         ExerciseDialog(
-            exerciseName = currentExercise!!.displayName(LocalContext.current),
-            reps = currentReps ?: repsMin,
+            exerciseName = exerciseName,
+            reps = reps,
             onDone = { viewModel.onExerciseDone() },
         )
     }
@@ -184,6 +216,7 @@ fun TimerScreen(
             autoRestart = autoRestart,
             dynamicIncreaseEnabled = dynamicIncreaseEnabled,
             beepCount = beepCount,
+            ttsEnabled = ttsEnabled,
             trackingEnabled = trackingEnabled,
             onLanguageChange = viewModel::setLanguage,
             onBeepVolumeChange = viewModel::setBeepVolume,
@@ -194,6 +227,25 @@ fun TimerScreen(
             onAutoRestartChange = viewModel::setAutoRestart,
             onDynamicIncreaseEnabledChange = viewModel::setDynamicIncreaseEnabled,
             onBeepCountChange = viewModel::setBeepCount,
+            onTtsEnabledChange = viewModel::setTtsEnabled,
+            customSoundUri = customSoundUri,
+            onCustomSoundSelected = viewModel::setCustomSoundUri,
+            onCustomSoundCleared = viewModel::clearCustomSound,
+            onCustomSoundPreview = viewModel::playPreviewSound,
+            workScheduleEnabled = workScheduleEnabled,
+            workStartHour = workStartHour,
+            workStartMinute = workStartMinute,
+            workEndHour = workEndHour,
+            workEndMinute = workEndMinute,
+            lunchStartHour = lunchStartHour,
+            lunchStartMinute = lunchStartMinute,
+            lunchEndHour = lunchEndHour,
+            lunchEndMinute = lunchEndMinute,
+            onWorkScheduleEnabledChange = viewModel::setWorkScheduleEnabled,
+            onWorkStartTimeChange = viewModel::setWorkStartTime,
+            onWorkEndTimeChange = viewModel::setWorkEndTime,
+            onLunchStartTimeChange = viewModel::setLunchStartTime,
+            onLunchEndTimeChange = viewModel::setLunchEndTime,
             onTrackingEnabledChange = viewModel::setTrackingEnabled,
             onResetStats = viewModel::resetStats,
             onExportToUri = viewModel::exportData,
@@ -263,10 +315,10 @@ fun TimerScreen(
                 verticalArrangement = Arrangement.Center,
             ) {
                 AnimatedContent(
-                    targetState = timerState is TimerState.Idle,
+                    targetState = timerState,
                     label = "timer_content",
-                ) { isIdle ->
-                    if (isIdle) {
+                ) { state ->
+                    if (state is TimerState.Idle) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
@@ -301,13 +353,66 @@ fun TimerScreen(
                                 )
                             }
                         }
+                    } else if (state is TimerState.Paused) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            VolumeBar(
+                                volume = beepVolume,
+                                onVolumeChange = viewModel::setBeepVolume,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Text(
+                                text = stringResource(R.string.timer_paused_lunch),
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            CountdownDisplay(
+                                remainingSeconds = state.remainingSeconds,
+                                totalSeconds = state.totalSeconds,
+                            )
+
+                            Spacer(modifier = Modifier.height(48.dp))
+
+                            OutlinedButton(
+                                onClick = { showResetDialog = true },
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.error,
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 48.dp)
+                                    .height(56.dp),
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.timer_reset),
+                                    style = MaterialTheme.typography.titleLarge,
+                                )
+                            }
+                        }
                     } else {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            val running = timerState as? TimerState.Running
+                            VolumeBar(
+                                volume = beepVolume,
+                                onVolumeChange = viewModel::setBeepVolume,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            val running = state as? TimerState.Running
 
                             CountdownDisplay(
                                 remainingSeconds = running?.remainingSeconds ?: 0L,

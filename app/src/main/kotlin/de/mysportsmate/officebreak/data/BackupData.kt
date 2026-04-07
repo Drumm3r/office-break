@@ -24,6 +24,17 @@ data class BackupData(
     val autoRestart: Boolean,
     val dynamicIncreaseEnabled: Boolean,
     val breaksSinceLastIncrease: Int,
+    val ttsEnabled: Boolean = false,
+    val customSoundUri: String? = null,
+    val workScheduleEnabled: Boolean = false,
+    val workStartHour: Int = 8,
+    val workStartMinute: Int = 0,
+    val workEndHour: Int = 17,
+    val workEndMinute: Int = 0,
+    val lunchStartHour: Int = 12,
+    val lunchStartMinute: Int = 0,
+    val lunchEndHour: Int = 13,
+    val lunchEndMinute: Int = 0,
 
     // Stats
     val trackingEnabled: Boolean,

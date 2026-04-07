@@ -25,6 +25,7 @@ import de.mysportsmate.officebreak.data.SettingsRepository
 import de.mysportsmate.officebreak.locale.LocaleHelper
 import de.mysportsmate.officebreak.ui.TimerViewModel
 import de.mysportsmate.officebreak.ui.screen.OnboardingScreen
+import de.mysportsmate.officebreak.ui.screen.WorkScheduleOnboardingState
 import de.mysportsmate.officebreak.ui.screen.TimerScreen
 import de.mysportsmate.officebreak.ui.theme.OfficeBreakTheme
 
@@ -73,6 +74,19 @@ class MainActivity : ComponentActivity() {
                     false -> OnboardingScreen(
                         exercises = exercises,
                         onComplete = viewModel::completeOnboarding,
+                        onWorkScheduleConfigured = { schedule ->
+                            viewModel.applyWorkSchedule(
+                                enabled = schedule.enabled,
+                                startH = schedule.workStartHour,
+                                startM = schedule.workStartMinute,
+                                endH = schedule.workEndHour,
+                                endM = schedule.workEndMinute,
+                                lunchStartH = schedule.lunchStartHour,
+                                lunchStartM = schedule.lunchStartMinute,
+                                lunchEndH = schedule.lunchEndHour,
+                                lunchEndM = schedule.lunchEndMinute,
+                            )
+                        },
                     )
                 }
             }

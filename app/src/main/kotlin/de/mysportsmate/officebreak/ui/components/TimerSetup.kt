@@ -78,6 +78,20 @@ fun TimerSetup(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
+            text = stringResource(R.string.timer_interval_label),
+            style = MaterialTheme.typography.titleMedium,
+        )
+
+        Text(
+            text = stringResource(R.string.timer_interval_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
             text = "%02d:%02d".format(hours, minutes),
             style = MaterialTheme.typography.displayLarge,
             color = MaterialTheme.colorScheme.primary,
