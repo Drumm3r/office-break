@@ -9,6 +9,8 @@ import androidx.lifecycle.viewModelScope
 import de.mysportsmate.officebreak.R
 import android.content.Intent
 import de.mysportsmate.officebreak.data.AchievementDefinition
+import de.mysportsmate.officebreak.data.DaySchedule
+import de.mysportsmate.officebreak.data.DEFAULT_WEEK_SCHEDULE
 import de.mysportsmate.officebreak.data.AchievementState
 import de.mysportsmate.officebreak.data.BackupManager
 import de.mysportsmate.officebreak.data.BreakRecord
@@ -132,29 +134,8 @@ class TimerViewModel @JvmOverloads constructor(
     val workScheduleEnabled: StateFlow<Boolean> = repository.workScheduleEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_WORK_SCHEDULE_ENABLED)
 
-    val workStartHour: StateFlow<Int> = repository.workStartHour
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_WORK_START_HOUR)
-
-    val workStartMinute: StateFlow<Int> = repository.workStartMinute
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_WORK_START_MINUTE)
-
-    val workEndHour: StateFlow<Int> = repository.workEndHour
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_WORK_END_HOUR)
-
-    val workEndMinute: StateFlow<Int> = repository.workEndMinute
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_WORK_END_MINUTE)
-
-    val lunchStartHour: StateFlow<Int> = repository.lunchStartHour
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_LUNCH_START_HOUR)
-
-    val lunchStartMinute: StateFlow<Int> = repository.lunchStartMinute
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_LUNCH_START_MINUTE)
-
-    val lunchEndHour: StateFlow<Int> = repository.lunchEndHour
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_LUNCH_END_HOUR)
-
-    val lunchEndMinute: StateFlow<Int> = repository.lunchEndMinute
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_LUNCH_END_MINUTE)
+    val weekSchedule: StateFlow<List<DaySchedule>> = repository.weekSchedule
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DEFAULT_WEEK_SCHEDULE)
 
     val dynamicIncreaseEnabled: StateFlow<Boolean> = repository.dynamicIncreaseEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_DYNAMIC_INCREASE_ENABLED)
@@ -459,9 +440,8 @@ class TimerViewModel @JvmOverloads constructor(
                 repository.setWorkScheduleEnabled(value)
                 val app = getApplication<Application>()
                 if (value) {
-                    WorkScheduleManager.scheduleNextWorkStartReminder(
-                        app, workStartHour.value, workStartMinute.value,
-                    )
+                    val schedule = weekSchedule.value
+                    WorkScheduleManager.scheduleNextWorkStartReminder(app, schedule)
                 } else {
                     WorkScheduleManager.cancelWorkStartReminder(app)
                 }
@@ -471,51 +451,21 @@ class TimerViewModel @JvmOverloads constructor(
         }
     }
 
-    fun setWorkStartTime(hour: Int, minute: Int) {
+    fun updateDaySchedule(dayIndex: Int, day: DaySchedule) {
         viewModelScope.launch {
             try {
-                repository.setWorkStartHour(hour)
-                repository.setWorkStartMinute(minute)
-                if (workScheduleEnabled.value) {
-                    WorkScheduleManager.scheduleNextWorkStartReminder(
-                        getApplication(), hour, minute,
-                    )
+                val current = weekSchedule.value.toMutableList()
+                if (dayIndex in current.indices) {
+                    current[dayIndex] = day
+                    repository.setWeekSchedule(current)
+                    if (workScheduleEnabled.value) {
+                        WorkScheduleManager.scheduleNextWorkStartReminder(
+                            getApplication(), current,
+                        )
+                    }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to set work start time", e)
-            }
-        }
-    }
-
-    fun setWorkEndTime(hour: Int, minute: Int) {
-        viewModelScope.launch {
-            try {
-                repository.setWorkEndHour(hour)
-                repository.setWorkEndMinute(minute)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to set work end time", e)
-            }
-        }
-    }
-
-    fun setLunchStartTime(hour: Int, minute: Int) {
-        viewModelScope.launch {
-            try {
-                repository.setLunchStartHour(hour)
-                repository.setLunchStartMinute(minute)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to set lunch start time", e)
-            }
-        }
-    }
-
-    fun setLunchEndTime(hour: Int, minute: Int) {
-        viewModelScope.launch {
-            try {
-                repository.setLunchEndHour(hour)
-                repository.setLunchEndMinute(minute)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to set lunch end time", e)
+                Log.e(TAG, "Failed to update day schedule", e)
             }
         }
     }
@@ -832,27 +782,14 @@ class TimerViewModel @JvmOverloads constructor(
         _backupState.value = BackupUiState.Idle
     }
 
-    fun applyWorkSchedule(
-        enabled: Boolean,
-        startH: Int, startM: Int,
-        endH: Int, endM: Int,
-        lunchStartH: Int, lunchStartM: Int,
-        lunchEndH: Int, lunchEndM: Int,
-    ) {
+    fun applyWorkSchedule(enabled: Boolean, schedule: List<DaySchedule>) {
         viewModelScope.launch {
             try {
                 repository.setWorkScheduleEnabled(enabled)
-                repository.setWorkStartHour(startH)
-                repository.setWorkStartMinute(startM)
-                repository.setWorkEndHour(endH)
-                repository.setWorkEndMinute(endM)
-                repository.setLunchStartHour(lunchStartH)
-                repository.setLunchStartMinute(lunchStartM)
-                repository.setLunchEndHour(lunchEndH)
-                repository.setLunchEndMinute(lunchEndM)
+                repository.setWeekSchedule(schedule)
                 if (enabled) {
                     WorkScheduleManager.scheduleNextWorkStartReminder(
-                        getApplication(), startH, startM,
+                        getApplication(), schedule,
                     )
                 }
             } catch (e: Exception) {

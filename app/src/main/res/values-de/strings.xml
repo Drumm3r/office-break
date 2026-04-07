@@ -59,17 +59,27 @@
     <string name="settings_custom_sound_current">Aktuell: %1$s</string>
     <string name="settings_work_schedule">Arbeitszeiten</string>
     <string name="settings_work_schedule_enabled">Arbeitszeiten</string>
-    <string name="settings_work_schedule_hint">Timer pausiert automatisch in der Mittagspause und stoppt am Feierabend</string>
+    <string name="settings_work_schedule_hint">Timer pausiert automatisch in der Pause und stoppt am Schichtende</string>
     <string name="settings_work_start">Arbeitsbeginn</string>
     <string name="settings_work_end">Arbeitsende</string>
-    <string name="settings_lunch_start">Mittagspause Beginn</string>
-    <string name="settings_lunch_end">Mittagspause Ende</string>
-    <string name="notification_text_lunch_pause">Mittagspause — Timer pausiert</string>
+    <string name="settings_lunch_start">Pause Beginn</string>
+    <string name="settings_lunch_end">Pause Ende</string>
+    <string name="notification_text_lunch_pause">Pause — Timer pausiert</string>
     <string name="notification_work_start_title">Arbeitstag beginnt!</string>
     <string name="notification_work_start_text">Starte deinen Pausen-Timer für den Tag</string>
-    <string name="timer_paused_lunch">Mittagspause</string>
+    <string name="timer_paused_lunch">Pause</string>
     <string name="onboarding_schedule_title">Deine Arbeitszeiten</string>
     <string name="onboarding_schedule_subtitle">Optional — du kannst das später in den Einstellungen ändern</string>
+    <string name="onboarding_schedule_select_days">Wähle deine Arbeitstage</string>
+    <string name="onboarding_schedule_customize_hint">Individuelle Zeiten pro Tag kannst du später in den Einstellungen anpassen</string>
+    <string name="day_mon">Mo</string>
+    <string name="day_tue">Di</string>
+    <string name="day_wed">Mi</string>
+    <string name="day_thu">Do</string>
+    <string name="day_fri">Fr</string>
+    <string name="day_sat">Sa</string>
+    <string name="day_sun">So</string>
+    <string name="settings_work_schedule_day_linked">Zeiten vom Vortag übernehmen</string>
 
     <!-- Dynamische Steigerung -->
     <string name="dynamic_increase_title">Du wirst stärker!</string>
@@ -113,6 +123,9 @@
     <string name="onboarding_summary_interval">Pause alle %1$s</string>
     <string name="onboarding_summary_reps">%d Wiederholungen pro Übung</string>
     <string name="onboarding_summary_exercises">%d Übungen ausgewählt</string>
+    <string name="onboarding_summary_work_schedule">Arbeitszeiten: %1$s – %2$s</string>
+    <string name="onboarding_summary_lunch">Pause: %1$s – %2$s</string>
+    <string name="onboarding_summary_work_schedule_off">Arbeitszeiten: aus</string>
     <string name="onboarding_next">Weiter</string>
     <string name="onboarding_back">Zurück</string>
     <string name="onboarding_start">Los geht\'s!</string>

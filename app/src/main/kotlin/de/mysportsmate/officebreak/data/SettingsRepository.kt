@@ -111,36 +111,39 @@ class SettingsRepository(
         prefs[KEY_WORK_SCHEDULE_ENABLED] ?: DEFAULT_WORK_SCHEDULE_ENABLED
     }
 
-    val workStartHour: Flow<Int> = dataStore.data.map { prefs ->
-        prefs[KEY_WORK_START_HOUR] ?: DEFAULT_WORK_START_HOUR
+    val weekSchedule: Flow<List<DaySchedule>> = dataStore.data.map { prefs ->
+        val raw = prefs[KEY_WEEK_SCHEDULE]
+        if (raw != null) {
+            try {
+                json.decodeFromString<List<DaySchedule>>(raw)
+            } catch (e: Exception) {
+                Log.w("SettingsRepository", "Failed to decode week schedule", e)
+                DEFAULT_WEEK_SCHEDULE
+            }
+        } else {
+            migrateOldScheduleKeys(prefs)
+        }
     }
 
-    val workStartMinute: Flow<Int> = dataStore.data.map { prefs ->
-        prefs[KEY_WORK_START_MINUTE] ?: DEFAULT_WORK_START_MINUTE
-    }
+    private fun migrateOldScheduleKeys(prefs: Preferences): List<DaySchedule> {
+        val hasOldKeys = prefs[KEY_WORK_START_HOUR] != null
+        if (!hasOldKeys) return DEFAULT_WEEK_SCHEDULE
 
-    val workEndHour: Flow<Int> = dataStore.data.map { prefs ->
-        prefs[KEY_WORK_END_HOUR] ?: DEFAULT_WORK_END_HOUR
-    }
-
-    val workEndMinute: Flow<Int> = dataStore.data.map { prefs ->
-        prefs[KEY_WORK_END_MINUTE] ?: DEFAULT_WORK_END_MINUTE
-    }
-
-    val lunchStartHour: Flow<Int> = dataStore.data.map { prefs ->
-        prefs[KEY_LUNCH_START_HOUR] ?: DEFAULT_LUNCH_START_HOUR
-    }
-
-    val lunchStartMinute: Flow<Int> = dataStore.data.map { prefs ->
-        prefs[KEY_LUNCH_START_MINUTE] ?: DEFAULT_LUNCH_START_MINUTE
-    }
-
-    val lunchEndHour: Flow<Int> = dataStore.data.map { prefs ->
-        prefs[KEY_LUNCH_END_HOUR] ?: DEFAULT_LUNCH_END_HOUR
-    }
-
-    val lunchEndMinute: Flow<Int> = dataStore.data.map { prefs ->
-        prefs[KEY_LUNCH_END_MINUTE] ?: DEFAULT_LUNCH_END_MINUTE
+        val baseDay = DaySchedule(
+            enabled = true,
+            linked = false,
+            workStartHour = prefs[KEY_WORK_START_HOUR] ?: DEFAULT_WORK_START_HOUR,
+            workStartMinute = prefs[KEY_WORK_START_MINUTE] ?: DEFAULT_WORK_START_MINUTE,
+            workEndHour = prefs[KEY_WORK_END_HOUR] ?: DEFAULT_WORK_END_HOUR,
+            workEndMinute = prefs[KEY_WORK_END_MINUTE] ?: DEFAULT_WORK_END_MINUTE,
+            lunchStartHour = prefs[KEY_LUNCH_START_HOUR] ?: DEFAULT_LUNCH_START_HOUR,
+            lunchStartMinute = prefs[KEY_LUNCH_START_MINUTE] ?: DEFAULT_LUNCH_START_MINUTE,
+            lunchEndHour = prefs[KEY_LUNCH_END_HOUR] ?: DEFAULT_LUNCH_END_HOUR,
+            lunchEndMinute = prefs[KEY_LUNCH_END_MINUTE] ?: DEFAULT_LUNCH_END_MINUTE,
+        )
+        val linkedDay = baseDay.copy(linked = true)
+        val offDay = DaySchedule(enabled = false, linked = false)
+        return listOf(baseDay, linkedDay, linkedDay, linkedDay, linkedDay, offDay, offDay)
     }
 
     val dynamicIncreaseEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
@@ -233,36 +236,8 @@ class SettingsRepository(
         dataStore.edit { it[KEY_WORK_SCHEDULE_ENABLED] = value }
     }
 
-    suspend fun setWorkStartHour(value: Int) {
-        dataStore.edit { it[KEY_WORK_START_HOUR] = value }
-    }
-
-    suspend fun setWorkStartMinute(value: Int) {
-        dataStore.edit { it[KEY_WORK_START_MINUTE] = value }
-    }
-
-    suspend fun setWorkEndHour(value: Int) {
-        dataStore.edit { it[KEY_WORK_END_HOUR] = value }
-    }
-
-    suspend fun setWorkEndMinute(value: Int) {
-        dataStore.edit { it[KEY_WORK_END_MINUTE] = value }
-    }
-
-    suspend fun setLunchStartHour(value: Int) {
-        dataStore.edit { it[KEY_LUNCH_START_HOUR] = value }
-    }
-
-    suspend fun setLunchStartMinute(value: Int) {
-        dataStore.edit { it[KEY_LUNCH_START_MINUTE] = value }
-    }
-
-    suspend fun setLunchEndHour(value: Int) {
-        dataStore.edit { it[KEY_LUNCH_END_HOUR] = value }
-    }
-
-    suspend fun setLunchEndMinute(value: Int) {
-        dataStore.edit { it[KEY_LUNCH_END_MINUTE] = value }
+    suspend fun setWeekSchedule(schedule: List<DaySchedule>) {
+        dataStore.edit { it[KEY_WEEK_SCHEDULE] = json.encodeToString(schedule) }
     }
 
     suspend fun setCustomSoundUri(uri: String?) {
@@ -328,14 +303,7 @@ class SettingsRepository(
             ttsEnabled = prefs[KEY_TTS_ENABLED] ?: DEFAULT_TTS_ENABLED,
             customSoundUri = prefs[KEY_CUSTOM_SOUND_URI],
             workScheduleEnabled = prefs[KEY_WORK_SCHEDULE_ENABLED] ?: DEFAULT_WORK_SCHEDULE_ENABLED,
-            workStartHour = prefs[KEY_WORK_START_HOUR] ?: DEFAULT_WORK_START_HOUR,
-            workStartMinute = prefs[KEY_WORK_START_MINUTE] ?: DEFAULT_WORK_START_MINUTE,
-            workEndHour = prefs[KEY_WORK_END_HOUR] ?: DEFAULT_WORK_END_HOUR,
-            workEndMinute = prefs[KEY_WORK_END_MINUTE] ?: DEFAULT_WORK_END_MINUTE,
-            lunchStartHour = prefs[KEY_LUNCH_START_HOUR] ?: DEFAULT_LUNCH_START_HOUR,
-            lunchStartMinute = prefs[KEY_LUNCH_START_MINUTE] ?: DEFAULT_LUNCH_START_MINUTE,
-            lunchEndHour = prefs[KEY_LUNCH_END_HOUR] ?: DEFAULT_LUNCH_END_HOUR,
-            lunchEndMinute = prefs[KEY_LUNCH_END_MINUTE] ?: DEFAULT_LUNCH_END_MINUTE,
+            weekSchedule = weekSchedule.first(),
         )
     }
 
@@ -359,14 +327,23 @@ class SettingsRepository(
             prefs[KEY_TTS_ENABLED] = data.ttsEnabled
             // customSoundUri is device-specific, not restored from backup
             prefs[KEY_WORK_SCHEDULE_ENABLED] = data.workScheduleEnabled
-            prefs[KEY_WORK_START_HOUR] = data.workStartHour
-            prefs[KEY_WORK_START_MINUTE] = data.workStartMinute
-            prefs[KEY_WORK_END_HOUR] = data.workEndHour
-            prefs[KEY_WORK_END_MINUTE] = data.workEndMinute
-            prefs[KEY_LUNCH_START_HOUR] = data.lunchStartHour
-            prefs[KEY_LUNCH_START_MINUTE] = data.lunchStartMinute
-            prefs[KEY_LUNCH_END_HOUR] = data.lunchEndHour
-            prefs[KEY_LUNCH_END_MINUTE] = data.lunchEndMinute
+            if (data.weekSchedule.isNotEmpty()) {
+                prefs[KEY_WEEK_SCHEDULE] = json.encodeToString(data.weekSchedule)
+            } else {
+                // Migrate from old flat fields
+                val baseDay = DaySchedule(
+                    enabled = true, linked = false,
+                    workStartHour = data.workStartHour, workStartMinute = data.workStartMinute,
+                    workEndHour = data.workEndHour, workEndMinute = data.workEndMinute,
+                    lunchStartHour = data.lunchStartHour, lunchStartMinute = data.lunchStartMinute,
+                    lunchEndHour = data.lunchEndHour, lunchEndMinute = data.lunchEndMinute,
+                )
+                val linkedDay = baseDay.copy(linked = true)
+                val offDay = DaySchedule(enabled = false, linked = false)
+                prefs[KEY_WEEK_SCHEDULE] = json.encodeToString(
+                    listOf(baseDay, linkedDay, linkedDay, linkedDay, linkedDay, offDay, offDay),
+                )
+            }
             prefs[KEY_ONBOARDING_COMPLETED] = true
         }
     }
@@ -390,14 +367,7 @@ class SettingsRepository(
         val ttsEnabled: Boolean,
         val customSoundUri: String?,
         val workScheduleEnabled: Boolean,
-        val workStartHour: Int,
-        val workStartMinute: Int,
-        val workEndHour: Int,
-        val workEndMinute: Int,
-        val lunchStartHour: Int,
-        val lunchStartMinute: Int,
-        val lunchEndHour: Int,
-        val lunchEndMinute: Int,
+        val weekSchedule: List<DaySchedule>,
     )
 
     companion object {
@@ -417,6 +387,8 @@ class SettingsRepository(
         private val KEY_TTS_ENABLED = booleanPreferencesKey("tts_enabled")
         private val KEY_CUSTOM_SOUND_URI = stringPreferencesKey("custom_sound_uri")
         private val KEY_WORK_SCHEDULE_ENABLED = booleanPreferencesKey("work_schedule_enabled")
+        private val KEY_WEEK_SCHEDULE = stringPreferencesKey("week_schedule")
+        // Legacy keys for migration from old flat format
         private val KEY_WORK_START_HOUR = intPreferencesKey("work_start_hour")
         private val KEY_WORK_START_MINUTE = intPreferencesKey("work_start_minute")
         private val KEY_WORK_END_HOUR = intPreferencesKey("work_end_hour")

@@ -35,6 +35,7 @@ data class BackupData(
     val lunchStartMinute: Int = 0,
     val lunchEndHour: Int = 13,
     val lunchEndMinute: Int = 0,
+    val weekSchedule: List<DaySchedule> = emptyList(),
 
     // Stats
     val trackingEnabled: Boolean,

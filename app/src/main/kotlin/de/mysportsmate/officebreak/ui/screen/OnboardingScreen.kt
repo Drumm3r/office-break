@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -24,7 +26,6 @@ import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -35,6 +36,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -47,34 +49,26 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import de.mysportsmate.officebreak.R
+import de.mysportsmate.officebreak.data.DEFAULT_WEEK_SCHEDULE
+import de.mysportsmate.officebreak.data.DaySchedule
 import de.mysportsmate.officebreak.data.Exercise
 import de.mysportsmate.officebreak.data.FitnessLevel
-import de.mysportsmate.officebreak.data.SettingsRepository
-
-data class WorkScheduleOnboardingState(
-    val enabled: Boolean = false,
-    val workStartHour: Int = SettingsRepository.DEFAULT_WORK_START_HOUR,
-    val workStartMinute: Int = SettingsRepository.DEFAULT_WORK_START_MINUTE,
-    val workEndHour: Int = SettingsRepository.DEFAULT_WORK_END_HOUR,
-    val workEndMinute: Int = SettingsRepository.DEFAULT_WORK_END_MINUTE,
-    val lunchStartHour: Int = SettingsRepository.DEFAULT_LUNCH_START_HOUR,
-    val lunchStartMinute: Int = SettingsRepository.DEFAULT_LUNCH_START_MINUTE,
-    val lunchEndHour: Int = SettingsRepository.DEFAULT_LUNCH_END_HOUR,
-    val lunchEndMinute: Int = SettingsRepository.DEFAULT_LUNCH_END_MINUTE,
-)
+import de.mysportsmate.officebreak.data.resolveEffectiveSchedule
+import androidx.compose.runtime.remember
 
 @Composable
 fun OnboardingScreen(
     exercises: List<Exercise>,
     onComplete: (FitnessLevel, List<Exercise>) -> Unit,
-    onWorkScheduleConfigured: (WorkScheduleOnboardingState) -> Unit = {},
+    onWorkScheduleConfigured: (Boolean, List<DaySchedule>) -> Unit = { _, _ -> },
 ) {
     var currentStep by rememberSaveable { mutableIntStateOf(0) }
     var selectedLevelOrdinal by rememberSaveable { mutableIntStateOf(-1) }
     var exerciseToggles by rememberSaveable(exercises) {
         mutableStateOf(exercises.map { it.isEnabled })
     }
-    var workSchedule by rememberSaveable { mutableStateOf(WorkScheduleOnboardingState()) }
+    var workScheduleEnabled by remember { mutableStateOf(false) }
+    var weekSchedule by remember { mutableStateOf(DEFAULT_WEEK_SCHEDULE) }
 
     val selectedLevel = if (selectedLevelOrdinal >= 0) {
         FitnessLevel.entries[selectedLevelOrdinal]
@@ -116,12 +110,16 @@ fun OnboardingScreen(
                         },
                     )
                     2 -> WorkScheduleStep(
-                        state = workSchedule,
-                        onStateChange = { workSchedule = it },
+                        enabled = workScheduleEnabled,
+                        weekSchedule = weekSchedule,
+                        onEnabledChange = { workScheduleEnabled = it },
+                        onScheduleChange = { weekSchedule = it },
                     )
                     3 -> SummaryStep(
                         level = selectedLevel!!,
                         exerciseCount = exerciseToggles.count { it },
+                        workScheduleEnabled = workScheduleEnabled,
+                        weekSchedule = weekSchedule,
                     )
                 }
             }
@@ -142,7 +140,7 @@ fun OnboardingScreen(
                     val selected = exercises.mapIndexed { index, exercise ->
                         exercise.copy(isEnabled = exerciseToggles.getOrElse(index) { true })
                     }
-                    onWorkScheduleConfigured(workSchedule)
+                    onWorkScheduleConfigured(workScheduleEnabled, weekSchedule)
                     onComplete(selectedLevel!!, selected)
                 },
             )
@@ -373,10 +371,11 @@ private fun ExerciseSelectionStep(
                         .padding(horizontal = 8.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Checkbox(
+                    Switch(
                         checked = toggles.getOrElse(index) { true },
                         onCheckedChange = { onToggle(index) },
                     )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = exercise.displayName(LocalContext.current),
                         style = MaterialTheme.typography.bodyLarge,
@@ -389,11 +388,25 @@ private fun ExerciseSelectionStep(
 
 @Composable
 private fun WorkScheduleStep(
-    state: WorkScheduleOnboardingState,
-    onStateChange: (WorkScheduleOnboardingState) -> Unit,
+    enabled: Boolean,
+    weekSchedule: List<DaySchedule>,
+    onEnabledChange: (Boolean) -> Unit,
+    onScheduleChange: (List<DaySchedule>) -> Unit,
 ) {
+    val dayNames = listOf(
+        stringResource(R.string.day_mon),
+        stringResource(R.string.day_tue),
+        stringResource(R.string.day_wed),
+        stringResource(R.string.day_thu),
+        stringResource(R.string.day_fri),
+        stringResource(R.string.day_sat),
+        stringResource(R.string.day_sun),
+    )
+
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
@@ -425,37 +438,35 @@ private fun WorkScheduleStep(
                 modifier = Modifier.weight(1f),
             )
             Switch(
-                checked = state.enabled,
-                onCheckedChange = { onStateChange(state.copy(enabled = it)) },
+                checked = enabled,
+                onCheckedChange = onEnabledChange,
             )
         }
 
-        if (state.enabled) {
+        if (enabled) {
             Spacer(modifier = Modifier.height(8.dp))
 
-            OnboardingTimeRow(
-                label = stringResource(R.string.settings_work_start),
-                hour = state.workStartHour,
-                minute = state.workStartMinute,
-                onTimeChange = { h, m -> onStateChange(state.copy(workStartHour = h, workStartMinute = m)) },
-            )
-            OnboardingTimeRow(
-                label = stringResource(R.string.settings_work_end),
-                hour = state.workEndHour,
-                minute = state.workEndMinute,
-                onTimeChange = { h, m -> onStateChange(state.copy(workEndHour = h, workEndMinute = m)) },
-            )
-            OnboardingTimeRow(
-                label = stringResource(R.string.settings_lunch_start),
-                hour = state.lunchStartHour,
-                minute = state.lunchStartMinute,
-                onTimeChange = { h, m -> onStateChange(state.copy(lunchStartHour = h, lunchStartMinute = m)) },
-            )
-            OnboardingTimeRow(
-                label = stringResource(R.string.settings_lunch_end),
-                hour = state.lunchEndHour,
-                minute = state.lunchEndMinute,
-                onTimeChange = { h, m -> onStateChange(state.copy(lunchEndHour = h, lunchEndMinute = m)) },
+            weekSchedule.forEachIndexed { index, day ->
+                DayScheduleRow(
+                    dayName = dayNames[index],
+                    day = day,
+                    effectiveDay = resolveEffectiveSchedule(weekSchedule, index),
+                    isFirstEnabled = weekSchedule.indexOfFirst { it.enabled } == index,
+                    onDayChange = {
+                        val updated = weekSchedule.toMutableList()
+                        updated[index] = it
+                        onScheduleChange(updated)
+                    },
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = stringResource(R.string.onboarding_schedule_customize_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
             )
         }
     }
@@ -513,28 +524,41 @@ private fun OnboardingTimePicker(
         is24Hour = true,
     )
 
-    androidx.compose.material3.AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(onClick = { onConfirm(state.hour, state.minute) }) {
-                Text(text = stringResource(R.string.dialog_confirm_ok))
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+            ),
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                androidx.compose.material3.TimePicker(state = state)
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text(text = stringResource(R.string.reset_confirm_no))
+                    }
+                    TextButton(onClick = { onConfirm(state.hour, state.minute) }) {
+                        Text(text = stringResource(R.string.dialog_confirm_ok))
+                    }
+                }
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(text = stringResource(R.string.reset_confirm_no))
-            }
-        },
-        text = {
-            androidx.compose.material3.TimePicker(state = state)
-        },
-    )
+        }
+    }
 }
 
 @Composable
 private fun SummaryStep(
     level: FitnessLevel,
     exerciseCount: Int,
+    workScheduleEnabled: Boolean,
+    weekSchedule: List<DaySchedule>,
 ) {
     val levelLabelRes = when (level) {
         FitnessLevel.BEGINNER -> R.string.onboarding_level_beginner
@@ -591,6 +615,28 @@ private fun SummaryStep(
                 SummaryRow(
                     label = stringResource(R.string.onboarding_summary_exercises, exerciseCount),
                 )
+                if (workScheduleEnabled) {
+                    val workDays = weekSchedule.count { it.enabled }
+                    val baseDay = weekSchedule.firstOrNull { it.enabled } ?: weekSchedule.first()
+                    SummaryRow(
+                        label = stringResource(
+                            R.string.onboarding_summary_work_schedule,
+                            "%02d:%02d".format(baseDay.workStartHour, baseDay.workStartMinute),
+                            "%02d:%02d".format(baseDay.workEndHour, baseDay.workEndMinute),
+                        ),
+                    )
+                    SummaryRow(
+                        label = stringResource(
+                            R.string.onboarding_summary_lunch,
+                            "%02d:%02d".format(baseDay.lunchStartHour, baseDay.lunchStartMinute),
+                            "%02d:%02d".format(baseDay.lunchEndHour, baseDay.lunchEndMinute),
+                        ),
+                    )
+                } else {
+                    SummaryRow(
+                        label = stringResource(R.string.onboarding_summary_work_schedule_off),
+                    )
+                }
             }
         }
     }

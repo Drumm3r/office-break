@@ -84,14 +84,7 @@ fun TimerScreen(
     val ttsEnabled by viewModel.ttsEnabled.collectAsState()
     val customSoundUri by viewModel.customSoundUri.collectAsState()
     val workScheduleEnabled by viewModel.workScheduleEnabled.collectAsState()
-    val workStartHour by viewModel.workStartHour.collectAsState()
-    val workStartMinute by viewModel.workStartMinute.collectAsState()
-    val workEndHour by viewModel.workEndHour.collectAsState()
-    val workEndMinute by viewModel.workEndMinute.collectAsState()
-    val lunchStartHour by viewModel.lunchStartHour.collectAsState()
-    val lunchStartMinute by viewModel.lunchStartMinute.collectAsState()
-    val lunchEndHour by viewModel.lunchEndHour.collectAsState()
-    val lunchEndMinute by viewModel.lunchEndMinute.collectAsState()
+    val weekSchedule by viewModel.weekSchedule.collectAsState()
     val dynamicIncreaseOffer by viewModel.dynamicIncreaseOffer.collectAsState()
     val newlyUnlockedAchievements by viewModel.newlyUnlockedAchievements.collectAsState()
     val backupState by viewModel.backupState.collectAsState()
@@ -233,19 +226,9 @@ fun TimerScreen(
             onCustomSoundCleared = viewModel::clearCustomSound,
             onCustomSoundPreview = viewModel::playPreviewSound,
             workScheduleEnabled = workScheduleEnabled,
-            workStartHour = workStartHour,
-            workStartMinute = workStartMinute,
-            workEndHour = workEndHour,
-            workEndMinute = workEndMinute,
-            lunchStartHour = lunchStartHour,
-            lunchStartMinute = lunchStartMinute,
-            lunchEndHour = lunchEndHour,
-            lunchEndMinute = lunchEndMinute,
+            weekSchedule = weekSchedule,
             onWorkScheduleEnabledChange = viewModel::setWorkScheduleEnabled,
-            onWorkStartTimeChange = viewModel::setWorkStartTime,
-            onWorkEndTimeChange = viewModel::setWorkEndTime,
-            onLunchStartTimeChange = viewModel::setLunchStartTime,
-            onLunchEndTimeChange = viewModel::setLunchEndTime,
+            onDayScheduleChange = viewModel::updateDaySchedule,
             onTrackingEnabledChange = viewModel::setTrackingEnabled,
             onResetStats = viewModel::resetStats,
             onExportToUri = viewModel::exportData,

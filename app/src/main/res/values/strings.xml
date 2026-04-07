@@ -59,17 +59,27 @@
     <string name="settings_custom_sound_current">Current: %1$s</string>
     <string name="settings_work_schedule">Work Schedule</string>
     <string name="settings_work_schedule_enabled">Work schedule</string>
-    <string name="settings_work_schedule_hint">Automatically pause during lunch and stop at end of day</string>
+    <string name="settings_work_schedule_hint">Automatically pause during breaks and stop at end of shift</string>
     <string name="settings_work_start">Work start</string>
     <string name="settings_work_end">Work end</string>
-    <string name="settings_lunch_start">Lunch start</string>
-    <string name="settings_lunch_end">Lunch end</string>
-    <string name="notification_text_lunch_pause">Paused for lunch break</string>
+    <string name="settings_lunch_start">Break start</string>
+    <string name="settings_lunch_end">Break end</string>
+    <string name="notification_text_lunch_pause">Break — timer paused</string>
     <string name="notification_work_start_title">Time to start working!</string>
     <string name="notification_work_start_text">Start your break timer for the day</string>
-    <string name="timer_paused_lunch">Lunch break</string>
+    <string name="timer_paused_lunch">Break</string>
     <string name="onboarding_schedule_title">Set your work schedule</string>
     <string name="onboarding_schedule_subtitle">Optional — you can set this up later in settings</string>
+    <string name="onboarding_schedule_select_days">Select your work days</string>
+    <string name="onboarding_schedule_customize_hint">You can set individual times per day later in settings</string>
+    <string name="day_mon">Mon</string>
+    <string name="day_tue">Tue</string>
+    <string name="day_wed">Wed</string>
+    <string name="day_thu">Thu</string>
+    <string name="day_fri">Fri</string>
+    <string name="day_sat">Sat</string>
+    <string name="day_sun">Sun</string>
+    <string name="settings_work_schedule_day_linked">Inherit times from previous day</string>
 
     <!-- Dynamic Increase -->
     <string name="dynamic_increase_title">You\'re getting stronger!</string>
@@ -113,6 +123,9 @@
     <string name="onboarding_summary_interval">Break every %1$s</string>
     <string name="onboarding_summary_reps">%d reps per exercise</string>
     <string name="onboarding_summary_exercises">%d exercises selected</string>
+    <string name="onboarding_summary_work_schedule">Work schedule: %1$s – %2$s</string>
+    <string name="onboarding_summary_lunch">Break: %1$s – %2$s</string>
+    <string name="onboarding_summary_work_schedule_off">Work schedule: off</string>
     <string name="onboarding_next">Next</string>
     <string name="onboarding_back">Back</string>
     <string name="onboarding_start">Let\'s go!</string>

@@ -24,8 +24,12 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import de.mysportsmate.officebreak.MainActivity
 import de.mysportsmate.officebreak.OfficeBreakApp
 import de.mysportsmate.officebreak.R
+import de.mysportsmate.officebreak.data.AppJson
+import de.mysportsmate.officebreak.data.DaySchedule
+import de.mysportsmate.officebreak.data.DEFAULT_WEEK_SCHEDULE
 import de.mysportsmate.officebreak.data.SettingsRepository
 import de.mysportsmate.officebreak.data.dataStore
+import de.mysportsmate.officebreak.data.resolveEffectiveSchedule
 import de.mysportsmate.officebreak.locale.LocaleHelper
 import de.mysportsmate.officebreak.widget.WidgetUpdater
 import kotlinx.coroutines.CoroutineScope
@@ -105,26 +109,37 @@ class TimerService : Service() {
                 writeWidgetTimerStatus("running")
                 WidgetUpdater.requestUpdate(this@TimerService)
 
-                val prefs = dataStore.data.first()
-                val scheduleEnabled = prefs[booleanPreferencesKey("work_schedule_enabled")] ?: false
-                val workEndH = prefs[intPreferencesKey("work_end_hour")] ?: 17
-                val workEndM = prefs[intPreferencesKey("work_end_minute")] ?: 0
-                val lunchStartH = prefs[intPreferencesKey("lunch_start_hour")] ?: 12
-                val lunchStartM = prefs[intPreferencesKey("lunch_start_minute")] ?: 0
-                val lunchEndH = prefs[intPreferencesKey("lunch_end_hour")] ?: 13
-                val lunchEndM = prefs[intPreferencesKey("lunch_end_minute")] ?: 0
+                val schedulePrefs = dataStore.data.first()
+                val scheduleEnabled = schedulePrefs[booleanPreferencesKey("work_schedule_enabled")] ?: false
+                val todaySchedule = if (scheduleEnabled) {
+                    val scheduleJson = schedulePrefs[stringPreferencesKey("week_schedule")]
+                    val week = if (scheduleJson != null) {
+                        try {
+                            AppJson.decodeFromString<List<DaySchedule>>(scheduleJson)
+                        } catch (_: Exception) {
+                            DEFAULT_WEEK_SCHEDULE
+                        }
+                    } else {
+                        DEFAULT_WEEK_SCHEDULE
+                    }
+                    val dayIndex = java.time.LocalDate.now().dayOfWeek.ordinal
+                    resolveEffectiveSchedule(week, dayIndex)
+                } else {
+                    null
+                }
 
                 var remaining = totalSeconds
                 while (remaining > 0) {
                     delay(1000L)
 
-                    if (scheduleEnabled) {
+                    if (todaySchedule != null) {
                         val now = LocalTime.now()
-                        val lunchStart = LocalTime.of(lunchStartH, lunchStartM)
-                        val lunchEnd = LocalTime.of(lunchEndH, lunchEndM)
-                        val workEnd = LocalTime.of(workEndH, workEndM)
+                        val workStart = LocalTime.of(todaySchedule.workStartHour, todaySchedule.workStartMinute)
+                        val workEnd = LocalTime.of(todaySchedule.workEndHour, todaySchedule.workEndMinute)
+                        val lunchStart = LocalTime.of(todaySchedule.lunchStartHour, todaySchedule.lunchStartMinute)
+                        val lunchEnd = LocalTime.of(todaySchedule.lunchEndHour, todaySchedule.lunchEndMinute)
 
-                        if (!now.isBefore(workEnd)) {
+                        if (isTimeInRange(now, workEnd, workStart)) {
                             timerStateHolder.update(TimerState.Idle)
                             writeWidgetTimerStatus("idle")
                             WidgetUpdater.requestUpdate(this@TimerService)
@@ -134,13 +149,13 @@ class TimerService : Service() {
                             return@launch
                         }
 
-                        if (!now.isBefore(lunchStart) && now.isBefore(lunchEnd)) {
+                        if (isTimeInRange(now, lunchStart, lunchEnd)) {
                             timerStateHolder.update(TimerState.Paused(
                                 remainingSeconds = remaining,
                                 totalSeconds = totalSeconds,
                             ))
                             updateNotification(localizedContext.getString(R.string.notification_text_lunch_pause))
-                            while (LocalTime.now().isBefore(lunchEnd) && !LocalTime.now().isBefore(lunchStart)) {
+                            while (isTimeInRange(LocalTime.now(), lunchStart, lunchEnd)) {
                                 delay(1000L)
                             }
                             timerStateHolder.update(TimerState.Running(
@@ -453,6 +468,14 @@ class TimerService : Service() {
             dataStore.edit { it[KEY_WIDGET_TIMER_STATUS] = status }
         } catch (_: Exception) {
             // Non-critical
+        }
+    }
+
+    private fun isTimeInRange(time: LocalTime, start: LocalTime, end: LocalTime): Boolean {
+        return if (!start.isAfter(end)) {
+            !time.isBefore(start) && time.isBefore(end)
+        } else {
+            !time.isBefore(start) || time.isBefore(end)
         }
     }
 

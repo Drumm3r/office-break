@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -23,6 +24,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.LinkOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
@@ -47,8 +51,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.mysportsmate.officebreak.R
+import de.mysportsmate.officebreak.data.DaySchedule
+import de.mysportsmate.officebreak.data.resolveEffectiveSchedule
 import de.mysportsmate.officebreak.data.SettingsRepository
 import de.mysportsmate.officebreak.ui.components.ConfirmImportDialog
+import de.mysportsmate.officebreak.ui.components.VolumeBar
 import de.mysportsmate.officebreak.ui.components.ConfirmResetStatsDialog
 import java.time.LocalDate
 import kotlin.math.roundToInt
@@ -81,19 +88,9 @@ fun SettingsScreen(
     onCustomSoundCleared: () -> Unit,
     onCustomSoundPreview: (Int) -> Unit,
     workScheduleEnabled: Boolean,
-    workStartHour: Int,
-    workStartMinute: Int,
-    workEndHour: Int,
-    workEndMinute: Int,
-    lunchStartHour: Int,
-    lunchStartMinute: Int,
-    lunchEndHour: Int,
-    lunchEndMinute: Int,
+    weekSchedule: List<DaySchedule>,
     onWorkScheduleEnabledChange: (Boolean) -> Unit,
-    onWorkStartTimeChange: (Int, Int) -> Unit,
-    onWorkEndTimeChange: (Int, Int) -> Unit,
-    onLunchStartTimeChange: (Int, Int) -> Unit,
-    onLunchEndTimeChange: (Int, Int) -> Unit,
+    onDayScheduleChange: (Int, DaySchedule) -> Unit,
     onTrackingEnabledChange: (Boolean) -> Unit,
     onResetStats: () -> Unit,
     onExportToUri: (Uri) -> Unit,
@@ -247,30 +244,25 @@ fun SettingsScreen(
             )
 
             if (workScheduleEnabled) {
-                TimePickerRow(
-                    label = stringResource(R.string.settings_work_start),
-                    hour = workStartHour,
-                    minute = workStartMinute,
-                    onTimeSelected = onWorkStartTimeChange,
+                val dayNames = listOf(
+                    stringResource(R.string.day_mon),
+                    stringResource(R.string.day_tue),
+                    stringResource(R.string.day_wed),
+                    stringResource(R.string.day_thu),
+                    stringResource(R.string.day_fri),
+                    stringResource(R.string.day_sat),
+                    stringResource(R.string.day_sun),
                 )
-                TimePickerRow(
-                    label = stringResource(R.string.settings_work_end),
-                    hour = workEndHour,
-                    minute = workEndMinute,
-                    onTimeSelected = onWorkEndTimeChange,
-                )
-                TimePickerRow(
-                    label = stringResource(R.string.settings_lunch_start),
-                    hour = lunchStartHour,
-                    minute = lunchStartMinute,
-                    onTimeSelected = onLunchStartTimeChange,
-                )
-                TimePickerRow(
-                    label = stringResource(R.string.settings_lunch_end),
-                    hour = lunchEndHour,
-                    minute = lunchEndMinute,
-                    onTimeSelected = onLunchEndTimeChange,
-                )
+
+                weekSchedule.forEachIndexed { index, day ->
+                    DayScheduleRow(
+                        dayName = dayNames[index],
+                        day = day,
+                        effectiveDay = resolveEffectiveSchedule(weekSchedule, index),
+                        isFirstEnabled = weekSchedule.indexOfFirst { it.enabled } == index,
+                        onDayChange = { onDayScheduleChange(index, it) },
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -283,10 +275,13 @@ fun SettingsScreen(
                 modifier = Modifier.padding(bottom = 8.dp),
             )
 
-            BeepVolumeSlider(
-                beepVolume = beepVolume,
-                onBeepVolumeChange = onBeepVolumeChange,
-                onBeepVolumePreview = onBeepVolumePreview,
+            VolumeBar(
+                volume = beepVolume,
+                onVolumeChange = { value ->
+                    onBeepVolumeChange(value)
+                    onBeepVolumePreview(value)
+                },
+                modifier = Modifier.fillMaxWidth(),
             )
 
             SettingsToggleRow(
@@ -628,9 +623,111 @@ private fun BeepCountSlider(
     }
 }
 
+@Composable
+internal fun DayScheduleRow(
+    dayName: String,
+    day: DaySchedule,
+    effectiveDay: DaySchedule?,
+    isFirstEnabled: Boolean,
+    onDayChange: (DaySchedule) -> Unit,
+) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    val displayDay = if (day.linked && !isFirstEnabled) effectiveDay ?: day else day
+    val timesEditable = day.enabled && (!day.linked || isFirstEnabled)
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(enabled = day.enabled) { expanded = !expanded }
+                .padding(vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Switch(
+                checked = day.enabled,
+                onCheckedChange = { onDayChange(day.copy(enabled = it)) },
+                modifier = Modifier.padding(end = 8.dp),
+            )
+
+            Text(
+                text = dayName,
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f),
+                color = if (day.enabled) {
+                    MaterialTheme.colorScheme.onSurface
+                } else {
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                },
+            )
+
+            if (day.enabled) {
+                Text(
+                    text = "%02d:%02d–%02d:%02d".format(
+                        displayDay.workStartHour, displayDay.workStartMinute,
+                        displayDay.workEndHour, displayDay.workEndMinute,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (timesEditable) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    },
+                )
+            }
+
+            if (day.enabled && !isFirstEnabled) {
+                IconButton(
+                    onClick = {
+                        val newLinked = !day.linked
+                        onDayChange(day.copy(linked = newLinked))
+                        if (!newLinked) expanded = true
+                    },
+                    modifier = Modifier.size(36.dp),
+                ) {
+                    Icon(
+                        imageVector = if (day.linked) Icons.Outlined.Link else Icons.Outlined.LinkOff,
+                        contentDescription = stringResource(R.string.settings_work_schedule_day_linked),
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
+        }
+
+        if (expanded && day.enabled && timesEditable) {
+            Column(modifier = Modifier.padding(start = 48.dp)) {
+                TimePickerRow(
+                    label = stringResource(R.string.settings_work_start),
+                    hour = day.workStartHour,
+                    minute = day.workStartMinute,
+                    onTimeSelected = { h, m -> onDayChange(day.copy(workStartHour = h, workStartMinute = m)) },
+                )
+                TimePickerRow(
+                    label = stringResource(R.string.settings_work_end),
+                    hour = day.workEndHour,
+                    minute = day.workEndMinute,
+                    onTimeSelected = { h, m -> onDayChange(day.copy(workEndHour = h, workEndMinute = m)) },
+                )
+                TimePickerRow(
+                    label = stringResource(R.string.settings_lunch_start),
+                    hour = day.lunchStartHour,
+                    minute = day.lunchStartMinute,
+                    onTimeSelected = { h, m -> onDayChange(day.copy(lunchStartHour = h, lunchStartMinute = m)) },
+                )
+                TimePickerRow(
+                    label = stringResource(R.string.settings_lunch_end),
+                    hour = day.lunchEndHour,
+                    minute = day.lunchEndMinute,
+                    onTimeSelected = { h, m -> onDayChange(day.copy(lunchEndHour = h, lunchEndMinute = m)) },
+                )
+            }
+        }
+    }
+}
+
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-private fun TimePickerRow(
+internal fun TimePickerRow(
     label: String,
     hour: Int,
     minute: Int,
@@ -661,25 +758,36 @@ private fun TimePickerRow(
             is24Hour = true,
         )
 
-        AlertDialog(
-            onDismissRequest = { showDialog = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    onTimeSelected(timePickerState.hour, timePickerState.minute)
-                    showDialog = false
-                }) {
-                    Text(text = stringResource(R.string.dialog_confirm_ok))
+        androidx.compose.ui.window.Dialog(onDismissRequest = { showDialog = false }) {
+            androidx.compose.material3.Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = androidx.compose.material3.CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                ),
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    TimePicker(state = timePickerState)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.End,
+                    ) {
+                        TextButton(onClick = { showDialog = false }) {
+                            Text(text = stringResource(R.string.reset_confirm_no))
+                        }
+                        TextButton(onClick = {
+                            onTimeSelected(timePickerState.hour, timePickerState.minute)
+                            showDialog = false
+                        }) {
+                            Text(text = stringResource(R.string.dialog_confirm_ok))
+                        }
+                    }
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDialog = false }) {
-                    Text(text = stringResource(R.string.reset_confirm_no))
-                }
-            },
-            text = {
-                TimePicker(state = timePickerState)
-            },
-        )
+            }
+        }
     }
 }
 
