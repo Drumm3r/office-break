@@ -5,12 +5,11 @@ import android.speech.tts.TextToSpeech
 import android.util.Log
 import java.util.Locale
 
-class BreakTtsManager(context: Context) : TextToSpeech.OnInitListener {
+class BreakTtsManager(context: Context) {
 
-    private val tts = TextToSpeech(context.applicationContext, this)
     private var isReady = false
 
-    override fun onInit(status: Int) {
+    private val tts = TextToSpeech(context.applicationContext) { status ->
         isReady = status == TextToSpeech.SUCCESS
         if (!isReady) {
             Log.w(TAG, "TTS initialization failed with status: $status")

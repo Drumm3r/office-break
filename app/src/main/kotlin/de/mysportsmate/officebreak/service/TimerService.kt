@@ -228,7 +228,7 @@ class TimerService : Service() {
                 flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
                 setPackage(packageName)
             },
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            PendingIntent.FLAG_CANCEL_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
         return NotificationCompat.Builder(this, OfficeBreakApp.CHANNEL_ID)
@@ -266,7 +266,7 @@ class TimerService : Service() {
                 addFlags(Intent.FLAG_ACTIVITY_NO_USER_ACTION)
                 setPackage(packageName)
             },
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            PendingIntent.FLAG_CANCEL_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
         val contentIntent = PendingIntent.getActivity(
@@ -276,7 +276,7 @@ class TimerService : Service() {
                 flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
                 setPackage(packageName)
             },
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            PendingIntent.FLAG_CANCEL_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
         val notification = NotificationCompat.Builder(this, OfficeBreakApp.ALERT_CHANNEL_ID)
