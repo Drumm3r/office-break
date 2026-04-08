@@ -55,7 +55,8 @@ object WorkScheduleManager {
     }
 
     private fun buildPendingIntent(context: Context): PendingIntent {
-        val intent = Intent(context, WorkScheduleReceiver::class.java).apply {
+        val intent = Intent().apply {
+            setClass(context, WorkScheduleReceiver::class.java)
             setPackage(context.packageName)
         }
         return PendingIntent.getBroadcast(
