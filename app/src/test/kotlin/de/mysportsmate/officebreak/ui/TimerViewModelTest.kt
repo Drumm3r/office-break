@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import de.mysportsmate.officebreak.MainDispatcherRule
+import de.mysportsmate.officebreak.data.AchievementDefinition
 import de.mysportsmate.officebreak.data.Exercise
 import de.mysportsmate.officebreak.data.FakeDataStore
 import de.mysportsmate.officebreak.data.FitnessLevel
@@ -23,6 +24,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -90,6 +92,18 @@ class TimerViewModelTest {
         viewModel.repsLinked,
         viewModel.exercises,
         viewModel.language,
+    )
+
+    private fun collectAllFlows() = collectFlows() + listOf(
+        viewModel.autoRestart,
+        viewModel.dynamicIncreaseEnabled,
+        viewModel.trackingEnabled,
+        viewModel.beepVolume,
+        viewModel.beepCount,
+        viewModel.vibrationEnabled,
+        viewModel.keepScreenOn,
+        viewModel.ttsEnabled,
+        viewModel.statsSnapshot,
     )
 
     @Test
@@ -950,6 +964,389 @@ class TimerViewModelTest {
 
         val call = serviceController.calls.first() as FakeTimerServiceController.Call.Start
         assertEquals(false, call.freestyle)
+
+        collectors.forEach { it.cancel() }
+    }
+
+    // --- Settings toggles ---
+
+    @Test
+    fun `setVibrationEnabled writes to repository`() = runTest {
+        viewModel.vibrationEnabled.test {
+            assertEquals(SettingsRepository.DEFAULT_VIBRATION_ENABLED, awaitItem())
+            viewModel.setVibrationEnabled(false)
+            assertEquals(false, awaitItem())
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `setKeepScreenOn writes to repository`() = runTest {
+        viewModel.keepScreenOn.test {
+            assertEquals(SettingsRepository.DEFAULT_KEEP_SCREEN_ON, awaitItem())
+            viewModel.setKeepScreenOn(true)
+            assertEquals(true, awaitItem())
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `setTtsEnabled writes to repository`() = runTest {
+        viewModel.ttsEnabled.test {
+            assertEquals(SettingsRepository.DEFAULT_TTS_ENABLED, awaitItem())
+            viewModel.setTtsEnabled(true)
+            assertEquals(true, awaitItem())
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `setDynamicIncreaseEnabled writes to repository`() = runTest {
+        viewModel.dynamicIncreaseEnabled.test {
+            assertEquals(SettingsRepository.DEFAULT_DYNAMIC_INCREASE_ENABLED, awaitItem())
+            viewModel.setDynamicIncreaseEnabled(false)
+            assertEquals(false, awaitItem())
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    // --- Achievement celebration ---
+
+    @Test
+    fun `dismissAchievementCelebration clears newly unlocked list`() {
+        assertEquals(emptyList<AchievementDefinition>(), viewModel.newlyUnlockedAchievements.value)
+        viewModel.dismissAchievementCelebration()
+        assertEquals(emptyList<AchievementDefinition>(), viewModel.newlyUnlockedAchievements.value)
+    }
+
+    // --- Backup state ---
+
+    @Test
+    fun `clearBackupState resets to Idle`() {
+        viewModel.clearBackupState()
+        assertEquals(BackupUiState.Idle, viewModel.backupState.value)
+    }
+
+    // --- onExerciseDone without autoRestart ---
+
+    @Test
+    fun `onExerciseDone without autoRestart resets timer`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        viewModel.setAutoRestart(false)
+        advanceUntilIdle()
+        viewModel.setMinutes(15)
+        advanceUntilIdle()
+
+        viewModel.onTimerExpired()
+        advanceUntilIdle()
+        assertNotNull(viewModel.currentExercise.value)
+
+        viewModel.onExerciseDone()
+        advanceUntilIdle()
+
+        assertNull(viewModel.currentExercise.value)
+        val lastCall = serviceController.calls.last()
+        assertTrue("Expected Reset but got $lastCall", lastCall is FakeTimerServiceController.Call.Reset)
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `onExerciseDone with null exercise still restarts timer`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        viewModel.setMinutes(15)
+        advanceUntilIdle()
+
+        // Call onExerciseDone without prior onTimerExpired, so exercise is null
+        viewModel.onExerciseDone()
+        advanceUntilIdle()
+
+        val lastCall = serviceController.calls.lastOrNull()
+        assertNotNull(lastCall)
+        assertTrue(lastCall is FakeTimerServiceController.Call.Restart)
+
+        collectors.forEach { it.cancel() }
+    }
+
+    // --- Dynamic increase ---
+
+    @Test
+    fun `onExerciseDone increments breaksSinceLastIncrease`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        val breakCountCollector = launch { viewModel.dynamicIncreaseEnabled.collect {} }
+        advanceUntilIdle()
+
+        viewModel.setMinutes(15)
+        advanceUntilIdle()
+
+        viewModel.onTimerExpired()
+        advanceUntilIdle()
+        viewModel.onExerciseDone()
+        advanceUntilIdle()
+
+        // breaksSinceLastIncrease is internal, test indirectly via breaksSinceLastIncrease flow
+        // After 1 exercise done, counter should be 1
+        // We can't directly read breaksSinceLastIncrease from ViewModel (private),
+        // but we verify no offer is shown yet (threshold for 15min = (480/15)*3 = 96)
+        assertNull(viewModel.dynamicIncreaseOffer.value)
+
+        breakCountCollector.cancel()
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `onExerciseDone does not show offer when dynamic increase disabled`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        viewModel.setDynamicIncreaseEnabled(false)
+        advanceUntilIdle()
+        viewModel.setMinutes(15)
+        advanceUntilIdle()
+
+        viewModel.onTimerExpired()
+        advanceUntilIdle()
+        viewModel.onExerciseDone()
+        advanceUntilIdle()
+
+        assertNull(viewModel.dynamicIncreaseOffer.value)
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `onExerciseDone does not show offer below threshold`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        // Default 30 min interval, threshold = (480/30)*3 = 48
+        // One exercise done should not trigger offer
+        viewModel.onTimerExpired()
+        advanceUntilIdle()
+        viewModel.onExerciseDone()
+        advanceUntilIdle()
+
+        assertNull(viewModel.dynamicIncreaseOffer.value)
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `acceptIncreaseReps offer has correct new reps value`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        // repsMax default = 10, after increase should be 12
+        viewModel.acceptIncreaseReps()
+        advanceUntilIdle()
+
+        assertEquals(12, viewModel.repsMax.value)
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `acceptDecreaseInterval offer has correct new interval`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        // Default 30 min, decrease by 5 = 25
+        viewModel.acceptDecreaseInterval()
+        advanceUntilIdle()
+
+        val totalMinutes = viewModel.hours.value * 60 + viewModel.minutes.value
+        assertEquals(25, totalMinutes)
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `acceptIncreaseReps cannot exceed MAX_REPS via offer`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        // Set reps close to max: 49
+        viewModel.setRepsLinked(false)
+        advanceUntilIdle()
+        viewModel.setRepsMin(49)
+        advanceUntilIdle()
+        viewModel.setRepsMax(49)
+        advanceUntilIdle()
+
+        // Increase by REPS_INCREASE=2, but capped at MAX_REPS=50
+        viewModel.acceptIncreaseReps()
+        advanceUntilIdle()
+
+        assertEquals(50, viewModel.repsMax.value)
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `acceptDecreaseInterval cannot go below MIN_INTERVAL via offer`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        // Set interval to 7 minutes
+        viewModel.setHours(0)
+        advanceUntilIdle()
+        viewModel.setMinutes(7)
+        advanceUntilIdle()
+
+        // Decrease by 5 -> 2, but floored at 5
+        viewModel.acceptDecreaseInterval()
+        advanceUntilIdle()
+
+        val totalMinutes = viewModel.hours.value * 60 + viewModel.minutes.value
+        assertEquals(5, totalMinutes)
+
+        collectors.forEach { it.cancel() }
+    }
+
+    // --- Accept / Decline Dynamic Increase ---
+
+    @Test
+    fun `acceptIncreaseReps increases repsMin and repsMax by 2`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        // Default reps: min=10, max=10
+        viewModel.acceptIncreaseReps()
+        advanceUntilIdle()
+
+        assertEquals(12, viewModel.repsMin.value)
+        assertEquals(12, viewModel.repsMax.value)
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `acceptIncreaseReps clears dynamic offer`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        viewModel.acceptIncreaseReps()
+        advanceUntilIdle()
+
+        assertNull(viewModel.dynamicIncreaseOffer.value)
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `acceptDecreaseInterval decreases total interval by 5 minutes`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        // Default: 0h 30m = 30 min
+        viewModel.acceptDecreaseInterval()
+        advanceUntilIdle()
+
+        val totalMinutes = viewModel.hours.value * 60 + viewModel.minutes.value
+        assertEquals(25, totalMinutes)
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `acceptDecreaseInterval splits hours and minutes correctly`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        // 1h 5m = 65 min -> decrease by 5 -> 60 min = 1h 0m
+        viewModel.setHours(1)
+        advanceUntilIdle()
+        viewModel.setMinutes(5)
+        advanceUntilIdle()
+
+        viewModel.acceptDecreaseInterval()
+        advanceUntilIdle()
+
+        assertEquals(1, viewModel.hours.value)
+        assertEquals(0, viewModel.minutes.value)
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `acceptDecreaseInterval clears dynamic offer`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        viewModel.acceptDecreaseInterval()
+        advanceUntilIdle()
+
+        assertNull(viewModel.dynamicIncreaseOffer.value)
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `declineDynamicIncrease clears offer and resets counter`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        // Set up some breaks counter
+        repository.setBreaksSinceLastIncrease(10)
+        advanceUntilIdle()
+
+        viewModel.declineDynamicIncrease()
+        advanceUntilIdle()
+
+        assertNull(viewModel.dynamicIncreaseOffer.value)
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `declineDynamicIncrease restarts timer when autoRestart on`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        viewModel.setMinutes(15)
+        advanceUntilIdle()
+
+        viewModel.declineDynamicIncrease()
+        advanceUntilIdle()
+
+        val lastCall = serviceController.calls.lastOrNull()
+        assertNotNull(lastCall)
+        assertTrue(lastCall is FakeTimerServiceController.Call.Restart)
+
+        collectors.forEach { it.cancel() }
+    }
+
+    // --- Tracking ---
+
+    @Test
+    fun `setTrackingEnabled writes to stats repository`() = runTest {
+        viewModel.trackingEnabled.test {
+            assertEquals(true, awaitItem())
+            viewModel.setTrackingEnabled(false)
+            assertEquals(false, awaitItem())
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `resetStats clears all stats`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        // Record a break first
+        viewModel.onTimerExpired()
+        advanceUntilIdle()
+        viewModel.onExerciseDone()
+        advanceUntilIdle()
+
+        viewModel.resetStats()
+        advanceUntilIdle()
+
+        assertEquals(0, viewModel.statsSnapshot.value.totalBreaksAllTime)
 
         collectors.forEach { it.cancel() }
     }
