@@ -42,8 +42,7 @@ class WorkScheduleReceiver : BroadcastReceiver() {
         val contentIntent = PendingIntent.getActivity(
             context,
             0,
-            Intent().apply {
-                setClass(context, MainActivity::class.java)
+            Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
                 setPackage(context.packageName)
             },
