@@ -502,28 +502,28 @@ private fun TimerScreenIdlePreview() {
                     IconButton(onClick = {}) {
                         Icon(
                             imageVector = Icons.Default.BarChart,
-                            contentDescription = null,
+                            contentDescription = stringResource(R.string.stats_title),
                             tint = MaterialTheme.colorScheme.primary,
                         )
                     }
                     IconButton(onClick = {}) {
                         Icon(
                             imageVector = Icons.Default.EmojiEvents,
-                            contentDescription = null,
+                            contentDescription = stringResource(R.string.achievements_title),
                             tint = MaterialTheme.colorScheme.primary,
                         )
                     }
                     IconButton(onClick = {}) {
                         Icon(
                             imageVector = Icons.Default.FitnessCenter,
-                            contentDescription = null,
+                            contentDescription = stringResource(R.string.exercises_title),
                             tint = MaterialTheme.colorScheme.primary,
                         )
                     }
                     IconButton(onClick = {}) {
                         Icon(
                             imageVector = Icons.Default.Settings,
-                            contentDescription = null,
+                            contentDescription = stringResource(R.string.settings_title),
                             tint = MaterialTheme.colorScheme.primary,
                         )
                     }
