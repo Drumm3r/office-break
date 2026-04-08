@@ -287,7 +287,7 @@ private fun FitnessLevelCard(
         ) {
             Icon(
                 imageVector = icon,
-                contentDescription = null,
+                contentDescription = stringResource(labelRes),
                 modifier = Modifier.size(40.dp),
                 tint = if (isSelected) {
                     MaterialTheme.colorScheme.onPrimaryContainer
@@ -647,7 +647,7 @@ private fun SummaryRow(
         if (icon != null) {
             Icon(
                 imageVector = icon,
-                contentDescription = null,
+                contentDescription = label,
                 modifier = Modifier.size(24.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
