@@ -22,6 +22,7 @@ import androidx.activity.compose.LocalActivity
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -38,6 +39,8 @@ import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import de.mysportsmate.officebreak.R
@@ -51,6 +54,11 @@ import de.mysportsmate.officebreak.ui.components.CountdownDisplay
 import de.mysportsmate.officebreak.ui.components.DynamicIncreaseDialog
 import de.mysportsmate.officebreak.ui.components.ExerciseDialog
 import de.mysportsmate.officebreak.ui.components.TimerSetup
+import de.mysportsmate.officebreak.ui.components.VolumeBar
+import de.mysportsmate.officebreak.data.SettingsRepository
+import de.mysportsmate.officebreak.locale.LocaleHelper
+import de.mysportsmate.officebreak.tts.BreakTtsManager
+import de.mysportsmate.officebreak.ui.theme.OfficeBreakTheme
 
 @Composable
 fun TimerScreen(
@@ -77,9 +85,19 @@ fun TimerScreen(
     val achievementState by viewModel.achievementState.collectAsState()
     val breakRecords by viewModel.breakRecords.collectAsState()
     val dynamicIncreaseEnabled by viewModel.dynamicIncreaseEnabled.collectAsState()
+    val ttsEnabled by viewModel.ttsEnabled.collectAsState()
+    val customSoundUri by viewModel.customSoundUri.collectAsState()
+    val workScheduleEnabled by viewModel.workScheduleEnabled.collectAsState()
+    val weekSchedule by viewModel.weekSchedule.collectAsState()
     val dynamicIncreaseOffer by viewModel.dynamicIncreaseOffer.collectAsState()
     val newlyUnlockedAchievements by viewModel.newlyUnlockedAchievements.collectAsState()
     val backupState by viewModel.backupState.collectAsState()
+    val ttsContext = LocalContext.current
+    val ttsManager = remember { BreakTtsManager(ttsContext) }
+    DisposableEffect(Unit) {
+        onDispose { ttsManager.shutdown() }
+    }
+
     var showResetDialog by rememberSaveable { mutableStateOf(false) }
     var showExerciseSettings by rememberSaveable { mutableStateOf(false) }
     var showSettings by rememberSaveable { mutableStateOf(false) }
@@ -116,9 +134,20 @@ fun TimerScreen(
     }
 
     if (currentExercise != null) {
+        val exerciseName = currentExercise!!.displayName(LocalContext.current)
+        val reps = currentReps ?: repsMin
+
+        LaunchedEffect(currentExercise) {
+            if (ttsEnabled) {
+                val locale = LocaleHelper.resolveLocale(language)
+                val heading = ttsContext.getString(R.string.exercise_heading)
+                ttsManager.speak("$heading $reps $exerciseName", locale)
+            }
+        }
+
         ExerciseDialog(
-            exerciseName = currentExercise!!.displayName(LocalContext.current),
-            reps = currentReps ?: repsMin,
+            exerciseName = exerciseName,
+            reps = reps,
             onDone = { viewModel.onExerciseDone() },
         )
     }
@@ -184,6 +213,7 @@ fun TimerScreen(
             autoRestart = autoRestart,
             dynamicIncreaseEnabled = dynamicIncreaseEnabled,
             beepCount = beepCount,
+            ttsEnabled = ttsEnabled,
             trackingEnabled = trackingEnabled,
             onLanguageChange = viewModel::setLanguage,
             onBeepVolumeChange = viewModel::setBeepVolume,
@@ -194,6 +224,17 @@ fun TimerScreen(
             onAutoRestartChange = viewModel::setAutoRestart,
             onDynamicIncreaseEnabledChange = viewModel::setDynamicIncreaseEnabled,
             onBeepCountChange = viewModel::setBeepCount,
+            onTtsEnabledChange = viewModel::setTtsEnabled,
+            customSoundUri = customSoundUri,
+            onCustomSoundSelected = viewModel::setCustomSoundUri,
+            onCustomSoundCleared = viewModel::clearCustomSound,
+            onCustomSoundPreview = viewModel::playPreviewSound,
+            isPreviewPlaying = viewModel.isPreviewPlaying.collectAsState().value,
+            onStopPreview = viewModel::stopPreview,
+            workScheduleEnabled = workScheduleEnabled,
+            weekSchedule = weekSchedule,
+            onWorkScheduleEnabledChange = viewModel::setWorkScheduleEnabled,
+            onDayScheduleChange = viewModel::updateDaySchedule,
             onTrackingEnabledChange = viewModel::setTrackingEnabled,
             onResetStats = viewModel::resetStats,
             onExportToUri = viewModel::exportData,
@@ -220,6 +261,17 @@ fun TimerScreen(
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
+            if (timerState is TimerState.Running || timerState is TimerState.Paused || timerState is TimerState.Expired) {
+                VolumeBar(
+                    volume = beepVolume,
+                    onVolumeChange = viewModel::setBeepVolume,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
+
             if (timerState is TimerState.Idle) {
                 Row(
                     modifier = Modifier
@@ -263,10 +315,19 @@ fun TimerScreen(
                 verticalArrangement = Arrangement.Center,
             ) {
                 AnimatedContent(
-                    targetState = timerState is TimerState.Idle,
+                    targetState = timerState,
+                    contentKey = { state ->
+                        when (state) {
+                            is TimerState.Idle -> "idle"
+                            is TimerState.Running -> "running"
+                            is TimerState.Paused -> "paused"
+                            is TimerState.Expired -> "expired"
+                            is TimerState.WorkEnded -> "work_ended"
+                        }
+                    },
                     label = "timer_content",
-                ) { isIdle ->
-                    if (isIdle) {
+                ) { state ->
+                    if (state is TimerState.Idle) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
@@ -301,13 +362,97 @@ fun TimerScreen(
                                 )
                             }
                         }
+                    } else if (state is TimerState.Paused) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.break_pause_title),
+                                style = MaterialTheme.typography.headlineLarge,
+                                color = MaterialTheme.colorScheme.primary,
+                                textAlign = TextAlign.Center,
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Text(
+                                text = stringResource(R.string.break_pause_message),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                            )
+
+                            Spacer(modifier = Modifier.height(24.dp))
+
+                            CountdownDisplay(
+                                remainingSeconds = state.remainingSeconds,
+                                totalSeconds = state.totalSeconds,
+                            )
+
+                            Spacer(modifier = Modifier.height(48.dp))
+
+                            OutlinedButton(
+                                onClick = { showResetDialog = true },
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.error,
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp)
+                                    .height(56.dp),
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.timer_reset),
+                                    style = MaterialTheme.typography.titleLarge,
+                                )
+                            }
+                        }
+                    } else if (state is TimerState.WorkEnded) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.work_ended_title),
+                                style = MaterialTheme.typography.headlineLarge,
+                                color = MaterialTheme.colorScheme.primary,
+                                textAlign = TextAlign.Center,
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Text(
+                                text = stringResource(R.string.work_ended_message),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                            )
+
+                            Spacer(modifier = Modifier.height(48.dp))
+
+                            Button(
+                                onClick = { viewModel.dismissWorkEnded() },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp)
+                                    .height(56.dp),
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.work_ended_dismiss),
+                                    style = MaterialTheme.typography.titleLarge,
+                                )
+                            }
+                        }
                     } else {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            val running = timerState as? TimerState.Running
+                            val running = state as? TimerState.Running
 
                             CountdownDisplay(
                                 remainingSeconds = running?.remainingSeconds ?: 0L,
@@ -331,6 +476,263 @@ fun TimerScreen(
                                     style = MaterialTheme.typography.titleLarge,
                                 )
                             }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun TimerScreenIdlePreview() {
+    OfficeBreakTheme {
+        Scaffold { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+            ) {
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp),
+                ) {
+                    IconButton(onClick = {}) {
+                        Icon(
+                            imageVector = Icons.Default.BarChart,
+                            contentDescription = stringResource(R.string.stats_title),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                    IconButton(onClick = {}) {
+                        Icon(
+                            imageVector = Icons.Default.EmojiEvents,
+                            contentDescription = stringResource(R.string.achievements_title),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                    IconButton(onClick = {}) {
+                        Icon(
+                            imageVector = Icons.Default.FitnessCenter,
+                            contentDescription = stringResource(R.string.exercises_title),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                    IconButton(onClick = {}) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = stringResource(R.string.settings_title),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    TimerSetup(
+                        hours = SettingsRepository.DEFAULT_HOURS,
+                        minutes = SettingsRepository.DEFAULT_MINUTES,
+                        repsMin = SettingsRepository.DEFAULT_REPS_MIN,
+                        repsMax = SettingsRepository.DEFAULT_REPS_MAX,
+                        repsLinked = true,
+                        onHoursChange = {},
+                        onMinutesChange = {},
+                        onRepsMinChange = {},
+                        onRepsMaxChange = {},
+                        onRepsLinkedChange = {},
+                    )
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    Button(
+                        onClick = {},
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 48.dp)
+                            .height(56.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.timer_start),
+                            style = MaterialTheme.typography.titleLarge,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun TimerScreenRunningPreview() {
+    OfficeBreakTheme {
+        Scaffold { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+            ) {
+                VolumeBar(
+                    volume = 80,
+                    onVolumeChange = {},
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    CountdownDisplay(
+                        remainingSeconds = 1425L,
+                        totalSeconds = 2700L,
+                    )
+
+                    Spacer(modifier = Modifier.height(48.dp))
+
+                    OutlinedButton(
+                        onClick = {},
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error,
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 48.dp)
+                            .height(56.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.timer_reset),
+                            style = MaterialTheme.typography.titleLarge,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun TimerScreenPausedPreview() {
+    OfficeBreakTheme {
+        Scaffold { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.break_pause_title),
+                            style = MaterialTheme.typography.headlineLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            textAlign = TextAlign.Center,
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = stringResource(R.string.break_pause_message),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        CountdownDisplay(
+                            remainingSeconds = 1425L,
+                            totalSeconds = 2700L,
+                        )
+
+                        Spacer(modifier = Modifier.height(48.dp))
+
+                        OutlinedButton(
+                            onClick = {},
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error,
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                                .height(56.dp),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.timer_reset),
+                                style = MaterialTheme.typography.titleLarge,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun TimerScreenWorkEndedPreview() {
+    OfficeBreakTheme {
+        Scaffold { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.work_ended_title),
+                            style = MaterialTheme.typography.headlineLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            textAlign = TextAlign.Center,
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = stringResource(R.string.work_ended_message),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+
+                        Spacer(modifier = Modifier.height(48.dp))
+
+                        Button(
+                            onClick = {},
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                                .height(56.dp),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.work_ended_dismiss),
+                                style = MaterialTheme.typography.titleLarge,
+                            )
                         }
                     }
                 }

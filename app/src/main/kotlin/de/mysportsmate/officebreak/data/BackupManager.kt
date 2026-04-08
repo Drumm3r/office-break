@@ -35,6 +35,10 @@ class BackupManager(
             autoRestart = settings.autoRestart,
             dynamicIncreaseEnabled = settings.dynamicIncreaseEnabled,
             breaksSinceLastIncrease = settings.breaksSinceLastIncrease,
+            ttsEnabled = settings.ttsEnabled,
+            customSoundUri = settings.customSoundUri,
+            workScheduleEnabled = settings.workScheduleEnabled,
+            weekSchedule = settings.weekSchedule,
 
             trackingEnabled = stats.trackingEnabled,
             breakRecords = stats.breakRecords,

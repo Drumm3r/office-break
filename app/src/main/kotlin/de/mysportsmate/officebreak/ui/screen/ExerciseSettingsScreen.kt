@@ -17,7 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Switch
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -37,9 +37,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.mysportsmate.officebreak.R
 import de.mysportsmate.officebreak.data.Exercise
+import de.mysportsmate.officebreak.ui.theme.OfficeBreakTheme
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
@@ -60,7 +62,7 @@ fun ExerciseSettingsScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = null,
+                            contentDescription = stringResource(R.string.navigate_back),
                         )
                     }
                 },
@@ -153,10 +155,11 @@ private fun ExerciseRow(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.weight(1f),
         ) {
-            Checkbox(
+            Switch(
                 checked = exercise.isEnabled,
                 onCheckedChange = { onToggle() },
             )
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = exercise.displayName(LocalContext.current),
                 style = MaterialTheme.typography.bodyLarge,
@@ -172,5 +175,23 @@ private fun ExerciseRow(
                 )
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ExerciseSettingsScreenPreview() {
+    OfficeBreakTheme {
+        ExerciseSettingsScreen(
+            exercises = listOf(
+                Exercise(name = "Push Ups", nameResKey = "exercise_push_ups", isEnabled = true),
+                Exercise(name = "Squats", nameResKey = "exercise_squats", isEnabled = true),
+                Exercise(name = "Lunges", nameResKey = "exercise_lunges", isEnabled = false),
+            ),
+            onToggle = {},
+            onAdd = {},
+            onRemove = {},
+            onBack = {},
+        )
     }
 }

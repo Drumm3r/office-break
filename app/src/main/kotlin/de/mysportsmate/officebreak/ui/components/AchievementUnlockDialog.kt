@@ -148,7 +148,7 @@ fun AchievementUnlockDialog(
                 ) {
                     Icon(
                         imageVector = Icons.Default.EmojiEvents,
-                        contentDescription = null,
+                        contentDescription = stringResource(R.string.achievement_unlocked),
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
                             .size(64.dp)

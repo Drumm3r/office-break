@@ -1,8 +1,10 @@
 package de.mysportsmate.officebreak.data
 
 import app.cash.turbine.test
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -273,6 +275,219 @@ class StatsRepositoryTest {
         aprilRepo.dailyAggregates.test {
             val daily = awaitItem()
             assertTrue(daily.none { it.dateString == oldDate })
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    // --- Snapshot / Restore ---
+
+    @Test
+    fun `snapshotForExport returns defaults when empty`() = runTest {
+        val snapshot = repository.snapshotForExport()
+        assertEquals(true, snapshot.trackingEnabled)
+        assertTrue(snapshot.breakRecords.isEmpty())
+        assertTrue(snapshot.dailyAggregates.isEmpty())
+        assertTrue(snapshot.yearlyAggregates.isEmpty())
+        assertEquals(StatsSnapshot(), snapshot.statsSnapshot)
+        assertEquals(AchievementState(), snapshot.achievementState)
+    }
+
+    @Test
+    fun `snapshotForExport captures all stats data`() = runTest {
+        repository.recordBreak(record(name = "Push Ups", reps = 10))
+        repository.recordBreak(record(name = "Squats", reps = 15))
+
+        val snapshot = repository.snapshotForExport()
+        assertEquals(2, snapshot.breakRecords.size)
+        assertEquals(2, snapshot.statsSnapshot.totalBreaksAllTime)
+        assertEquals(25, snapshot.statsSnapshot.totalRepsAllTime)
+    }
+
+    @Test
+    fun `restoreFromBackup persists all stats fields`() = runTest {
+        val breakRecords = listOf(record(name = "Push Ups", reps = 10))
+        val statsSnapshot = StatsSnapshot(
+            totalBreaksAllTime = 5,
+            totalRepsAllTime = 50,
+            currentStreakDays = 3,
+            longestStreakDays = 7,
+        )
+        val achievementState = AchievementState(
+            unlockedIds = setOf("breaks_1"),
+            unlockTimestamps = mapOf("breaks_1" to 1000L),
+        )
+        val backupData = BackupData(
+            exportTimestamp = 1000L,
+            appVersionCode = 5,
+            timerHours = 0,
+            timerMinutes = 30,
+            repsMin = 10,
+            repsMax = 10,
+            repsLinked = true,
+            exercises = emptyList(),
+            language = "system",
+            themeMode = "system",
+            beepVolume = 80,
+            vibrationEnabled = true,
+            beepCount = 3,
+            keepScreenOn = false,
+            autoRestart = true,
+            dynamicIncreaseEnabled = true,
+            breaksSinceLastIncrease = 0,
+            trackingEnabled = false,
+            breakRecords = breakRecords,
+            dailyAggregates = emptyList(),
+            yearlyAggregates = emptyList(),
+            statsSnapshot = statsSnapshot,
+            achievementState = achievementState,
+        )
+
+        repository.restoreFromBackup(backupData)
+
+        assertEquals(false, repository.trackingEnabled.first())
+        assertEquals(breakRecords, repository.breakRecords.first())
+        val restoredSnapshot = repository.statsSnapshot.first()
+        assertEquals(5, restoredSnapshot.totalBreaksAllTime)
+        assertEquals(50, restoredSnapshot.totalRepsAllTime)
+        assertEquals(3, restoredSnapshot.currentStreakDays)
+        val restoredAchievements = repository.achievementState.first()
+        assertTrue(restoredAchievements.unlockedIds.contains("breaks_1"))
+    }
+
+    @Test
+    fun `restoreFromBackup overwrites existing data`() = runTest {
+        repository.recordBreak(record(name = "Push Ups", reps = 10))
+        assertEquals(1, repository.statsSnapshot.first().totalBreaksAllTime)
+
+        val backupData = BackupData(
+            exportTimestamp = 1000L,
+            appVersionCode = 5,
+            timerHours = 0,
+            timerMinutes = 30,
+            repsMin = 10,
+            repsMax = 10,
+            repsLinked = true,
+            exercises = emptyList(),
+            language = "system",
+            themeMode = "system",
+            beepVolume = 80,
+            vibrationEnabled = true,
+            beepCount = 3,
+            keepScreenOn = false,
+            autoRestart = true,
+            dynamicIncreaseEnabled = true,
+            breaksSinceLastIncrease = 0,
+            trackingEnabled = true,
+            breakRecords = emptyList(),
+            dailyAggregates = emptyList(),
+            yearlyAggregates = emptyList(),
+            statsSnapshot = StatsSnapshot(totalBreaksAllTime = 99),
+            achievementState = AchievementState(),
+        )
+
+        repository.restoreFromBackup(backupData)
+
+        assertEquals(99, repository.statsSnapshot.first().totalBreaksAllTime)
+        assertTrue(repository.breakRecords.first().isEmpty())
+    }
+
+    // --- uniqueExercisesUsed ---
+
+    @Test
+    fun `uniqueExercisesUsed tracks distinct exercise names`() = runTest {
+        repository.recordBreak(record(name = "Push Ups"))
+        repository.recordBreak(record(name = "Squats"))
+        repository.recordBreak(record(name = "Push Ups"))
+
+        repository.statsSnapshot.test {
+            val snapshot = awaitItem()
+            assertEquals(setOf("Push Ups", "Squats"), snapshot.uniqueExercisesUsed)
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    // --- firstBreakDateString ---
+
+    @Test
+    fun `firstBreakDateString records first ever break date`() = runTest {
+        repository.recordBreak(record(dateString = "2026-03-25"))
+
+        repository.statsSnapshot.test {
+            val snapshot = awaitItem()
+            assertEquals("2026-03-25", snapshot.firstBreakDateString)
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `firstBreakDateString stays fixed on subsequent breaks`() = runTest {
+        repository.recordBreak(record(dateString = "2026-03-25"))
+        repository.recordBreak(record(dateString = "2026-03-30"))
+
+        repository.statsSnapshot.test {
+            val snapshot = awaitItem()
+            assertEquals("2026-03-25", snapshot.firstBreakDateString)
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    // --- Yearly compaction edge cases ---
+
+    @Test
+    fun `yearlyCompaction does nothing before April`() = runTest {
+        // March clock - yearly compaction should not run
+        val marchClock = Clock.fixed(
+            Instant.parse("2026-03-15T12:00:00Z"),
+            ZoneId.of("UTC"),
+        )
+        val marchRepo = StatsRepository(dataStore = FakeDataStore(), clock = marchClock)
+
+        val oldDate = "2024-06-15"
+        marchRepo.recordBreak(record(dateString = oldDate))
+        marchRepo.recordBreak(record(dateString = "2026-03-15"))
+
+        marchRepo.runYearlyCompaction()
+
+        marchRepo.yearlyAggregates.test {
+            val yearly = awaitItem()
+            assertTrue(yearly.isEmpty())
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `yearlyCompaction preserves current year aggregates`() = runTest {
+        val aprilClock = Clock.fixed(
+            Instant.parse("2026-04-15T12:00:00Z"),
+            ZoneId.of("UTC"),
+        )
+        val aprilRepo = StatsRepository(dataStore = FakeDataStore(), clock = aprilClock)
+
+        // Record a break from early 2026 (>90 days old, will be compacted to daily aggregate)
+        val currentYearDate = "2026-01-10"
+        aprilRepo.recordBreak(record(dateString = currentYearDate))
+        // Second record triggers daily compaction of old record
+        aprilRepo.recordBreak(record(dateString = "2026-04-15"))
+
+        // Verify it was compacted to a daily aggregate
+        aprilRepo.dailyAggregates.test {
+            val daily = awaitItem()
+            assertTrue("Expected daily aggregate for $currentYearDate", daily.any { it.dateString == currentYearDate })
+            cancelAndConsumeRemainingEvents()
+        }
+
+        // Run yearly compaction: cutoffYear = 2025, so 2026 aggregates should stay
+        aprilRepo.runYearlyCompaction()
+
+        aprilRepo.dailyAggregates.test {
+            val daily = awaitItem()
+            assertTrue("2026 aggregate should NOT be moved to yearly", daily.any { it.dateString == currentYearDate })
+            cancelAndConsumeRemainingEvents()
+        }
+
+        aprilRepo.yearlyAggregates.test {
+            val yearly = awaitItem()
+            assertTrue("No yearly aggregate should exist for 2026", yearly.none { it.year == 2026 })
             cancelAndConsumeRemainingEvents()
         }
     }

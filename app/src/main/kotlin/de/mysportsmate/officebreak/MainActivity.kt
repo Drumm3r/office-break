@@ -73,6 +73,9 @@ class MainActivity : ComponentActivity() {
                     false -> OnboardingScreen(
                         exercises = exercises,
                         onComplete = viewModel::completeOnboarding,
+                        onWorkScheduleConfigured = { enabled, schedule ->
+                            viewModel.applyWorkSchedule(enabled, schedule)
+                        },
                     )
                 }
             }

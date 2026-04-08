@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -24,15 +26,17 @@ import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -43,27 +47,37 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.mysportsmate.officebreak.R
+import de.mysportsmate.officebreak.data.DEFAULT_WEEK_SCHEDULE
+import de.mysportsmate.officebreak.data.DaySchedule
 import de.mysportsmate.officebreak.data.Exercise
 import de.mysportsmate.officebreak.data.FitnessLevel
+import de.mysportsmate.officebreak.data.resolveEffectiveSchedule
+import de.mysportsmate.officebreak.ui.theme.OfficeBreakTheme
 
 @Composable
 fun OnboardingScreen(
     exercises: List<Exercise>,
     onComplete: (FitnessLevel, List<Exercise>) -> Unit,
+    onWorkScheduleConfigured: (Boolean, List<DaySchedule>) -> Unit = { _, _ -> },
 ) {
     var currentStep by rememberSaveable { mutableIntStateOf(0) }
     var selectedLevelOrdinal by rememberSaveable { mutableIntStateOf(-1) }
     var exerciseToggles by rememberSaveable(exercises) {
         mutableStateOf(exercises.map { it.isEnabled })
     }
+    var workScheduleEnabled by remember { mutableStateOf(false) }
+    var weekSchedule by remember { mutableStateOf(DEFAULT_WEEK_SCHEDULE) }
 
     val selectedLevel = if (selectedLevelOrdinal >= 0) {
         FitnessLevel.entries[selectedLevelOrdinal]
     } else {
         null
     }
+
+    val totalSteps = 4
 
     Scaffold { innerPadding ->
         Column(
@@ -73,7 +87,7 @@ fun OnboardingScreen(
                 .padding(horizontal = 24.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            StepIndicator(currentStep = currentStep, totalSteps = 3)
+            StepIndicator(currentStep = currentStep, totalSteps = totalSteps)
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -96,9 +110,17 @@ fun OnboardingScreen(
                             }
                         },
                     )
-                    2 -> SummaryStep(
+                    2 -> WorkScheduleStep(
+                        enabled = workScheduleEnabled,
+                        weekSchedule = weekSchedule,
+                        onEnabledChange = { workScheduleEnabled = it },
+                        onScheduleChange = { weekSchedule = it },
+                    )
+                    3 -> SummaryStep(
                         level = selectedLevel!!,
                         exerciseCount = exerciseToggles.count { it },
+                        workScheduleEnabled = workScheduleEnabled,
+                        weekSchedule = weekSchedule,
                     )
                 }
             }
@@ -107,6 +129,7 @@ fun OnboardingScreen(
 
             NavigationButtons(
                 currentStep = currentStep,
+                totalSteps = totalSteps,
                 canAdvance = when (currentStep) {
                     0 -> selectedLevel != null
                     1 -> exerciseToggles.any { it }
@@ -118,6 +141,7 @@ fun OnboardingScreen(
                     val selected = exercises.mapIndexed { index, exercise ->
                         exercise.copy(isEnabled = exerciseToggles.getOrElse(index) { true })
                     }
+                    onWorkScheduleConfigured(workScheduleEnabled, weekSchedule)
                     onComplete(selectedLevel!!, selected)
                 },
             )
@@ -153,6 +177,8 @@ private fun FitnessLevelStep(
     selectedLevel: FitnessLevel?,
     onSelect: (FitnessLevel) -> Unit,
 ) {
+    var showDetails by rememberSaveable { mutableStateOf(false) }
+
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -172,15 +198,35 @@ private fun FitnessLevelStep(
             textAlign = TextAlign.Center,
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            text = stringResource(R.string.onboarding_fitness_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
 
         FitnessLevel.entries.forEach { level ->
             FitnessLevelCard(
                 level = level,
                 isSelected = level == selectedLevel,
+                showDetails = showDetails,
                 onClick = { onSelect(level) },
             )
             Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        TextButton(onClick = { showDetails = !showDetails }) {
+            Text(
+                text = if (showDetails) {
+                    stringResource(R.string.onboarding_hide_details)
+                } else {
+                    stringResource(R.string.onboarding_show_details)
+                },
+            )
         }
     }
 }
@@ -189,27 +235,32 @@ private fun FitnessLevelStep(
 private fun FitnessLevelCard(
     level: FitnessLevel,
     isSelected: Boolean,
+    showDetails: Boolean,
     onClick: () -> Unit,
 ) {
     val icon: ImageVector
     val labelRes: Int
     val descRes: Int
+    val detailRes: Int
 
     when (level) {
         FitnessLevel.BEGINNER -> {
             icon = Icons.AutoMirrored.Filled.DirectionsWalk
             labelRes = R.string.onboarding_level_beginner
             descRes = R.string.onboarding_level_beginner_desc
+            detailRes = R.string.onboarding_level_beginner_detail
         }
         FitnessLevel.MODERATE -> {
             icon = Icons.AutoMirrored.Filled.DirectionsRun
             labelRes = R.string.onboarding_level_moderate
             descRes = R.string.onboarding_level_moderate_desc
+            detailRes = R.string.onboarding_level_moderate_detail
         }
         FitnessLevel.ATHLETIC -> {
             icon = Icons.Default.FitnessCenter
             labelRes = R.string.onboarding_level_athletic
             descRes = R.string.onboarding_level_athletic_desc
+            detailRes = R.string.onboarding_level_athletic_detail
         }
     }
 
@@ -237,7 +288,7 @@ private fun FitnessLevelCard(
         ) {
             Icon(
                 imageVector = icon,
-                contentDescription = null,
+                contentDescription = stringResource(labelRes),
                 modifier = Modifier.size(40.dp),
                 tint = if (isSelected) {
                     MaterialTheme.colorScheme.onPrimaryContainer
@@ -267,6 +318,17 @@ private fun FitnessLevelCard(
                         MaterialTheme.colorScheme.onSurfaceVariant
                     },
                 )
+                if (showDetails) {
+                    Text(
+                        text = stringResource(detailRes),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (isSelected) {
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    )
+                }
             }
         }
     }
@@ -310,10 +372,11 @@ private fun ExerciseSelectionStep(
                         .padding(horizontal = 8.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Checkbox(
+                    Switch(
                         checked = toggles.getOrElse(index) { true },
                         onCheckedChange = { onToggle(index) },
                     )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = exercise.displayName(LocalContext.current),
                         style = MaterialTheme.typography.bodyLarge,
@@ -325,9 +388,89 @@ private fun ExerciseSelectionStep(
 }
 
 @Composable
+private fun WorkScheduleStep(
+    enabled: Boolean,
+    weekSchedule: List<DaySchedule>,
+    onEnabledChange: (Boolean) -> Unit,
+    onScheduleChange: (List<DaySchedule>) -> Unit,
+) {
+    val dayNames = listOf(
+        stringResource(R.string.day_mon),
+        stringResource(R.string.day_tue),
+        stringResource(R.string.day_wed),
+        stringResource(R.string.day_thu),
+        stringResource(R.string.day_fri),
+        stringResource(R.string.day_sat),
+        stringResource(R.string.day_sun),
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = stringResource(R.string.onboarding_schedule_title),
+            style = MaterialTheme.typography.headlineMedium,
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = stringResource(R.string.onboarding_schedule_subtitle),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.settings_work_schedule_enabled),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f),
+            )
+            Switch(
+                checked = enabled,
+                onCheckedChange = onEnabledChange,
+            )
+        }
+
+        if (enabled) {
+            Spacer(modifier = Modifier.height(8.dp))
+
+            weekSchedule.forEachIndexed { index, day ->
+                DayScheduleRow(
+                    dayName = dayNames[index],
+                    day = day,
+                    effectiveDay = resolveEffectiveSchedule(weekSchedule, index),
+                    isFirstEnabled = weekSchedule.indexOfFirst { it.enabled } == index,
+                    onDayChange = {
+                        val updated = weekSchedule.toMutableList()
+                        updated[index] = it
+                        onScheduleChange(updated)
+                    },
+                )
+            }
+
+        }
+    }
+}
+
+@Composable
 private fun SummaryStep(
     level: FitnessLevel,
     exerciseCount: Int,
+    workScheduleEnabled: Boolean,
+    weekSchedule: List<DaySchedule>,
 ) {
     val levelLabelRes = when (level) {
         FitnessLevel.BEGINNER -> R.string.onboarding_level_beginner
@@ -384,6 +527,30 @@ private fun SummaryStep(
                 SummaryRow(
                     label = stringResource(R.string.onboarding_summary_exercises, exerciseCount),
                 )
+                if (workScheduleEnabled) {
+                    val dayNames = listOf(
+                        stringResource(R.string.day_mon),
+                        stringResource(R.string.day_tue),
+                        stringResource(R.string.day_wed),
+                        stringResource(R.string.day_thu),
+                        stringResource(R.string.day_fri),
+                        stringResource(R.string.day_sat),
+                        stringResource(R.string.day_sun),
+                    )
+
+                    val groups = buildScheduleGroups(weekSchedule, dayNames)
+
+                    groups.forEach { (days, ws, we, ls, le) ->
+                        SummaryRow(label = "$days: $ws–$we")
+                        SummaryRow(
+                            label = stringResource(R.string.onboarding_summary_lunch, ls, le),
+                        )
+                    }
+                } else {
+                    SummaryRow(
+                        label = stringResource(R.string.onboarding_summary_work_schedule_off),
+                    )
+                }
             }
         }
     }
@@ -400,7 +567,7 @@ private fun SummaryRow(
         if (icon != null) {
             Icon(
                 imageVector = icon,
-                contentDescription = null,
+                contentDescription = label,
                 modifier = Modifier.size(24.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -417,11 +584,14 @@ private fun SummaryRow(
 @Composable
 private fun NavigationButtons(
     currentStep: Int,
+    totalSteps: Int,
     canAdvance: Boolean,
     onBack: () -> Unit,
     onNext: () -> Unit,
     onComplete: () -> Unit,
 ) {
+    val lastStep = totalSteps - 1
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -436,17 +606,70 @@ private fun NavigationButtons(
         }
 
         Button(
-            onClick = if (currentStep == 2) onComplete else onNext,
+            onClick = if (currentStep == lastStep) onComplete else onNext,
             enabled = canAdvance,
             modifier = Modifier.weight(1f),
         ) {
             Text(
-                if (currentStep == 2) {
+                if (currentStep == lastStep) {
                     stringResource(R.string.onboarding_start)
                 } else {
                     stringResource(R.string.onboarding_next)
                 },
             )
         }
+    }
+}
+
+private data class ScheduleGroup(
+    val days: String,
+    val workStart: String,
+    val workEnd: String,
+    val lunchStart: String,
+    val lunchEnd: String,
+)
+
+private fun buildScheduleGroups(
+    weekSchedule: List<DaySchedule>,
+    dayNames: List<String>,
+): List<ScheduleGroup> {
+    data class Key(val ws: String, val we: String, val ls: String, val le: String)
+
+    return weekSchedule.indices
+        .filter { weekSchedule[it].enabled }
+        .map { index ->
+            val eff = resolveEffectiveSchedule(weekSchedule, index) ?: weekSchedule[index]
+            dayNames[index] to Key(
+                ws = "%02d:%02d".format(eff.workStartHour, eff.workStartMinute),
+                we = "%02d:%02d".format(eff.workEndHour, eff.workEndMinute),
+                ls = "%02d:%02d".format(eff.lunchStartHour, eff.lunchStartMinute),
+                le = "%02d:%02d".format(eff.lunchEndHour, eff.lunchEndMinute),
+            )
+        }
+        .groupBy({ it.second }, { it.first })
+        .map { (key, days) ->
+            ScheduleGroup(
+                days = days.joinToString(", "),
+                workStart = key.ws,
+                workEnd = key.we,
+                lunchStart = key.ls,
+                lunchEnd = key.le,
+            )
+        }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun OnboardingScreenPreview() {
+    OfficeBreakTheme {
+        OnboardingScreen(
+            exercises = listOf(
+                Exercise(name = "Push Ups", nameResKey = "exercise_push_ups", isEnabled = true),
+                Exercise(name = "Squats", nameResKey = "exercise_squats", isEnabled = true),
+                Exercise(name = "Sit Ups", nameResKey = "exercise_sit_ups", isEnabled = false),
+            ),
+            onComplete = { _, _ -> },
+            onWorkScheduleConfigured = { _, _ -> },
+        )
     }
 }

@@ -1,12 +1,14 @@
 package de.mysportsmate.officebreak.ui.screen
 
 import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -22,8 +24,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.LinkOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -38,12 +47,20 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.mysportsmate.officebreak.R
+import de.mysportsmate.officebreak.data.DEFAULT_WEEK_SCHEDULE
+import de.mysportsmate.officebreak.data.DaySchedule
+import de.mysportsmate.officebreak.data.resolveEffectiveSchedule
+import de.mysportsmate.officebreak.data.validated
 import de.mysportsmate.officebreak.data.SettingsRepository
 import de.mysportsmate.officebreak.ui.components.ConfirmImportDialog
+import de.mysportsmate.officebreak.ui.components.VolumeBar
 import de.mysportsmate.officebreak.ui.components.ConfirmResetStatsDialog
+import de.mysportsmate.officebreak.ui.theme.OfficeBreakTheme
 import java.time.LocalDate
 import kotlin.math.roundToInt
 
@@ -58,6 +75,7 @@ fun SettingsScreen(
     autoRestart: Boolean,
     dynamicIncreaseEnabled: Boolean,
     beepCount: Int,
+    ttsEnabled: Boolean,
     trackingEnabled: Boolean,
     onLanguageChange: (String) -> Unit,
     onBeepVolumeChange: (Int) -> Unit,
@@ -68,6 +86,17 @@ fun SettingsScreen(
     onAutoRestartChange: (Boolean) -> Unit,
     onDynamicIncreaseEnabledChange: (Boolean) -> Unit,
     onBeepCountChange: (Int) -> Unit,
+    onTtsEnabledChange: (Boolean) -> Unit,
+    customSoundUri: String?,
+    onCustomSoundSelected: (Uri) -> Unit,
+    onCustomSoundCleared: () -> Unit,
+    onCustomSoundPreview: (Int) -> Unit,
+    isPreviewPlaying: Boolean,
+    onStopPreview: () -> Unit,
+    workScheduleEnabled: Boolean,
+    weekSchedule: List<DaySchedule>,
+    onWorkScheduleEnabledChange: (Boolean) -> Unit,
+    onDayScheduleChange: (Int, DaySchedule) -> Unit,
     onTrackingEnabledChange: (Boolean) -> Unit,
     onResetStats: () -> Unit,
     onExportToUri: (Uri) -> Unit,
@@ -76,6 +105,12 @@ fun SettingsScreen(
 ) {
     var showResetStatsDialog by rememberSaveable { mutableStateOf(false) }
     var showImportConfirmDialog by rememberSaveable { mutableStateOf(false) }
+
+    val soundPickerLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) onCustomSoundSelected(uri)
+    }
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json"),
@@ -116,7 +151,7 @@ fun SettingsScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = null,
+                            contentDescription = stringResource(R.string.navigate_back),
                         )
                     }
                 },
@@ -184,6 +219,58 @@ fun SettingsScreen(
                 onCheckedChange = onDynamicIncreaseEnabledChange,
             )
 
+            Text(
+                text = stringResource(R.string.settings_dynamic_increase_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = stringResource(R.string.settings_work_schedule),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+
+            SettingsToggleRow(
+                label = stringResource(R.string.settings_work_schedule_enabled),
+                checked = workScheduleEnabled,
+                onCheckedChange = onWorkScheduleEnabledChange,
+            )
+
+            Text(
+                text = stringResource(R.string.settings_work_schedule_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+
+            if (workScheduleEnabled) {
+                val dayNames = listOf(
+                    stringResource(R.string.day_mon),
+                    stringResource(R.string.day_tue),
+                    stringResource(R.string.day_wed),
+                    stringResource(R.string.day_thu),
+                    stringResource(R.string.day_fri),
+                    stringResource(R.string.day_sat),
+                    stringResource(R.string.day_sun),
+                )
+
+                weekSchedule.forEachIndexed { index, day ->
+                    DayScheduleRow(
+                        dayName = dayNames[index],
+                        day = day,
+                        effectiveDay = resolveEffectiveSchedule(weekSchedule, index),
+                        isFirstEnabled = weekSchedule.indexOfFirst { it.enabled } == index,
+                        onDayChange = { onDayScheduleChange(index, it) },
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
             HorizontalDivider()
             Spacer(modifier = Modifier.height(16.dp))
@@ -194,10 +281,13 @@ fun SettingsScreen(
                 modifier = Modifier.padding(bottom = 8.dp),
             )
 
-            BeepVolumeSlider(
-                beepVolume = beepVolume,
-                onBeepVolumeChange = onBeepVolumeChange,
-                onBeepVolumePreview = onBeepVolumePreview,
+            VolumeBar(
+                volume = beepVolume,
+                onVolumeChange = { value ->
+                    onBeepVolumeChange(value)
+                    onBeepVolumePreview(value)
+                },
+                modifier = Modifier.fillMaxWidth(),
             )
 
             SettingsToggleRow(
@@ -211,6 +301,100 @@ fun SettingsScreen(
                 enabled = beepVolume > 0,
                 onBeepCountChange = onBeepCountChange,
             )
+
+            SettingsToggleRow(
+                label = stringResource(R.string.settings_tts_enabled),
+                checked = ttsEnabled,
+                onCheckedChange = onTtsEnabledChange,
+            )
+
+            Text(
+                text = stringResource(R.string.settings_tts_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = stringResource(R.string.settings_notification_sound),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(bottom = 4.dp),
+            )
+
+            Text(
+                text = stringResource(R.string.settings_notification_sound_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+
+            if (customSoundUri != null) {
+                val context = LocalContext.current
+                val fileName = remember(customSoundUri) {
+                    try {
+                        context.contentResolver.query(
+                            Uri.parse(customSoundUri),
+                            arrayOf(OpenableColumns.DISPLAY_NAME),
+                            null, null, null,
+                        )?.use { cursor ->
+                            if (cursor.moveToFirst()) {
+                                cursor.getString(
+                                    cursor.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME),
+                                )
+                            } else null
+                        }
+                    } catch (_: Exception) {
+                        null
+                    } ?: customSoundUri.substringAfterLast('/')
+                }
+
+                Text(
+                    text = stringResource(R.string.settings_custom_sound_current, fileName),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            if (isPreviewPlaying) onStopPreview()
+                            else onCustomSoundPreview(beepVolume)
+                        },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(
+                            text = if (isPreviewPlaying) {
+                                stringResource(R.string.settings_custom_sound_stop)
+                            } else {
+                                stringResource(R.string.settings_custom_sound_preview)
+                            },
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            onStopPreview()
+                            onCustomSoundCleared()
+                        },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(text = stringResource(R.string.settings_custom_sound_reset))
+                    }
+                }
+            } else {
+                OutlinedButton(
+                    onClick = { soundPickerLauncher.launch(arrayOf("audio/*")) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(text = stringResource(R.string.settings_custom_sound_select))
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
             HorizontalDivider()
@@ -376,49 +560,6 @@ private fun ThemeDropdown(
 }
 
 @Composable
-private fun BeepVolumeSlider(
-    beepVolume: Int,
-    onBeepVolumeChange: (Int) -> Unit,
-    onBeepVolumePreview: (Int) -> Unit,
-) {
-    var sliderValue by remember(beepVolume) { mutableStateOf(beepVolume.toFloat()) }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-    ) {
-        Text(
-            text = stringResource(R.string.settings_beep_volume),
-            style = MaterialTheme.typography.bodyLarge,
-        )
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Slider(
-                value = sliderValue,
-                onValueChange = {
-                    sliderValue = it
-                    onBeepVolumeChange(it.roundToInt())
-                },
-                onValueChangeFinished = {
-                    onBeepVolumePreview(sliderValue.roundToInt())
-                },
-                valueRange = 0f..100f,
-                steps = 19,
-                modifier = Modifier.weight(1f),
-            )
-            Text(
-                text = "${sliderValue.roundToInt()}%",
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(start = 8.dp),
-            )
-        }
-    }
-}
-
-@Composable
 private fun BeepCountSlider(
     beepCount: Int,
     enabled: Boolean,
@@ -465,6 +606,184 @@ private fun BeepCountSlider(
 }
 
 @Composable
+internal fun DayScheduleRow(
+    dayName: String,
+    day: DaySchedule,
+    effectiveDay: DaySchedule?,
+    isFirstEnabled: Boolean,
+    onDayChange: (DaySchedule) -> Unit,
+) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    val displayDay = if (day.linked && !isFirstEnabled) effectiveDay ?: day else day
+    val timesEditable = day.enabled && (!day.linked || isFirstEnabled)
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(enabled = day.enabled) { expanded = !expanded }
+                .padding(vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Switch(
+                checked = day.enabled,
+                onCheckedChange = { onDayChange(day.copy(enabled = it)) },
+                modifier = Modifier.padding(end = 8.dp),
+            )
+
+            Text(
+                text = dayName,
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f),
+                color = if (day.enabled) {
+                    MaterialTheme.colorScheme.onSurface
+                } else {
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                },
+            )
+
+            if (day.enabled && !isFirstEnabled) {
+                IconButton(
+                    onClick = {
+                        val newLinked = !day.linked
+                        onDayChange(day.copy(linked = newLinked))
+                        if (!newLinked) expanded = true
+                    },
+                    modifier = Modifier.size(36.dp),
+                ) {
+                    Icon(
+                        imageVector = if (day.linked) Icons.Outlined.Link else Icons.Outlined.LinkOff,
+                        contentDescription = stringResource(R.string.settings_work_schedule_day_linked),
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
+
+            if (day.enabled) {
+                androidx.compose.material3.Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = if (timesEditable) {
+                        MaterialTheme.colorScheme.secondaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant
+                    },
+                ) {
+                    Text(
+                        text = "%02d:%02d–%02d:%02d".format(
+                            displayDay.workStartHour, displayDay.workStartMinute,
+                            displayDay.workEndHour, displayDay.workEndMinute,
+                        ),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = if (timesEditable) {
+                            MaterialTheme.colorScheme.onSecondaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    )
+                }
+            }
+        }
+
+        if (expanded && day.enabled && timesEditable) {
+            Column(modifier = Modifier.padding(start = 48.dp)) {
+                TimePickerRow(
+                    label = stringResource(R.string.settings_work_start),
+                    hour = day.workStartHour,
+                    minute = day.workStartMinute,
+                    onTimeSelected = { h, m -> onDayChange(day.copy(workStartHour = h, workStartMinute = m).validated()) },
+                )
+                TimePickerRow(
+                    label = stringResource(R.string.settings_work_end),
+                    hour = day.workEndHour,
+                    minute = day.workEndMinute,
+                    onTimeSelected = { h, m -> onDayChange(day.copy(workEndHour = h, workEndMinute = m).validated()) },
+                )
+                TimePickerRow(
+                    label = stringResource(R.string.settings_lunch_start),
+                    hour = day.lunchStartHour,
+                    minute = day.lunchStartMinute,
+                    onTimeSelected = { h, m -> onDayChange(day.copy(lunchStartHour = h, lunchStartMinute = m).validated()) },
+                )
+                TimePickerRow(
+                    label = stringResource(R.string.settings_lunch_end),
+                    hour = day.lunchEndHour,
+                    minute = day.lunchEndMinute,
+                    onTimeSelected = { h, m -> onDayChange(day.copy(lunchEndHour = h, lunchEndMinute = m).validated()) },
+                )
+            }
+        }
+    }
+}
+
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+internal fun TimePickerRow(
+    label: String,
+    hour: Int,
+    minute: Int,
+    onTimeSelected: (Int, Int) -> Unit,
+) {
+    var showDialog by rememberSaveable { mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f),
+        )
+        OutlinedButton(onClick = { showDialog = true }) {
+            Text(text = "%02d:%02d".format(hour, minute))
+        }
+    }
+
+    if (showDialog) {
+        val timePickerState = rememberTimePickerState(
+            initialHour = hour,
+            initialMinute = minute,
+            is24Hour = true,
+        )
+
+        androidx.compose.ui.window.Dialog(onDismissRequest = { showDialog = false }) {
+            androidx.compose.material3.Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = androidx.compose.material3.CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                ),
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    TimePicker(state = timePickerState)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.End,
+                    ) {
+                        TextButton(onClick = { showDialog = false }) {
+                            Text(text = stringResource(R.string.reset_confirm_no))
+                        }
+                        TextButton(onClick = {
+                            onTimeSelected(timePickerState.hour, timePickerState.minute)
+                            showDialog = false
+                        }) {
+                            Text(text = stringResource(R.string.dialog_confirm_ok))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun SettingsToggleRow(
     label: String,
     checked: Boolean,
@@ -484,6 +803,50 @@ private fun SettingsToggleRow(
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SettingsScreenPreview() {
+    OfficeBreakTheme {
+        SettingsScreen(
+            language = SettingsRepository.LANGUAGE_SYSTEM,
+            beepVolume = 80,
+            vibrationEnabled = true,
+            themeMode = SettingsRepository.THEME_SYSTEM,
+            keepScreenOn = false,
+            autoRestart = true,
+            dynamicIncreaseEnabled = false,
+            beepCount = 3,
+            ttsEnabled = false,
+            trackingEnabled = true,
+            onLanguageChange = {},
+            onBeepVolumeChange = {},
+            onBeepVolumePreview = {},
+            onVibrationEnabledChange = {},
+            onThemeModeChange = {},
+            onKeepScreenOnChange = {},
+            onAutoRestartChange = {},
+            onDynamicIncreaseEnabledChange = {},
+            onBeepCountChange = {},
+            onTtsEnabledChange = {},
+            customSoundUri = null,
+            onCustomSoundSelected = {},
+            onCustomSoundCleared = {},
+            onCustomSoundPreview = {},
+            isPreviewPlaying = false,
+            onStopPreview = {},
+            workScheduleEnabled = true,
+            weekSchedule = DEFAULT_WEEK_SCHEDULE,
+            onWorkScheduleEnabledChange = {},
+            onDayScheduleChange = { _, _ -> },
+            onTrackingEnabledChange = {},
+            onResetStats = {},
+            onExportToUri = {},
+            onImportFromUri = {},
+            onBack = {},
         )
     }
 }

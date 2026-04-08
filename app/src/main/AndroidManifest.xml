@@ -7,6 +7,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <application
         android:name=".OfficeBreakApp"
@@ -33,6 +34,10 @@
         <service
             android:name=".service.TimerService"
             android:foregroundServiceType="specialUse"
+            android:exported="false" />
+
+        <receiver
+            android:name=".service.WorkScheduleReceiver"
             android:exported="false" />
 
         <!-- Widget disabled for now — re-enable by uncommenting

@@ -13,8 +13,17 @@ Android app for regular movement breaks at the office. Set a timer, start it, an
 - Shuffle-bag exercise selection -- cycles through all enabled exercises before repeating, persisted across app restarts
 - Auto-restart after exercise confirmation (configurable -- can be disabled)
 - Foreground service with persistent notification (stays visible until manual reset)
-- Audible beep alert on timer expiry with configurable beep count (1-5)
+- Audible beep alert on timer expiry with configurable beep count (1-5) and custom notification sound support
+- Vibration alert on timer expiry
 - Lock screen notification with screen wake-up on timer expiry
+- TTS break announcements -- exercise names read aloud via text-to-speech (localized)
+- Work schedule -- per-day start/end times, break pause with auto-pause/resume, time inheritance via link icon, weekend/off-day detection, night shift support
+- End-of-shift screen -- friendly "Schönen Feierabend" / "Enjoy your time off" notification when work hours end, so the timer stop is never a surprise
+- Break pause screen -- "Schöne Pause" / "Enjoy your break" screen during scheduled breaks with auto-resume info
+- Freestyle mode -- automatically detected when starting outside work hours; disables auto-stop and break pausing so the timer runs freely for after-work use
+- Custom notification sounds -- pick audio files via SAF, preview before saving, reset to default
+- Persistent volume bar at top of timer screen
+- Home screen widget (Glance) -- break count, streak, timer status, quick-start button
 - Exercise management (add, remove, enable/disable)
 - Achievements system with unlockable milestones
 - Stats tracking -- weekly reps, week-over-week comparison, most frequent exercise (all data stored locally)
@@ -40,10 +49,12 @@ Exercises can be customized in the app via the settings screen.
 
 ## Tech Stack
 
-- Kotlin 2.2
+- Kotlin 2.2.10
 - Jetpack Compose + Material 3
+- Jetpack Glance (home screen widget)
 - Jetpack DataStore (Preferences)
 - kotlinx.serialization
+- kotlinx.coroutines
 - Min SDK 28 (Android 9), Target SDK 36 (Android 16)
 
 ## Build

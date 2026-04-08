@@ -7,7 +7,12 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import de.mysportsmate.officebreak.R
+import android.content.Intent
 import de.mysportsmate.officebreak.data.AchievementDefinition
+import de.mysportsmate.officebreak.data.DaySchedule
+import de.mysportsmate.officebreak.data.validated
+import de.mysportsmate.officebreak.data.DEFAULT_WEEK_SCHEDULE
+import de.mysportsmate.officebreak.data.resolveEffectiveSchedule
 import de.mysportsmate.officebreak.data.AchievementState
 import de.mysportsmate.officebreak.data.BackupManager
 import de.mysportsmate.officebreak.data.BreakRecord
@@ -18,6 +23,7 @@ import de.mysportsmate.officebreak.data.SettingsRepository
 import de.mysportsmate.officebreak.data.StatsRepository
 import de.mysportsmate.officebreak.data.StatsSnapshot
 import de.mysportsmate.officebreak.service.DefaultTimerServiceController
+import de.mysportsmate.officebreak.service.WorkScheduleManager
 import de.mysportsmate.officebreak.service.TimerServiceController
 import de.mysportsmate.officebreak.service.TimerState
 import de.mysportsmate.officebreak.service.TimerStateHolder
@@ -121,6 +127,18 @@ class TimerViewModel @JvmOverloads constructor(
     val beepCount: StateFlow<Int> = repository.beepCount
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_BEEP_COUNT)
 
+    val ttsEnabled: StateFlow<Boolean> = repository.ttsEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_TTS_ENABLED)
+
+    val customSoundUri: StateFlow<String?> = repository.customSoundUri
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val workScheduleEnabled: StateFlow<Boolean> = repository.workScheduleEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_WORK_SCHEDULE_ENABLED)
+
+    val weekSchedule: StateFlow<List<DaySchedule>> = repository.weekSchedule
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DEFAULT_WEEK_SCHEDULE)
+
     val dynamicIncreaseEnabled: StateFlow<Boolean> = repository.dynamicIncreaseEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_DYNAMIC_INCREASE_ENABLED)
 
@@ -159,6 +177,13 @@ class TimerViewModel @JvmOverloads constructor(
     private val _currentReps = MutableStateFlow(savedStateHandle.get<Int>(KEY_CURRENT_REPS))
     val currentReps: StateFlow<Int?> = _currentReps.asStateFlow()
 
+    private var previewTrack: android.media.AudioTrack? = null
+    private var previewPlayer: android.media.MediaPlayer? = null
+    private var previewJob: kotlinx.coroutines.Job? = null
+    private val _isPreviewPlaying = MutableStateFlow(false)
+    val isPreviewPlaying: StateFlow<Boolean> = _isPreviewPlaying.asStateFlow()
+
+    private var _isFreestyle = false
     private val usedExerciseNames: MutableSet<String> = mutableSetOf()
     private var lastPickedName: String? = null
 
@@ -265,9 +290,27 @@ class TimerViewModel @JvmOverloads constructor(
         }
     }
 
+    fun stopPreview() {
+        previewJob?.cancel()
+        previewJob = null
+        try {
+            previewTrack?.stop()
+            previewTrack?.release()
+        } catch (_: Exception) { }
+        previewTrack = null
+        try {
+            previewPlayer?.stop()
+            previewPlayer?.release()
+        } catch (_: Exception) { }
+        previewPlayer = null
+        _isPreviewPlaying.value = false
+    }
+
     fun playPreviewBeep(volume: Int) {
         if (volume <= 0) return
-        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+        stopPreview()
+        _isPreviewPlaying.value = true
+        previewJob = viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
                 val sampleRate = 44100
                 val beepDurationMs = 150
@@ -298,16 +341,22 @@ class TimerViewModel @JvmOverloads constructor(
                     .setBufferSizeInBytes(samples.size * 2)
                     .setTransferMode(android.media.AudioTrack.MODE_STATIC)
                     .build()
+                previewTrack = track
                 try {
                     track.write(samples, 0, samples.size)
                     track.play()
                     kotlinx.coroutines.delay(beepDurationMs.toLong() + 50)
                 } finally {
-                    track.stop()
-                    track.release()
+                    try {
+                        track.stop()
+                        track.release()
+                    } catch (_: Exception) { }
+                    previewTrack = null
+                    _isPreviewPlaying.value = false
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to play preview beep", e)
+                _isPreviewPlaying.value = false
             }
         }
     }
@@ -348,6 +397,117 @@ class TimerViewModel @JvmOverloads constructor(
                 repository.setAutoRestart(value)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to set auto restart", e)
+            }
+        }
+    }
+
+    fun setCustomSoundUri(uri: android.net.Uri) {
+        viewModelScope.launch {
+            try {
+                val app = getApplication<Application>()
+                app.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                )
+                repository.setCustomSoundUri(uri.toString())
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set custom sound URI", e)
+            }
+        }
+    }
+
+    fun clearCustomSound() {
+        stopPreview()
+        viewModelScope.launch {
+            try {
+                repository.setCustomSoundUri(null)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to clear custom sound", e)
+            }
+        }
+    }
+
+    fun playPreviewSound(volume: Int) {
+        val uri = customSoundUri.value
+        if (volume <= 0) return
+        if (uri != null) {
+            stopPreview()
+            _isPreviewPlaying.value = true
+            previewJob = viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                try {
+                    val app = getApplication<Application>()
+                    val player = android.media.MediaPlayer().apply {
+                        setAudioAttributes(
+                            android.media.AudioAttributes.Builder()
+                                .setUsage(android.media.AudioAttributes.USAGE_ALARM)
+                                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                .build(),
+                        )
+                        setDataSource(app, android.net.Uri.parse(uri))
+                        prepare()
+                        val vol = volume / 100f
+                        setVolume(vol, vol)
+                    }
+                    previewPlayer = player
+                    player.setOnCompletionListener {
+                        it.release()
+                        previewPlayer = null
+                        _isPreviewPlaying.value = false
+                    }
+                    player.start()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to play custom sound preview, falling back to beep", e)
+                    _isPreviewPlaying.value = false
+                    playPreviewBeep(volume)
+                }
+            }
+        } else {
+            playPreviewBeep(volume)
+        }
+    }
+
+    fun setTtsEnabled(value: Boolean) {
+        viewModelScope.launch {
+            try {
+                repository.setTtsEnabled(value)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set TTS enabled", e)
+            }
+        }
+    }
+
+    fun setWorkScheduleEnabled(value: Boolean) {
+        viewModelScope.launch {
+            try {
+                repository.setWorkScheduleEnabled(value)
+                val app = getApplication<Application>()
+                if (value) {
+                    val schedule = weekSchedule.value
+                    WorkScheduleManager.scheduleNextWorkStartReminder(app, schedule)
+                } else {
+                    WorkScheduleManager.cancelWorkStartReminder(app)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set work schedule enabled", e)
+            }
+        }
+    }
+
+    fun updateDaySchedule(dayIndex: Int, day: DaySchedule) {
+        viewModelScope.launch {
+            try {
+                val current = weekSchedule.value.toMutableList()
+                if (dayIndex in current.indices) {
+                    current[dayIndex] = day.validated()
+                    repository.setWeekSchedule(current)
+                    if (workScheduleEnabled.value) {
+                        WorkScheduleManager.scheduleNextWorkStartReminder(
+                            getApplication(), current,
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to update day schedule", e)
             }
         }
     }
@@ -420,14 +580,30 @@ class TimerViewModel @JvmOverloads constructor(
         val totalSeconds = (hours.value * 3600L) + (minutes.value * 60L)
         if (totalSeconds <= 0) return
 
-        serviceController.startTimer(totalSeconds, language.value)
+        val freestyle = shouldStartAsFreestyle()
+        _isFreestyle = freestyle
+
+        serviceController.startTimer(totalSeconds, language.value, freestyle)
         viewModelScope.launch {
             repository.setWidgetTimerStatus("running")
             WidgetUpdater.requestUpdate(getApplication())
         }
     }
 
+    private fun shouldStartAsFreestyle(): Boolean {
+        if (!workScheduleEnabled.value) return false
+        val schedule = weekSchedule.value
+        val dayIndex = java.time.LocalDate.now().dayOfWeek.ordinal
+        val todaySchedule = resolveEffectiveSchedule(schedule, dayIndex) ?: return true
+        val now = java.time.LocalTime.now()
+        val workStart = java.time.LocalTime.of(todaySchedule.workStartHour, todaySchedule.workStartMinute)
+        val workEnd = java.time.LocalTime.of(todaySchedule.workEndHour, todaySchedule.workEndMinute)
+
+        return now.isBefore(workStart) || !now.isBefore(workEnd)
+    }
+
     fun resetTimer() {
+        _isFreestyle = false
         _currentExercise.value = null
         _currentReps.value = null
         usedExerciseNames.clear()
@@ -437,6 +613,15 @@ class TimerViewModel @JvmOverloads constructor(
             repository.setLastPickedName(null)
         }
         serviceController.resetTimer()
+    }
+
+    fun dismissWorkEnded() {
+        _isFreestyle = false
+        timerStateHolder.update(TimerState.Idle)
+        viewModelScope.launch {
+            repository.setWidgetTimerStatus("idle")
+            WidgetUpdater.requestUpdate(getApplication())
+        }
     }
 
     fun onTimerExpired() {
@@ -595,6 +780,7 @@ class TimerViewModel @JvmOverloads constructor(
 
     private suspend fun restartOrResetTimer() {
         if (!autoRestart.value) {
+            _isFreestyle = false
             serviceController.resetTimer()
             repository.setWidgetTimerStatus("idle")
             WidgetUpdater.requestUpdate(getApplication())
@@ -603,7 +789,7 @@ class TimerViewModel @JvmOverloads constructor(
         val totalSeconds = (hours.value * 3600L) + (minutes.value * 60L)
         if (totalSeconds <= 0) return
 
-        serviceController.restartTimer(totalSeconds, language.value)
+        serviceController.restartTimer(totalSeconds, language.value, _isFreestyle)
         repository.setWidgetTimerStatus("running")
         WidgetUpdater.requestUpdate(getApplication())
     }
@@ -662,6 +848,22 @@ class TimerViewModel @JvmOverloads constructor(
 
     fun clearBackupState() {
         _backupState.value = BackupUiState.Idle
+    }
+
+    fun applyWorkSchedule(enabled: Boolean, schedule: List<DaySchedule>) {
+        viewModelScope.launch {
+            try {
+                repository.setWorkScheduleEnabled(enabled)
+                repository.setWeekSchedule(schedule)
+                if (enabled) {
+                    WorkScheduleManager.scheduleNextWorkStartReminder(
+                        getApplication(), schedule,
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to apply work schedule", e)
+            }
+        }
     }
 
     fun completeOnboarding(level: FitnessLevel, selectedExercises: List<Exercise>) {

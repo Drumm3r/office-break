@@ -29,7 +29,7 @@ object LocaleHelper {
         return createLocalizedContext(context, language)
     }
 
-    private fun resolveLocale(language: String): Locale {
+    fun resolveLocale(language: String): Locale {
         return if (language == SettingsRepository.LANGUAGE_SYSTEM) {
             Resources.getSystem().configuration.locales[0]
         } else {
