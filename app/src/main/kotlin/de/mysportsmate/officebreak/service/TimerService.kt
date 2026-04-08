@@ -48,6 +48,7 @@ sealed interface TimerState {
     data class Running(val remainingSeconds: Long, val totalSeconds: Long) : TimerState
     data class Paused(val remainingSeconds: Long, val totalSeconds: Long) : TimerState
     data object Expired : TimerState
+    data object WorkEnded : TimerState
 }
 
 class TimerService : Service() {
@@ -70,15 +71,17 @@ class TimerService : Service() {
         when (intent?.action) {
             ACTION_START -> {
                 val totalSeconds = intent.getLongExtra(EXTRA_DURATION_SECONDS, 0L)
+                val freestyle = intent.getBooleanExtra(EXTRA_FREESTYLE, false)
                 if (totalSeconds > 0) {
-                    startTimer(totalSeconds)
+                    startTimer(totalSeconds, freestyle)
                 }
             }
             ACTION_RESET -> resetTimer()
             ACTION_RESTART -> {
                 val totalSeconds = intent.getLongExtra(EXTRA_DURATION_SECONDS, 0L)
+                val freestyle = intent.getBooleanExtra(EXTRA_FREESTYLE, false)
                 if (totalSeconds > 0) {
-                    startTimer(totalSeconds)
+                    startTimer(totalSeconds, freestyle)
                 }
             }
             else -> {
@@ -90,7 +93,7 @@ class TimerService : Service() {
         return START_NOT_STICKY
     }
 
-    private fun startTimer(totalSeconds: Long) {
+    private fun startTimer(totalSeconds: Long, freestyle: Boolean = false) {
         timerJob?.cancel()
         stopAlarmSound()
         stopVibration()
@@ -132,7 +135,7 @@ class TimerService : Service() {
                 while (remaining > 0) {
                     delay(1000L)
 
-                    if (todaySchedule != null) {
+                    if (todaySchedule != null && !freestyle) {
                         val now = LocalTime.now()
                         val workStart = LocalTime.of(todaySchedule.workStartHour, todaySchedule.workStartMinute)
                         val workEnd = LocalTime.of(todaySchedule.workEndHour, todaySchedule.workEndMinute)
@@ -140,8 +143,8 @@ class TimerService : Service() {
                         val lunchEnd = LocalTime.of(todaySchedule.lunchEndHour, todaySchedule.lunchEndMinute)
 
                         if (isTimeInRange(now, workEnd, workStart)) {
-                            timerStateHolder.update(TimerState.Idle)
-                            writeWidgetTimerStatus("idle")
+                            timerStateHolder.update(TimerState.WorkEnded)
+                            writeWidgetTimerStatus("work_ended")
                             WidgetUpdater.requestUpdate(this@TimerService)
                             releaseWakeLock()
                             stopForeground(STOP_FOREGROUND_REMOVE)
@@ -487,6 +490,7 @@ class TimerService : Service() {
         const val ACTION_RESTART = "de.mysportsmate.officebreak.ACTION_RESTART"
         const val EXTRA_DURATION_SECONDS = "duration_seconds"
         const val EXTRA_LANGUAGE = "language"
+        const val EXTRA_FREESTYLE = "freestyle"
         const val NOTIFICATION_ID = 1
         const val EXPIRED_NOTIFICATION_ID = 2
 

@@ -67,6 +67,11 @@
     <string name="settings_lunch_start">Break start</string>
     <string name="settings_lunch_end">Break end</string>
     <string name="notification_text_lunch_pause">Break — timer paused</string>
+    <string name="work_ended_title">Enjoy your time off!</string>
+    <string name="work_ended_message">Your shift has ended. The timer was stopped automatically.</string>
+    <string name="work_ended_dismiss">OK</string>
+    <string name="break_pause_title">Enjoy your break!</string>
+    <string name="break_pause_message">The timer is paused and will resume automatically when your break ends.</string>
     <string name="notification_work_start_title">Time to start working!</string>
     <string name="notification_work_start_text">Start your break timer for the day</string>
     <string name="timer_paused_lunch">Break</string>

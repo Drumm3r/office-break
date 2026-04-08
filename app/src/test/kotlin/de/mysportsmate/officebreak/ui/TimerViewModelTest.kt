@@ -927,4 +927,30 @@ class TimerViewModelTest {
 
         collectors.forEach { it.cancel() }
     }
+
+    @Test
+    fun `dismissWorkEnded transitions to Idle`() = runTest {
+        timerStateHolder.update(TimerState.WorkEnded)
+        assertEquals(TimerState.WorkEnded, viewModel.timerState.value)
+
+        viewModel.dismissWorkEnded()
+        advanceUntilIdle()
+
+        assertEquals(TimerState.Idle, viewModel.timerState.value)
+    }
+
+    @Test
+    fun `startTimer without schedule passes freestyle false`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+
+        viewModel.setMinutes(15)
+        advanceUntilIdle()
+
+        viewModel.startTimer()
+
+        val call = serviceController.calls.first() as FakeTimerServiceController.Call.Start
+        assertEquals(false, call.freestyle)
+
+        collectors.forEach { it.cancel() }
+    }
 }

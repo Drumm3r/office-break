@@ -47,6 +47,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.mysportsmate.officebreak.R
 import de.mysportsmate.officebreak.data.DEFAULT_WEEK_SCHEDULE
@@ -54,6 +55,7 @@ import de.mysportsmate.officebreak.data.DaySchedule
 import de.mysportsmate.officebreak.data.Exercise
 import de.mysportsmate.officebreak.data.FitnessLevel
 import de.mysportsmate.officebreak.data.resolveEffectiveSchedule
+import de.mysportsmate.officebreak.ui.theme.OfficeBreakTheme
 import androidx.compose.runtime.remember
 
 @Composable
@@ -736,4 +738,20 @@ private fun buildScheduleGroups(
                 lunchEnd = key.le,
             )
         }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun OnboardingScreenPreview() {
+    OfficeBreakTheme {
+        OnboardingScreen(
+            exercises = listOf(
+                Exercise(name = "Push Ups", nameResKey = "exercise_push_ups", isEnabled = true),
+                Exercise(name = "Squats", nameResKey = "exercise_squats", isEnabled = true),
+                Exercise(name = "Sit Ups", nameResKey = "exercise_sit_ups", isEnabled = false),
+            ),
+            onComplete = { _, _ -> },
+            onWorkScheduleConfigured = { _, _ -> },
+        )
+    }
 }

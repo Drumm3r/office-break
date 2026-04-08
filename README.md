@@ -17,7 +17,10 @@ Android app for regular movement breaks at the office. Set a timer, start it, an
 - Vibration alert on timer expiry
 - Lock screen notification with screen wake-up on timer expiry
 - TTS break announcements -- exercise names read aloud via text-to-speech (localized)
-- Work schedule -- per-day start/end times, lunch pause with auto-pause/resume, time inheritance via link icon, weekend/off-day detection, night shift support
+- Work schedule -- per-day start/end times, break pause with auto-pause/resume, time inheritance via link icon, weekend/off-day detection, night shift support
+- End-of-shift screen -- friendly "Schönen Feierabend" / "Enjoy your time off" notification when work hours end, so the timer stop is never a surprise
+- Break pause screen -- "Schöne Pause" / "Enjoy your break" screen during scheduled breaks with auto-resume info
+- Freestyle mode -- automatically detected when starting outside work hours; disables auto-stop and break pausing so the timer runs freely for after-work use
 - Custom notification sounds -- pick audio files via SAF, preview before saving, reset to default
 - Persistent volume bar at top of timer screen
 - Home screen widget (Glance) -- break count, streak, timer status, quick-start button

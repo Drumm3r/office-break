@@ -49,8 +49,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.mysportsmate.officebreak.R
+import de.mysportsmate.officebreak.data.DEFAULT_WEEK_SCHEDULE
 import de.mysportsmate.officebreak.data.DaySchedule
 import de.mysportsmate.officebreak.data.resolveEffectiveSchedule
 import de.mysportsmate.officebreak.data.validated
@@ -58,6 +60,7 @@ import de.mysportsmate.officebreak.data.SettingsRepository
 import de.mysportsmate.officebreak.ui.components.ConfirmImportDialog
 import de.mysportsmate.officebreak.ui.components.VolumeBar
 import de.mysportsmate.officebreak.ui.components.ConfirmResetStatsDialog
+import de.mysportsmate.officebreak.ui.theme.OfficeBreakTheme
 import java.time.LocalDate
 import kotlin.math.roundToInt
 
@@ -843,6 +846,50 @@ private fun SettingsToggleRow(
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SettingsScreenPreview() {
+    OfficeBreakTheme {
+        SettingsScreen(
+            language = SettingsRepository.LANGUAGE_SYSTEM,
+            beepVolume = 80,
+            vibrationEnabled = true,
+            themeMode = SettingsRepository.THEME_SYSTEM,
+            keepScreenOn = false,
+            autoRestart = true,
+            dynamicIncreaseEnabled = false,
+            beepCount = 3,
+            ttsEnabled = false,
+            trackingEnabled = true,
+            onLanguageChange = {},
+            onBeepVolumeChange = {},
+            onBeepVolumePreview = {},
+            onVibrationEnabledChange = {},
+            onThemeModeChange = {},
+            onKeepScreenOnChange = {},
+            onAutoRestartChange = {},
+            onDynamicIncreaseEnabledChange = {},
+            onBeepCountChange = {},
+            onTtsEnabledChange = {},
+            customSoundUri = null,
+            onCustomSoundSelected = {},
+            onCustomSoundCleared = {},
+            onCustomSoundPreview = {},
+            isPreviewPlaying = false,
+            onStopPreview = {},
+            workScheduleEnabled = true,
+            weekSchedule = DEFAULT_WEEK_SCHEDULE,
+            onWorkScheduleEnabledChange = {},
+            onDayScheduleChange = { _, _ -> },
+            onTrackingEnabledChange = {},
+            onResetStats = {},
+            onExportToUri = {},
+            onImportFromUri = {},
+            onBack = {},
         )
     }
 }

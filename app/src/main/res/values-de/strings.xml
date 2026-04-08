@@ -67,6 +67,11 @@
     <string name="settings_lunch_start">Pause Beginn</string>
     <string name="settings_lunch_end">Pause Ende</string>
     <string name="notification_text_lunch_pause">Pause — Timer pausiert</string>
+    <string name="work_ended_title">Schönen Feierabend!</string>
+    <string name="work_ended_message">Dein Arbeitstag ist vorbei. Der Timer wurde automatisch gestoppt.</string>
+    <string name="work_ended_dismiss">OK</string>
+    <string name="break_pause_title">Schöne Pause!</string>
+    <string name="break_pause_message">Der Timer ist pausiert und wird automatisch fortgesetzt, wenn deine Pause vorbei ist.</string>
     <string name="notification_work_start_title">Arbeitstag beginnt!</string>
     <string name="notification_work_start_text">Starte deinen Pausen-Timer für den Tag</string>
     <string name="timer_paused_lunch">Pause</string>

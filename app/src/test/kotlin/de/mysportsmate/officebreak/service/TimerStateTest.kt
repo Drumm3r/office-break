@@ -39,6 +39,14 @@ class TimerStateTest {
     }
 
     @Test
+    fun `WorkEnded is singleton`() {
+        val a = TimerState.WorkEnded
+        val b = TimerState.WorkEnded
+
+        assertTrue(a === b)
+    }
+
+    @Test
     fun `formatTime formats correctly`() {
         assertEquals("00:00", TimerService.formatTime(0))
         assertEquals("00:59", TimerService.formatTime(59))

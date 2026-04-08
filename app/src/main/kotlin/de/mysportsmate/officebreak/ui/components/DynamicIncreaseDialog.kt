@@ -142,3 +142,16 @@ private fun DynamicIncreaseDialogRepsOnlyPreview() {
         )
     }
 }
+
+@Preview(showBackground = true)
+@Composable
+private fun DynamicIncreaseDialogIntervalOnlyPreview() {
+    OfficeBreakTheme {
+        DynamicIncreaseDialog(
+            offer = DynamicIncreaseOffer.IntervalOnly(newIntervalMinutes = 25),
+            onAcceptReps = {},
+            onAcceptInterval = {},
+            onDecline = {},
+        )
+    }
+}

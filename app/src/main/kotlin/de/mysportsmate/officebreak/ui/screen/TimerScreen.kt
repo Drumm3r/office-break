@@ -39,6 +39,8 @@ import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import de.mysportsmate.officebreak.R
@@ -53,8 +55,10 @@ import de.mysportsmate.officebreak.ui.components.DynamicIncreaseDialog
 import de.mysportsmate.officebreak.ui.components.ExerciseDialog
 import de.mysportsmate.officebreak.ui.components.TimerSetup
 import de.mysportsmate.officebreak.ui.components.VolumeBar
+import de.mysportsmate.officebreak.data.SettingsRepository
 import de.mysportsmate.officebreak.locale.LocaleHelper
 import de.mysportsmate.officebreak.tts.BreakTtsManager
+import de.mysportsmate.officebreak.ui.theme.OfficeBreakTheme
 
 @Composable
 fun TimerScreen(
@@ -257,7 +261,7 @@ fun TimerScreen(
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
-            if (timerState !is TimerState.Idle) {
+            if (timerState is TimerState.Running || timerState is TimerState.Paused || timerState is TimerState.Expired) {
                 VolumeBar(
                     volume = beepVolume,
                     onVolumeChange = viewModel::setBeepVolume,
@@ -318,6 +322,7 @@ fun TimerScreen(
                             is TimerState.Running -> "running"
                             is TimerState.Paused -> "paused"
                             is TimerState.Expired -> "expired"
+                            is TimerState.WorkEnded -> "work_ended"
                         }
                     },
                     label = "timer_content",
@@ -361,15 +366,25 @@ fun TimerScreen(
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
                         ) {
                             Text(
-                                text = stringResource(R.string.timer_paused_lunch),
-                                style = MaterialTheme.typography.headlineMedium,
+                                text = stringResource(R.string.break_pause_title),
+                                style = MaterialTheme.typography.headlineLarge,
                                 color = MaterialTheme.colorScheme.primary,
+                                textAlign = TextAlign.Center,
                             )
 
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Text(
+                                text = stringResource(R.string.break_pause_message),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                            )
+
+                            Spacer(modifier = Modifier.height(24.dp))
 
                             CountdownDisplay(
                                 remainingSeconds = state.remainingSeconds,
@@ -385,11 +400,48 @@ fun TimerScreen(
                                 ),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 48.dp)
+                                    .padding(horizontal = 16.dp)
                                     .height(56.dp),
                             ) {
                                 Text(
                                     text = stringResource(R.string.timer_reset),
+                                    style = MaterialTheme.typography.titleLarge,
+                                )
+                            }
+                        }
+                    } else if (state is TimerState.WorkEnded) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.work_ended_title),
+                                style = MaterialTheme.typography.headlineLarge,
+                                color = MaterialTheme.colorScheme.primary,
+                                textAlign = TextAlign.Center,
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Text(
+                                text = stringResource(R.string.work_ended_message),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                            )
+
+                            Spacer(modifier = Modifier.height(48.dp))
+
+                            Button(
+                                onClick = { viewModel.dismissWorkEnded() },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp)
+                                    .height(56.dp),
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.work_ended_dismiss),
                                     style = MaterialTheme.typography.titleLarge,
                                 )
                             }
@@ -424,6 +476,263 @@ fun TimerScreen(
                                     style = MaterialTheme.typography.titleLarge,
                                 )
                             }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun TimerScreenIdlePreview() {
+    OfficeBreakTheme {
+        Scaffold { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+            ) {
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp),
+                ) {
+                    IconButton(onClick = {}) {
+                        Icon(
+                            imageVector = Icons.Default.BarChart,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                    IconButton(onClick = {}) {
+                        Icon(
+                            imageVector = Icons.Default.EmojiEvents,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                    IconButton(onClick = {}) {
+                        Icon(
+                            imageVector = Icons.Default.FitnessCenter,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                    IconButton(onClick = {}) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    TimerSetup(
+                        hours = SettingsRepository.DEFAULT_HOURS,
+                        minutes = SettingsRepository.DEFAULT_MINUTES,
+                        repsMin = SettingsRepository.DEFAULT_REPS_MIN,
+                        repsMax = SettingsRepository.DEFAULT_REPS_MAX,
+                        repsLinked = true,
+                        onHoursChange = {},
+                        onMinutesChange = {},
+                        onRepsMinChange = {},
+                        onRepsMaxChange = {},
+                        onRepsLinkedChange = {},
+                    )
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    Button(
+                        onClick = {},
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 48.dp)
+                            .height(56.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.timer_start),
+                            style = MaterialTheme.typography.titleLarge,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun TimerScreenRunningPreview() {
+    OfficeBreakTheme {
+        Scaffold { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+            ) {
+                VolumeBar(
+                    volume = 80,
+                    onVolumeChange = {},
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    CountdownDisplay(
+                        remainingSeconds = 1425L,
+                        totalSeconds = 2700L,
+                    )
+
+                    Spacer(modifier = Modifier.height(48.dp))
+
+                    OutlinedButton(
+                        onClick = {},
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error,
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 48.dp)
+                            .height(56.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.timer_reset),
+                            style = MaterialTheme.typography.titleLarge,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun TimerScreenPausedPreview() {
+    OfficeBreakTheme {
+        Scaffold { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.break_pause_title),
+                            style = MaterialTheme.typography.headlineLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            textAlign = TextAlign.Center,
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = stringResource(R.string.break_pause_message),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        CountdownDisplay(
+                            remainingSeconds = 1425L,
+                            totalSeconds = 2700L,
+                        )
+
+                        Spacer(modifier = Modifier.height(48.dp))
+
+                        OutlinedButton(
+                            onClick = {},
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error,
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                                .height(56.dp),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.timer_reset),
+                                style = MaterialTheme.typography.titleLarge,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun TimerScreenWorkEndedPreview() {
+    OfficeBreakTheme {
+        Scaffold { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.work_ended_title),
+                            style = MaterialTheme.typography.headlineLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            textAlign = TextAlign.Center,
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = stringResource(R.string.work_ended_message),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+
+                        Spacer(modifier = Modifier.height(48.dp))
+
+                        Button(
+                            onClick = {},
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                                .height(56.dp),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.work_ended_dismiss),
+                                style = MaterialTheme.typography.titleLarge,
+                            )
                         }
                     }
                 }

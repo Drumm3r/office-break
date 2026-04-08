@@ -37,9 +37,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.mysportsmate.officebreak.R
 import de.mysportsmate.officebreak.data.Exercise
+import de.mysportsmate.officebreak.ui.theme.OfficeBreakTheme
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
@@ -173,5 +175,23 @@ private fun ExerciseRow(
                 )
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ExerciseSettingsScreenPreview() {
+    OfficeBreakTheme {
+        ExerciseSettingsScreen(
+            exercises = listOf(
+                Exercise(name = "Push Ups", nameResKey = "exercise_push_ups", isEnabled = true),
+                Exercise(name = "Squats", nameResKey = "exercise_squats", isEnabled = true),
+                Exercise(name = "Lunges", nameResKey = "exercise_lunges", isEnabled = false),
+            ),
+            onToggle = {},
+            onAdd = {},
+            onRemove = {},
+            onBack = {},
+        )
     }
 }

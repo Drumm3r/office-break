@@ -12,6 +12,7 @@ import de.mysportsmate.officebreak.data.AchievementDefinition
 import de.mysportsmate.officebreak.data.DaySchedule
 import de.mysportsmate.officebreak.data.validated
 import de.mysportsmate.officebreak.data.DEFAULT_WEEK_SCHEDULE
+import de.mysportsmate.officebreak.data.resolveEffectiveSchedule
 import de.mysportsmate.officebreak.data.AchievementState
 import de.mysportsmate.officebreak.data.BackupManager
 import de.mysportsmate.officebreak.data.BreakRecord
@@ -182,6 +183,7 @@ class TimerViewModel @JvmOverloads constructor(
     private val _isPreviewPlaying = MutableStateFlow(false)
     val isPreviewPlaying: StateFlow<Boolean> = _isPreviewPlaying.asStateFlow()
 
+    private var _isFreestyle = false
     private val usedExerciseNames: MutableSet<String> = mutableSetOf()
     private var lastPickedName: String? = null
 
@@ -578,14 +580,30 @@ class TimerViewModel @JvmOverloads constructor(
         val totalSeconds = (hours.value * 3600L) + (minutes.value * 60L)
         if (totalSeconds <= 0) return
 
-        serviceController.startTimer(totalSeconds, language.value)
+        val freestyle = shouldStartAsFreestyle()
+        _isFreestyle = freestyle
+
+        serviceController.startTimer(totalSeconds, language.value, freestyle)
         viewModelScope.launch {
             repository.setWidgetTimerStatus("running")
             WidgetUpdater.requestUpdate(getApplication())
         }
     }
 
+    private fun shouldStartAsFreestyle(): Boolean {
+        if (!workScheduleEnabled.value) return false
+        val schedule = weekSchedule.value
+        val dayIndex = java.time.LocalDate.now().dayOfWeek.ordinal
+        val todaySchedule = resolveEffectiveSchedule(schedule, dayIndex) ?: return true
+        val now = java.time.LocalTime.now()
+        val workStart = java.time.LocalTime.of(todaySchedule.workStartHour, todaySchedule.workStartMinute)
+        val workEnd = java.time.LocalTime.of(todaySchedule.workEndHour, todaySchedule.workEndMinute)
+
+        return now.isBefore(workStart) || !now.isBefore(workEnd)
+    }
+
     fun resetTimer() {
+        _isFreestyle = false
         _currentExercise.value = null
         _currentReps.value = null
         usedExerciseNames.clear()
@@ -595,6 +613,15 @@ class TimerViewModel @JvmOverloads constructor(
             repository.setLastPickedName(null)
         }
         serviceController.resetTimer()
+    }
+
+    fun dismissWorkEnded() {
+        _isFreestyle = false
+        timerStateHolder.update(TimerState.Idle)
+        viewModelScope.launch {
+            repository.setWidgetTimerStatus("idle")
+            WidgetUpdater.requestUpdate(getApplication())
+        }
     }
 
     fun onTimerExpired() {
@@ -753,6 +780,7 @@ class TimerViewModel @JvmOverloads constructor(
 
     private suspend fun restartOrResetTimer() {
         if (!autoRestart.value) {
+            _isFreestyle = false
             serviceController.resetTimer()
             repository.setWidgetTimerStatus("idle")
             WidgetUpdater.requestUpdate(getApplication())
@@ -761,7 +789,7 @@ class TimerViewModel @JvmOverloads constructor(
         val totalSeconds = (hours.value * 3600L) + (minutes.value * 60L)
         if (totalSeconds <= 0) return
 
-        serviceController.restartTimer(totalSeconds, language.value)
+        serviceController.restartTimer(totalSeconds, language.value, _isFreestyle)
         repository.setWidgetTimerStatus("running")
         WidgetUpdater.requestUpdate(getApplication())
     }
