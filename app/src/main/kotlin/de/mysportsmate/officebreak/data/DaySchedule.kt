@@ -29,9 +29,29 @@ val DEFAULT_WEEK_SCHEDULE: List<DaySchedule> = listOf(
 fun DaySchedule.validated(): DaySchedule {
     val workStartMin = workStartHour * 60 + workStartMinute
     val workEndMin = workEndHour * 60 + workEndMinute
-    if (workStartMin >= workEndMin) return this
-    val lunchStartMin = (lunchStartHour * 60 + lunchStartMinute).coerceIn(workStartMin, workEndMin - 1)
-    val lunchEndMin = (lunchEndHour * 60 + lunchEndMinute).coerceIn(lunchStartMin + 1, workEndMin)
+    if (workStartMin == workEndMin) return this
+
+    val lunchStartMin: Int
+    val lunchEndMin: Int
+
+    if (workStartMin < workEndMin) {
+        lunchStartMin = (lunchStartHour * 60 + lunchStartMinute).coerceIn(workStartMin, workEndMin - 1)
+        lunchEndMin = (lunchEndHour * 60 + lunchEndMinute).coerceIn(lunchStartMin + 1, workEndMin)
+    } else {
+        // Night shift: work spans midnight, clamp lunch within the work range
+        val rawLunchStart = lunchStartHour * 60 + lunchStartMinute
+        val rawLunchEnd = lunchEndHour * 60 + lunchEndMinute
+        lunchStartMin = if (rawLunchStart >= workStartMin || rawLunchStart < workEndMin) {
+            rawLunchStart
+        } else {
+            workStartMin
+        }
+        lunchEndMin = if (rawLunchEnd > lunchStartMin || (rawLunchEnd > 0 && rawLunchEnd <= workEndMin)) {
+            rawLunchEnd
+        } else {
+            (lunchStartMin + 60) % (24 * 60)
+        }
+    }
 
     return copy(
         lunchStartHour = lunchStartMin / 60,

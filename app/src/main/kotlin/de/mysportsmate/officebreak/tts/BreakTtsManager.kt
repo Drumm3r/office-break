@@ -7,6 +7,7 @@ import java.util.Locale
 
 class BreakTtsManager(context: Context) {
 
+    @Volatile
     private var isReady = false
 
     private val tts = TextToSpeech(context.applicationContext) { status ->

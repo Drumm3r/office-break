@@ -13,8 +13,10 @@ import de.mysportsmate.officebreak.data.DEFAULT_WEEK_SCHEDULE
 import de.mysportsmate.officebreak.data.DaySchedule
 import de.mysportsmate.officebreak.data.dataStore
 import de.mysportsmate.officebreak.locale.LocaleHelper
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 
 class WorkScheduleReceiver : BroadcastReceiver() {
 
@@ -24,7 +26,14 @@ class WorkScheduleReceiver : BroadcastReceiver() {
             showWorkStartNotification(context)
         }
 
-        rescheduleForTomorrow(context)
+        val pendingResult = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                rescheduleForTomorrow(context)
+            } finally {
+                pendingResult.finish()
+            }
+        }
     }
 
     private fun showWorkStartNotification(context: Context) {
@@ -54,9 +63,9 @@ class WorkScheduleReceiver : BroadcastReceiver() {
         manager.notify(NOTIFICATION_ID, notification)
     }
 
-    private fun rescheduleForTomorrow(context: Context) {
+    private suspend fun rescheduleForTomorrow(context: Context) {
         try {
-            val prefs = runBlocking { context.dataStore.data.first() }
+            val prefs = context.dataStore.data.first()
             val enabled = prefs[androidx.datastore.preferences.core.booleanPreferencesKey("work_schedule_enabled")] ?: false
             if (enabled) {
                 val scheduleJson = prefs[androidx.datastore.preferences.core.stringPreferencesKey("week_schedule")]

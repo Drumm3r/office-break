@@ -560,49 +560,6 @@ private fun ThemeDropdown(
 }
 
 @Composable
-private fun BeepVolumeSlider(
-    beepVolume: Int,
-    onBeepVolumeChange: (Int) -> Unit,
-    onBeepVolumePreview: (Int) -> Unit,
-) {
-    var sliderValue by remember(beepVolume) { mutableStateOf(beepVolume.toFloat()) }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-    ) {
-        Text(
-            text = stringResource(R.string.settings_beep_volume),
-            style = MaterialTheme.typography.bodyLarge,
-        )
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Slider(
-                value = sliderValue,
-                onValueChange = {
-                    sliderValue = it
-                    onBeepVolumeChange(it.roundToInt())
-                },
-                onValueChangeFinished = {
-                    onBeepVolumePreview(sliderValue.roundToInt())
-                },
-                valueRange = 0f..100f,
-                steps = 19,
-                modifier = Modifier.weight(1f),
-            )
-            Text(
-                text = "${sliderValue.roundToInt()}%",
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(start = 8.dp),
-            )
-        }
-    }
-}
-
-@Composable
 private fun BeepCountSlider(
     beepCount: Int,
     enabled: Boolean,

@@ -19,10 +19,33 @@ class DayScheduleTest {
     }
 
     @Test
-    fun `validated returns unchanged when workStart after workEnd`() {
-        val schedule = DaySchedule(workStartHour = 17, workStartMinute = 0, workEndHour = 8, workEndMinute = 0)
+    fun `validated clamps lunch for night shift schedule`() {
+        val schedule = DaySchedule(
+            workStartHour = 22, workStartMinute = 0,
+            workEndHour = 6, workEndMinute = 0,
+            lunchStartHour = 1, lunchStartMinute = 0,
+            lunchEndHour = 2, lunchEndMinute = 0,
+        )
         val result = schedule.validated()
-        assertEquals(schedule, result)
+        // Lunch at 01:00-02:00 is within the night shift (22:00-06:00)
+        assertEquals(1, result.lunchStartHour)
+        assertEquals(0, result.lunchStartMinute)
+        assertEquals(2, result.lunchEndHour)
+        assertEquals(0, result.lunchEndMinute)
+    }
+
+    @Test
+    fun `validated clamps lunch outside night shift to work start`() {
+        val schedule = DaySchedule(
+            workStartHour = 22, workStartMinute = 0,
+            workEndHour = 6, workEndMinute = 0,
+            lunchStartHour = 10, lunchStartMinute = 0,
+            lunchEndHour = 11, lunchEndMinute = 0,
+        )
+        val result = schedule.validated()
+        // 10:00 is outside 22:00-06:00, should clamp to workStart (22:00)
+        assertEquals(22, result.lunchStartHour)
+        assertEquals(0, result.lunchStartMinute)
     }
 
     @Test

@@ -56,7 +56,6 @@ import de.mysportsmate.officebreak.data.Exercise
 import de.mysportsmate.officebreak.data.FitnessLevel
 import de.mysportsmate.officebreak.data.resolveEffectiveSchedule
 import de.mysportsmate.officebreak.ui.theme.OfficeBreakTheme
-import androidx.compose.runtime.remember
 
 @Composable
 fun OnboardingScreen(
@@ -462,87 +461,6 @@ private fun WorkScheduleStep(
                 )
             }
 
-        }
-    }
-}
-
-@Composable
-private fun OnboardingTimeRow(
-    label: String,
-    hour: Int,
-    minute: Int,
-    onTimeChange: (Int, Int) -> Unit,
-) {
-    var editing by rememberSaveable { mutableStateOf(false) }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.weight(1f),
-        )
-        OutlinedButton(onClick = { editing = true }) {
-            Text(text = "%02d:%02d".format(hour, minute))
-        }
-    }
-
-    if (editing) {
-        OnboardingTimePicker(
-            initialHour = hour,
-            initialMinute = minute,
-            onConfirm = { h, m ->
-                onTimeChange(h, m)
-                editing = false
-            },
-            onDismiss = { editing = false },
-        )
-    }
-}
-
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
-@Composable
-private fun OnboardingTimePicker(
-    initialHour: Int,
-    initialMinute: Int,
-    onConfirm: (Int, Int) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val state = androidx.compose.material3.rememberTimePickerState(
-        initialHour = initialHour,
-        initialMinute = initialMinute,
-        is24Hour = true,
-    )
-
-    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface,
-            ),
-        ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                androidx.compose.material3.TimePicker(state = state)
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                ) {
-                    TextButton(onClick = onDismiss) {
-                        Text(text = stringResource(R.string.reset_confirm_no))
-                    }
-                    TextButton(onClick = { onConfirm(state.hour, state.minute) }) {
-                        Text(text = stringResource(R.string.dialog_confirm_ok))
-                    }
-                }
-            }
         }
     }
 }
