@@ -460,14 +460,6 @@ private fun WorkScheduleStep(
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = stringResource(R.string.onboarding_schedule_customize_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
         }
     }
 }
@@ -616,22 +608,24 @@ private fun SummaryStep(
                     label = stringResource(R.string.onboarding_summary_exercises, exerciseCount),
                 )
                 if (workScheduleEnabled) {
-                    val workDays = weekSchedule.count { it.enabled }
-                    val baseDay = weekSchedule.firstOrNull { it.enabled } ?: weekSchedule.first()
-                    SummaryRow(
-                        label = stringResource(
-                            R.string.onboarding_summary_work_schedule,
-                            "%02d:%02d".format(baseDay.workStartHour, baseDay.workStartMinute),
-                            "%02d:%02d".format(baseDay.workEndHour, baseDay.workEndMinute),
-                        ),
+                    val dayNames = listOf(
+                        stringResource(R.string.day_mon),
+                        stringResource(R.string.day_tue),
+                        stringResource(R.string.day_wed),
+                        stringResource(R.string.day_thu),
+                        stringResource(R.string.day_fri),
+                        stringResource(R.string.day_sat),
+                        stringResource(R.string.day_sun),
                     )
-                    SummaryRow(
-                        label = stringResource(
-                            R.string.onboarding_summary_lunch,
-                            "%02d:%02d".format(baseDay.lunchStartHour, baseDay.lunchStartMinute),
-                            "%02d:%02d".format(baseDay.lunchEndHour, baseDay.lunchEndMinute),
-                        ),
-                    )
+
+                    val groups = buildScheduleGroups(weekSchedule, dayNames)
+
+                    groups.forEach { (days, ws, we, ls, le) ->
+                        SummaryRow(label = "$days: $ws–$we")
+                        SummaryRow(
+                            label = stringResource(R.string.onboarding_summary_lunch, ls, le),
+                        )
+                    }
                 } else {
                     SummaryRow(
                         label = stringResource(R.string.onboarding_summary_work_schedule_off),
@@ -705,4 +699,41 @@ private fun NavigationButtons(
             )
         }
     }
+}
+
+private data class ScheduleGroup(
+    val days: String,
+    val workStart: String,
+    val workEnd: String,
+    val lunchStart: String,
+    val lunchEnd: String,
+)
+
+private fun buildScheduleGroups(
+    weekSchedule: List<DaySchedule>,
+    dayNames: List<String>,
+): List<ScheduleGroup> {
+    data class Key(val ws: String, val we: String, val ls: String, val le: String)
+
+    return weekSchedule.indices
+        .filter { weekSchedule[it].enabled }
+        .map { index ->
+            val eff = resolveEffectiveSchedule(weekSchedule, index) ?: weekSchedule[index]
+            dayNames[index] to Key(
+                ws = "%02d:%02d".format(eff.workStartHour, eff.workStartMinute),
+                we = "%02d:%02d".format(eff.workEndHour, eff.workEndMinute),
+                ls = "%02d:%02d".format(eff.lunchStartHour, eff.lunchStartMinute),
+                le = "%02d:%02d".format(eff.lunchEndHour, eff.lunchEndMinute),
+            )
+        }
+        .groupBy({ it.second }, { it.first })
+        .map { (key, days) ->
+            ScheduleGroup(
+                days = days.joinToString(", "),
+                workStart = key.ws,
+                workEnd = key.we,
+                lunchStart = key.ls,
+                lunchEnd = key.le,
+            )
+        }
 }

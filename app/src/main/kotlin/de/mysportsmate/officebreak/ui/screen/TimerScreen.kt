@@ -225,6 +225,8 @@ fun TimerScreen(
             onCustomSoundSelected = viewModel::setCustomSoundUri,
             onCustomSoundCleared = viewModel::clearCustomSound,
             onCustomSoundPreview = viewModel::playPreviewSound,
+            isPreviewPlaying = viewModel.isPreviewPlaying.collectAsState().value,
+            onStopPreview = viewModel::stopPreview,
             workScheduleEnabled = workScheduleEnabled,
             weekSchedule = weekSchedule,
             onWorkScheduleEnabledChange = viewModel::setWorkScheduleEnabled,
@@ -255,6 +257,17 @@ fun TimerScreen(
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
+            if (timerState !is TimerState.Idle) {
+                VolumeBar(
+                    volume = beepVolume,
+                    onVolumeChange = viewModel::setBeepVolume,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
+
             if (timerState is TimerState.Idle) {
                 Row(
                     modifier = Modifier
@@ -299,6 +312,14 @@ fun TimerScreen(
             ) {
                 AnimatedContent(
                     targetState = timerState,
+                    contentKey = { state ->
+                        when (state) {
+                            is TimerState.Idle -> "idle"
+                            is TimerState.Running -> "running"
+                            is TimerState.Paused -> "paused"
+                            is TimerState.Expired -> "expired"
+                        }
+                    },
                     label = "timer_content",
                 ) { state ->
                     if (state is TimerState.Idle) {
@@ -342,14 +363,6 @@ fun TimerScreen(
                             verticalArrangement = Arrangement.Center,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            VolumeBar(
-                                volume = beepVolume,
-                                onVolumeChange = viewModel::setBeepVolume,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
                             Text(
                                 text = stringResource(R.string.timer_paused_lunch),
                                 style = MaterialTheme.typography.headlineMedium,
@@ -387,14 +400,6 @@ fun TimerScreen(
                             verticalArrangement = Arrangement.Center,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            VolumeBar(
-                                volume = beepVolume,
-                                onVolumeChange = viewModel::setBeepVolume,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
                             val running = state as? TimerState.Running
 
                             CountdownDisplay(

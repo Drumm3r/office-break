@@ -26,6 +26,21 @@ val DEFAULT_WEEK_SCHEDULE: List<DaySchedule> = listOf(
     DaySchedule(enabled = false, linked = false),   // Sunday
 )
 
+fun DaySchedule.validated(): DaySchedule {
+    val workStartMin = workStartHour * 60 + workStartMinute
+    val workEndMin = workEndHour * 60 + workEndMinute
+    if (workStartMin >= workEndMin) return this
+    val lunchStartMin = (lunchStartHour * 60 + lunchStartMinute).coerceIn(workStartMin, workEndMin - 1)
+    val lunchEndMin = (lunchEndHour * 60 + lunchEndMinute).coerceIn(lunchStartMin + 1, workEndMin)
+
+    return copy(
+        lunchStartHour = lunchStartMin / 60,
+        lunchStartMinute = lunchStartMin % 60,
+        lunchEndHour = lunchEndMin / 60,
+        lunchEndMinute = lunchEndMin % 60,
+    )
+}
+
 fun resolveEffectiveSchedule(schedule: List<DaySchedule>, dayIndex: Int): DaySchedule? {
     if (dayIndex !in schedule.indices) return null
     val day = schedule[dayIndex]

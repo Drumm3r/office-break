@@ -10,6 +10,7 @@ import de.mysportsmate.officebreak.R
 import android.content.Intent
 import de.mysportsmate.officebreak.data.AchievementDefinition
 import de.mysportsmate.officebreak.data.DaySchedule
+import de.mysportsmate.officebreak.data.validated
 import de.mysportsmate.officebreak.data.DEFAULT_WEEK_SCHEDULE
 import de.mysportsmate.officebreak.data.AchievementState
 import de.mysportsmate.officebreak.data.BackupManager
@@ -175,6 +176,12 @@ class TimerViewModel @JvmOverloads constructor(
     private val _currentReps = MutableStateFlow(savedStateHandle.get<Int>(KEY_CURRENT_REPS))
     val currentReps: StateFlow<Int?> = _currentReps.asStateFlow()
 
+    private var previewTrack: android.media.AudioTrack? = null
+    private var previewPlayer: android.media.MediaPlayer? = null
+    private var previewJob: kotlinx.coroutines.Job? = null
+    private val _isPreviewPlaying = MutableStateFlow(false)
+    val isPreviewPlaying: StateFlow<Boolean> = _isPreviewPlaying.asStateFlow()
+
     private val usedExerciseNames: MutableSet<String> = mutableSetOf()
     private var lastPickedName: String? = null
 
@@ -281,9 +288,27 @@ class TimerViewModel @JvmOverloads constructor(
         }
     }
 
+    fun stopPreview() {
+        previewJob?.cancel()
+        previewJob = null
+        try {
+            previewTrack?.stop()
+            previewTrack?.release()
+        } catch (_: Exception) { }
+        previewTrack = null
+        try {
+            previewPlayer?.stop()
+            previewPlayer?.release()
+        } catch (_: Exception) { }
+        previewPlayer = null
+        _isPreviewPlaying.value = false
+    }
+
     fun playPreviewBeep(volume: Int) {
         if (volume <= 0) return
-        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+        stopPreview()
+        _isPreviewPlaying.value = true
+        previewJob = viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
                 val sampleRate = 44100
                 val beepDurationMs = 150
@@ -314,16 +339,22 @@ class TimerViewModel @JvmOverloads constructor(
                     .setBufferSizeInBytes(samples.size * 2)
                     .setTransferMode(android.media.AudioTrack.MODE_STATIC)
                     .build()
+                previewTrack = track
                 try {
                     track.write(samples, 0, samples.size)
                     track.play()
                     kotlinx.coroutines.delay(beepDurationMs.toLong() + 50)
                 } finally {
-                    track.stop()
-                    track.release()
+                    try {
+                        track.stop()
+                        track.release()
+                    } catch (_: Exception) { }
+                    previewTrack = null
+                    _isPreviewPlaying.value = false
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to play preview beep", e)
+                _isPreviewPlaying.value = false
             }
         }
     }
@@ -384,6 +415,7 @@ class TimerViewModel @JvmOverloads constructor(
     }
 
     fun clearCustomSound() {
+        stopPreview()
         viewModelScope.launch {
             try {
                 repository.setCustomSoundUri(null)
@@ -397,7 +429,9 @@ class TimerViewModel @JvmOverloads constructor(
         val uri = customSoundUri.value
         if (volume <= 0) return
         if (uri != null) {
-            viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            stopPreview()
+            _isPreviewPlaying.value = true
+            previewJob = viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                 try {
                     val app = getApplication<Application>()
                     val player = android.media.MediaPlayer().apply {
@@ -412,10 +446,16 @@ class TimerViewModel @JvmOverloads constructor(
                         val vol = volume / 100f
                         setVolume(vol, vol)
                     }
-                    player.setOnCompletionListener { it.release() }
+                    previewPlayer = player
+                    player.setOnCompletionListener {
+                        it.release()
+                        previewPlayer = null
+                        _isPreviewPlaying.value = false
+                    }
                     player.start()
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to play custom sound preview, falling back to beep", e)
+                    _isPreviewPlaying.value = false
                     playPreviewBeep(volume)
                 }
             }
@@ -456,7 +496,7 @@ class TimerViewModel @JvmOverloads constructor(
             try {
                 val current = weekSchedule.value.toMutableList()
                 if (dayIndex in current.indices) {
-                    current[dayIndex] = day
+                    current[dayIndex] = day.validated()
                     repository.setWeekSchedule(current)
                     if (workScheduleEnabled.value) {
                         WorkScheduleManager.scheduleNextWorkStartReminder(

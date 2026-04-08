@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import de.mysportsmate.officebreak.R
 import de.mysportsmate.officebreak.data.DaySchedule
 import de.mysportsmate.officebreak.data.resolveEffectiveSchedule
+import de.mysportsmate.officebreak.data.validated
 import de.mysportsmate.officebreak.data.SettingsRepository
 import de.mysportsmate.officebreak.ui.components.ConfirmImportDialog
 import de.mysportsmate.officebreak.ui.components.VolumeBar
@@ -87,6 +88,8 @@ fun SettingsScreen(
     onCustomSoundSelected: (Uri) -> Unit,
     onCustomSoundCleared: () -> Unit,
     onCustomSoundPreview: (Int) -> Unit,
+    isPreviewPlaying: Boolean,
+    onStopPreview: () -> Unit,
     workScheduleEnabled: Boolean,
     weekSchedule: List<DaySchedule>,
     onWorkScheduleEnabledChange: (Boolean) -> Unit,
@@ -314,6 +317,13 @@ fun SettingsScreen(
             Text(
                 text = stringResource(R.string.settings_notification_sound),
                 style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(bottom = 4.dp),
+            )
+
+            Text(
+                text = stringResource(R.string.settings_notification_sound_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 8.dp),
             )
 
@@ -349,14 +359,26 @@ fun SettingsScreen(
                     horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
                 ) {
                     OutlinedButton(
-                        onClick = { onCustomSoundPreview(beepVolume) },
+                        onClick = {
+                            if (isPreviewPlaying) onStopPreview()
+                            else onCustomSoundPreview(beepVolume)
+                        },
                         modifier = Modifier.weight(1f),
                     ) {
-                        Text(text = stringResource(R.string.settings_custom_sound_preview))
+                        Text(
+                            text = if (isPreviewPlaying) {
+                                stringResource(R.string.settings_custom_sound_stop)
+                            } else {
+                                stringResource(R.string.settings_custom_sound_preview)
+                            },
+                        )
                     }
 
                     OutlinedButton(
-                        onClick = onCustomSoundCleared,
+                        onClick = {
+                            onStopPreview()
+                            onCustomSoundCleared()
+                        },
                         modifier = Modifier.weight(1f),
                     ) {
                         Text(text = stringResource(R.string.settings_custom_sound_reset))
@@ -660,21 +682,6 @@ internal fun DayScheduleRow(
                 },
             )
 
-            if (day.enabled) {
-                Text(
-                    text = "%02d:%02d–%02d:%02d".format(
-                        displayDay.workStartHour, displayDay.workStartMinute,
-                        displayDay.workEndHour, displayDay.workEndMinute,
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (timesEditable) {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                    },
-                )
-            }
-
             if (day.enabled && !isFirstEnabled) {
                 IconButton(
                     onClick = {
@@ -692,6 +699,31 @@ internal fun DayScheduleRow(
                     )
                 }
             }
+
+            if (day.enabled) {
+                androidx.compose.material3.Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = if (timesEditable) {
+                        MaterialTheme.colorScheme.secondaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant
+                    },
+                ) {
+                    Text(
+                        text = "%02d:%02d–%02d:%02d".format(
+                            displayDay.workStartHour, displayDay.workStartMinute,
+                            displayDay.workEndHour, displayDay.workEndMinute,
+                        ),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = if (timesEditable) {
+                            MaterialTheme.colorScheme.onSecondaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    )
+                }
+            }
         }
 
         if (expanded && day.enabled && timesEditable) {
@@ -700,25 +732,25 @@ internal fun DayScheduleRow(
                     label = stringResource(R.string.settings_work_start),
                     hour = day.workStartHour,
                     minute = day.workStartMinute,
-                    onTimeSelected = { h, m -> onDayChange(day.copy(workStartHour = h, workStartMinute = m)) },
+                    onTimeSelected = { h, m -> onDayChange(day.copy(workStartHour = h, workStartMinute = m).validated()) },
                 )
                 TimePickerRow(
                     label = stringResource(R.string.settings_work_end),
                     hour = day.workEndHour,
                     minute = day.workEndMinute,
-                    onTimeSelected = { h, m -> onDayChange(day.copy(workEndHour = h, workEndMinute = m)) },
+                    onTimeSelected = { h, m -> onDayChange(day.copy(workEndHour = h, workEndMinute = m).validated()) },
                 )
                 TimePickerRow(
                     label = stringResource(R.string.settings_lunch_start),
                     hour = day.lunchStartHour,
                     minute = day.lunchStartMinute,
-                    onTimeSelected = { h, m -> onDayChange(day.copy(lunchStartHour = h, lunchStartMinute = m)) },
+                    onTimeSelected = { h, m -> onDayChange(day.copy(lunchStartHour = h, lunchStartMinute = m).validated()) },
                 )
                 TimePickerRow(
                     label = stringResource(R.string.settings_lunch_end),
                     hour = day.lunchEndHour,
                     minute = day.lunchEndMinute,
-                    onTimeSelected = { h, m -> onDayChange(day.copy(lunchEndHour = h, lunchEndMinute = m)) },
+                    onTimeSelected = { h, m -> onDayChange(day.copy(lunchEndHour = h, lunchEndMinute = m).validated()) },
                 )
             }
         }

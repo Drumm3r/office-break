@@ -53,9 +53,11 @@
     <string name="settings_tts_enabled">Übung vorlesen</string>
     <string name="settings_tts_hint">Nutzt Sprachausgabe um Übungen bei Pausenbeginn anzusagen</string>
     <string name="settings_notification_sound">Benachrichtigungston</string>
+    <string name="settings_notification_sound_hint">Eigene Töne werden bei Pausenbeginn abgespielt und stoppen, wenn du sie als erledigt markierst</string>
     <string name="settings_custom_sound_select">Eigenen Ton auswählen</string>
     <string name="settings_custom_sound_reset">Auf Standard zurücksetzen</string>
     <string name="settings_custom_sound_preview">Vorhören</string>
+    <string name="settings_custom_sound_stop">Stopp</string>
     <string name="settings_custom_sound_current">Aktuell: %1$s</string>
     <string name="settings_work_schedule">Arbeitszeiten</string>
     <string name="settings_work_schedule_enabled">Arbeitszeiten</string>
@@ -71,7 +73,6 @@
     <string name="onboarding_schedule_title">Deine Arbeitszeiten</string>
     <string name="onboarding_schedule_subtitle">Optional — du kannst das später in den Einstellungen ändern</string>
     <string name="onboarding_schedule_select_days">Wähle deine Arbeitstage</string>
-    <string name="onboarding_schedule_customize_hint">Individuelle Zeiten pro Tag kannst du später in den Einstellungen anpassen</string>
     <string name="day_mon">Mo</string>
     <string name="day_tue">Di</string>
     <string name="day_wed">Mi</string>

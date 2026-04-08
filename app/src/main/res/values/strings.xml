@@ -53,9 +53,11 @@
     <string name="settings_tts_enabled">Read exercise aloud</string>
     <string name="settings_tts_hint">Uses text-to-speech to announce exercises when a break starts</string>
     <string name="settings_notification_sound">Notification sound</string>
+    <string name="settings_notification_sound_hint">Custom sounds play when a break starts and stop when you mark it as done</string>
     <string name="settings_custom_sound_select">Select custom sound</string>
     <string name="settings_custom_sound_reset">Reset to default</string>
     <string name="settings_custom_sound_preview">Preview</string>
+    <string name="settings_custom_sound_stop">Stop</string>
     <string name="settings_custom_sound_current">Current: %1$s</string>
     <string name="settings_work_schedule">Work Schedule</string>
     <string name="settings_work_schedule_enabled">Work schedule</string>
@@ -71,7 +73,6 @@
     <string name="onboarding_schedule_title">Set your work schedule</string>
     <string name="onboarding_schedule_subtitle">Optional — you can set this up later in settings</string>
     <string name="onboarding_schedule_select_days">Select your work days</string>
-    <string name="onboarding_schedule_customize_hint">You can set individual times per day later in settings</string>
     <string name="day_mon">Mon</string>
     <string name="day_tue">Tue</string>
     <string name="day_wed">Wed</string>
