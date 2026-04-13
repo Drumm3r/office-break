@@ -72,8 +72,9 @@
     <string name="work_ended_dismiss">OK</string>
     <string name="break_pause_title">Enjoy your break!</string>
     <string name="break_pause_message">The timer is paused and will resume automatically when your break ends.</string>
-    <string name="notification_work_start_title">Time to start working!</string>
-    <string name="notification_work_start_text">Start your break timer for the day</string>
+    <string name="notification_work_start_title">Your work day has started</string>
+    <string name="notification_work_start_text">Do you want to start your break timer?</string>
+    <string name="notification_work_start_action">Start</string>
     <string name="timer_paused_lunch">Break</string>
     <string name="onboarding_schedule_title">Set your work schedule</string>
     <string name="onboarding_schedule_subtitle">Optional — you can set this up later in settings</string>

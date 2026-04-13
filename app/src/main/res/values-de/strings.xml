@@ -72,8 +72,9 @@
     <string name="work_ended_dismiss">OK</string>
     <string name="break_pause_title">Schöne Pause!</string>
     <string name="break_pause_message">Der Timer ist pausiert und wird automatisch fortgesetzt, wenn deine Pause vorbei ist.</string>
-    <string name="notification_work_start_title">Arbeitstag beginnt!</string>
-    <string name="notification_work_start_text">Starte deinen Pausen-Timer für den Tag</string>
+    <string name="notification_work_start_title">Dein Arbeitstag hat begonnen</string>
+    <string name="notification_work_start_text">Möchtest du deinen Pausen-Timer starten?</string>
+    <string name="notification_work_start_action">Starten</string>
     <string name="timer_paused_lunch">Pause</string>
     <string name="onboarding_schedule_title">Deine Arbeitszeiten</string>
     <string name="onboarding_schedule_subtitle">Optional — du kannst das später in den Einstellungen ändern</string>
