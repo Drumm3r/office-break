@@ -11,6 +11,8 @@ All notable changes to Office Break are documented here. Newest on top.
 - **"Start" action on the work-start notification** — The notification now includes a direct action button that starts the break timer with the configured break interval and language, so users can begin the day without opening the app.
 - **Inexact alarm fallback** — On Android S+ devices where `SCHEDULE_EXACT_ALARM` permission is denied, the app now gracefully falls back to `setAndAllowWhileIdle()` instead of failing silently, ensuring reminders still fire (just without exact-to-the-second timing).
 - **App-start alarm re-registration** — On app launch, work-start alarms are re-registered if the schedule is enabled, so reminders persist across app upgrades, data clears, and alarm-manager restarts.
+- **Pause/resume custom break music** — When a custom notification sound is configured, a "Pause music / Resume music" toggle now appears in the exercise dialog below the "Done" button, with a play/pause icon. Lets users silence the alarm during meetings without ending the break; tapping resume continues playback (or restarts from the beginning if the clip already finished).
+- **Play/pause icons on custom-sound preview button** — The settings preview button now shows a play-arrow icon when idle and a pause icon while previewing, matching the in-break music toggle for visual consistency.
 
 ### Changes
 

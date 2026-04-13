@@ -84,6 +84,8 @@ class TimerService : Service() {
                     startTimer(totalSeconds, freestyle)
                 }
             }
+            ACTION_PAUSE_MUSIC -> pauseCustomSound()
+            ACTION_RESUME_MUSIC -> resumeCustomSound()
             else -> {
                 timerStateHolder.update(TimerState.Idle)
                 stopSelf()
@@ -388,14 +390,17 @@ class TimerService : Service() {
             }
             mediaPlayer = player
             player.setOnCompletionListener {
+                timerStateHolder.updateMusicPlaying(false)
                 it.release()
                 if (mediaPlayer === it) mediaPlayer = null
             }
             player.start()
+            timerStateHolder.updateMusicPlaying(true)
         } catch (e: Exception) {
             android.util.Log.e("TimerService", "Failed to play custom sound, falling back to beep", e)
             mediaPlayer?.release()
             mediaPlayer = null
+            timerStateHolder.updateMusicPlaying(false)
             playAlarmSound(volume = volume)
         }
     }
@@ -410,6 +415,40 @@ class TimerService : Service() {
             it.release()
         }
         mediaPlayer = null
+        timerStateHolder.updateMusicPlaying(false)
+    }
+
+    private fun pauseCustomSound() {
+        val player = mediaPlayer ?: return
+        try {
+            if (player.isPlaying) {
+                player.pause()
+            }
+        } catch (_: IllegalStateException) {
+            // Player in invalid state; ignore
+        }
+        timerStateHolder.updateMusicPlaying(false)
+    }
+
+    private fun resumeCustomSound() {
+        val player = mediaPlayer
+        if (player != null) {
+            try {
+                player.start()
+                timerStateHolder.updateMusicPlaying(true)
+                return
+            } catch (_: IllegalStateException) {
+                // Player invalid; fall through to restart from file
+            }
+        }
+        scope.launch {
+            val soundPrefs = dataStore.data.first()
+            val beepVolume = soundPrefs[intPreferencesKey("beep_volume")] ?: SettingsRepository.DEFAULT_BEEP_VOLUME
+            val customSoundUri = soundPrefs[stringPreferencesKey("custom_sound_uri")]
+            if (customSoundUri != null && beepVolume > 0) {
+                playCustomSound(customSoundUri, beepVolume / 100.0)
+            }
+        }
     }
 
     private fun stopAlarmSound() {
@@ -488,6 +527,8 @@ class TimerService : Service() {
         const val ACTION_START = "de.mysportsmate.officebreak.ACTION_START"
         const val ACTION_RESET = "de.mysportsmate.officebreak.ACTION_RESET"
         const val ACTION_RESTART = "de.mysportsmate.officebreak.ACTION_RESTART"
+        const val ACTION_PAUSE_MUSIC = "de.mysportsmate.officebreak.ACTION_PAUSE_MUSIC"
+        const val ACTION_RESUME_MUSIC = "de.mysportsmate.officebreak.ACTION_RESUME_MUSIC"
         const val EXTRA_DURATION_SECONDS = "duration_seconds"
         const val EXTRA_LANGUAGE = "language"
         const val EXTRA_FREESTYLE = "freestyle"

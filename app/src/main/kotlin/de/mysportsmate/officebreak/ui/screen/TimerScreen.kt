@@ -87,6 +87,7 @@ fun TimerScreen(
     val dynamicIncreaseEnabled by viewModel.dynamicIncreaseEnabled.collectAsState()
     val ttsEnabled by viewModel.ttsEnabled.collectAsState()
     val customSoundUri by viewModel.customSoundUri.collectAsState()
+    val isMusicPlaying by viewModel.isMusicPlaying.collectAsState()
     val workScheduleEnabled by viewModel.workScheduleEnabled.collectAsState()
     val weekSchedule by viewModel.weekSchedule.collectAsState()
     val dynamicIncreaseOffer by viewModel.dynamicIncreaseOffer.collectAsState()
@@ -149,6 +150,9 @@ fun TimerScreen(
             exerciseName = exerciseName,
             reps = reps,
             onDone = { viewModel.onExerciseDone() },
+            showMusicToggle = customSoundUri != null,
+            isMusicPlaying = isMusicPlaying,
+            onToggleMusic = { viewModel.toggleMusicPlayback() },
         )
     }
 

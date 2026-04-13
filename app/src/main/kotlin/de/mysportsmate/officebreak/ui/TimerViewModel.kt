@@ -133,6 +133,8 @@ class TimerViewModel @JvmOverloads constructor(
     val customSoundUri: StateFlow<String?> = repository.customSoundUri
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    val isMusicPlaying: StateFlow<Boolean> = timerStateHolder.isMusicPlaying
+
     val workScheduleEnabled: StateFlow<Boolean> = repository.workScheduleEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_WORK_SCHEDULE_ENABLED)
 
@@ -613,6 +615,14 @@ class TimerViewModel @JvmOverloads constructor(
             repository.setLastPickedName(null)
         }
         serviceController.resetTimer()
+    }
+
+    fun toggleMusicPlayback() {
+        if (timerStateHolder.isMusicPlaying.value) {
+            serviceController.pauseMusic()
+        } else {
+            serviceController.resumeMusic()
+        }
     }
 
     fun dismissWorkEnded() {
