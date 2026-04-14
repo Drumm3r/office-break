@@ -292,4 +292,11 @@
     <string name="widget_start">Start</string>
     <string name="widget_open">Open</string>
     <string name="navigate_back">Navigate back</string>
+
+    <!-- Share Achievement -->
+    <string name="share_achievement">Share</string>
+    <string name="share_chooser_title">Share achievement</string>
+    <string name="share_text">I just unlocked \"%1$s\" in Office Break! 🏆</string>
+    <string name="share_card_unlocked">Achievement Unlocked!</string>
+    <string name="share_card_app_name">Office Break</string>
 </resources>

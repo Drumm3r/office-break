@@ -25,7 +25,7 @@ Android app for regular movement breaks at the office. Set a timer, start it, an
 - Persistent volume bar at top of timer screen
 - Home screen widget (Glance) -- break count, streak, timer status, quick-start button
 - Exercise management (add, remove, enable/disable)
-- Achievements system with unlockable milestones
+- Achievements system with unlockable milestones and share-to-social (image card via share sheet)
 - Stats tracking -- weekly reps, week-over-week comparison, most frequent exercise (all data stored locally)
 - Fitness levels with progression
 - Dynamic difficulty increase with adaptive threshold (optional)

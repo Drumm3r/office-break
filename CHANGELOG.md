@@ -13,6 +13,7 @@ All notable changes to Office Break are documented here. Newest on top.
 - **App-start alarm re-registration** — On app launch, work-start alarms are re-registered if the schedule is enabled, so reminders persist across app upgrades, data clears, and alarm-manager restarts.
 - **Pause/resume custom break music** — When a custom notification sound is configured, a "Pause music / Resume music" toggle now appears in the exercise dialog below the "Done" button, with a play/pause icon. Lets users silence the alarm during meetings without ending the break; tapping resume continues playback (or restarts from the beginning if the clip already finished).
 - **Play/pause icons on custom-sound preview button** — The settings preview button now shows a play-arrow icon when idle and a pause icon while previewing, matching the in-break music toggle for visual consistency.
+- **Share achievements** — Unlocked achievements can be shared as a branded image card (green gradient with trophy icon, title, and description) via Android's share sheet to WhatsApp, Instagram Stories, social media, and more. A share button appears in the unlock celebration dialog and on each unlocked achievement in the achievements list.
 
 ### Changes
 
