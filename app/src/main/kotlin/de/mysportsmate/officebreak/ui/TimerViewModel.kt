@@ -17,6 +17,7 @@ import de.mysportsmate.officebreak.data.AchievementState
 import de.mysportsmate.officebreak.data.BackupManager
 import de.mysportsmate.officebreak.data.BreakRecord
 import de.mysportsmate.officebreak.data.Exercise
+import de.mysportsmate.officebreak.data.ExerciseMode
 import de.mysportsmate.officebreak.data.FitnessLevel
 import de.mysportsmate.officebreak.data.ImportResult
 import de.mysportsmate.officebreak.data.SettingsRepository
@@ -102,6 +103,9 @@ class TimerViewModel @JvmOverloads constructor(
 
     val repsLinked: StateFlow<Boolean> = repository.repsLinked
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_REPS_LINKED)
+
+    val exerciseMode: StateFlow<ExerciseMode> = repository.exerciseMode
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ExerciseMode.HOME_WORKOUT)
 
     val exercises: StateFlow<List<Exercise>> = repository.exercises
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
@@ -534,6 +538,20 @@ class TimerViewModel @JvmOverloads constructor(
         }
     }
 
+    fun setExerciseMode(mode: ExerciseMode) {
+        viewModelScope.launch {
+            try {
+                repository.setExerciseMode(mode)
+                usedExerciseNames.clear()
+                lastPickedName = null
+                repository.setUsedExerciseNames(emptySet())
+                repository.setLastPickedName(null)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set exercise mode", e)
+            }
+        }
+    }
+
     fun toggleExercise(index: Int) {
         viewModelScope.launch {
             try {
@@ -554,9 +572,13 @@ class TimerViewModel @JvmOverloads constructor(
 
         viewModelScope.launch {
             try {
-                val current = exercises.value.toMutableList()
-                current.add(Exercise(name = trimmed))
-                repository.setExercises(current)
+                // Add enabled to active mode, disabled to other modes
+                val activeMode = exerciseMode.value
+                for (mode in ExerciseMode.entries) {
+                    val modeExercises = repository.exercisesForMode(mode).first().toMutableList()
+                    modeExercises.add(Exercise(name = trimmed, isEnabled = mode == activeMode))
+                    repository.setExercisesForMode(mode, modeExercises)
+                }
                 statsRepository.markCustomExerciseCreated()
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to add exercise", e)
@@ -569,8 +591,19 @@ class TimerViewModel @JvmOverloads constructor(
             try {
                 val current = exercises.value.toMutableList()
                 if (current.size > 1 && index in current.indices) {
+                    val removedName = current[index].name
                     current.removeAt(index)
                     repository.setExercises(current)
+
+                    // Remove from other modes too
+                    val activeMode = exerciseMode.value
+                    for (mode in ExerciseMode.entries) {
+                        if (mode != activeMode) {
+                            val modeExercises = repository.exercisesForMode(mode).first().toMutableList()
+                            modeExercises.removeAll { it.name == removedName }
+                            repository.setExercisesForMode(mode, modeExercises)
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to remove exercise", e)
@@ -866,7 +899,7 @@ class TimerViewModel @JvmOverloads constructor(
         }
     }
 
-    fun completeOnboarding(level: FitnessLevel, selectedExercises: List<Exercise>) {
+    fun completeOnboarding(level: FitnessLevel, mode: ExerciseMode) {
         viewModelScope.launch {
             try {
                 repository.setTimerHours(level.hours)
@@ -874,7 +907,7 @@ class TimerViewModel @JvmOverloads constructor(
                 repository.setRepsMin(level.reps)
                 repository.setRepsMax(level.reps)
                 repository.setRepsLinked(true)
-                repository.setExercises(selectedExercises)
+                repository.setExerciseMode(mode)
                 repository.setOnboardingCompleted(true)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to complete onboarding", e)

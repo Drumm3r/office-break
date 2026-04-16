@@ -24,7 +24,8 @@ Android app for regular movement breaks at the office. Set a timer, start it, an
 - Custom notification sounds -- pick audio files via SAF, preview before saving, reset to default
 - Persistent volume bar at top of timer screen
 - Home screen widget (Glance) -- break count, streak, timer status, quick-start button
-- Exercise management (add, remove, enable/disable)
+- Exercise context modes -- three switchable presets (Home Office Workout, Home Office Mobility, Office) with instant mode switching via segmented button; 25 built-in exercises across all modes
+- Exercise management (add, remove, enable/disable per mode)
 - Achievements system with unlockable milestones and share-to-social (image card via share sheet)
 - Stats tracking -- weekly reps, week-over-week comparison, most frequent exercise (all data stored locally)
 - Fitness levels with progression
@@ -36,16 +37,18 @@ Android app for regular movement breaks at the office. Set a timer, start it, an
 - Keep screen on during countdown (optional)
 - Material 3 theming
 
-## Default Exercises
+## Exercise Modes
 
-- Push Ups / Liegestuetze
-- Squats / Kniebeuge
-- Deadlifts / Kreuzheben
-- Lunges / Ausfallschritt
-- Sit-Ups
-- Superman Angels
+Three context-aware modes, each with curated default exercises. All 25 exercises are always visible; switching modes toggles which are enabled. Users can customize each mode independently.
 
-Exercises can be customized in the app via the settings screen.
+### Home Office Workout
+Push Ups, Squats, Deadlifts, Lunges, Sit Ups, Superman Angels, Plank, Glute Bridge
+
+### Home Office Mobility
+Cat-Cow Stretch, Child's Pose, Downward Dog, Seated Spinal Twist, Hip Circles, Standing Forward Fold, Thread the Needle, Pigeon Stretch
+
+### Office
+Shoulder Blade Squeeze, Chest Opener, Neck Stretch, Calf Raises, Seated Leg Extension, Wrist Circles, Ankle Circles, Seated Cat-Cow, Seated Core Bracing
 
 ## Tech Stack
 

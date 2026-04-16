@@ -3,6 +3,7 @@ package de.mysportsmate.officebreak.data
 import app.cash.turbine.test
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.encodeToString
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -14,9 +15,23 @@ class SettingsRepositoryTest {
     private lateinit var dataStore: FakeDataStore
     private lateinit var repository: SettingsRepository
 
-    private val defaultExercises = listOf(
+    private val defaultHomeWorkout = listOf(
         Exercise(name = "Push Ups", nameResKey = "exercise_push_ups"),
         Exercise(name = "Squats", nameResKey = "exercise_squats"),
+    )
+
+    private val defaultHomeMobility = listOf(
+        Exercise(name = "Cat-Cow Stretch", nameResKey = "exercise_cat_cow"),
+    )
+
+    private val defaultOffice = listOf(
+        Exercise(name = "Neck Stretch", nameResKey = "exercise_neck_stretch"),
+    )
+
+    private val defaultExercisesByMode = mapOf(
+        ExerciseMode.HOME_WORKOUT to defaultHomeWorkout,
+        ExerciseMode.HOME_MOBILITY to defaultHomeMobility,
+        ExerciseMode.OFFICE to defaultOffice,
     )
 
     @Before
@@ -24,7 +39,7 @@ class SettingsRepositoryTest {
         dataStore = FakeDataStore()
         repository = SettingsRepository(
             dataStore = dataStore,
-            defaultExercises = defaultExercises,
+            defaultExercisesByMode = defaultExercisesByMode,
         )
     }
 
@@ -131,7 +146,7 @@ class SettingsRepositoryTest {
     @Test
     fun `exercises emits defaults when empty`() = runTest {
         repository.exercises.test {
-            assertEquals(defaultExercises, awaitItem())
+            assertEquals(defaultHomeWorkout, awaitItem())
             cancelAndConsumeRemainingEvents()
         }
     }
@@ -141,7 +156,7 @@ class SettingsRepositoryTest {
         val newExercises = listOf(Exercise(name = "Custom Exercise", isEnabled = false))
 
         repository.exercises.test {
-            assertEquals(defaultExercises, awaitItem())
+            assertEquals(defaultHomeWorkout, awaitItem())
 
             repository.setExercises(newExercises)
             assertEquals(newExercises, awaitItem())
@@ -158,10 +173,10 @@ class SettingsRepositoryTest {
             mutable[androidx.datastore.preferences.core.stringPreferencesKey("exercises")] = "not valid json"
             mutable
         }
-        val repo = SettingsRepository(dataStore = corruptStore, defaultExercises = defaultExercises)
+        val repo = SettingsRepository(dataStore = corruptStore, defaultExercisesByMode = defaultExercisesByMode)
 
         repo.exercises.test {
-            assertEquals(defaultExercises, awaitItem())
+            assertEquals(defaultHomeWorkout, awaitItem())
             cancelAndConsumeRemainingEvents()
         }
     }
@@ -311,7 +326,7 @@ class SettingsRepositoryTest {
             mutable[androidx.datastore.preferences.core.stringPreferencesKey("week_schedule")] = "not valid json"
             mutable
         }
-        val repo = SettingsRepository(dataStore = corruptStore, defaultExercises = defaultExercises)
+        val repo = SettingsRepository(dataStore = corruptStore, defaultExercisesByMode = defaultExercisesByMode)
 
         repo.weekSchedule.test {
             assertEquals(DEFAULT_WEEK_SCHEDULE, awaitItem())
@@ -334,7 +349,7 @@ class SettingsRepositoryTest {
             mutable[androidx.datastore.preferences.core.intPreferencesKey("lunch_end_minute")] = 30
             mutable
         }
-        val repo = SettingsRepository(dataStore = migrateStore, defaultExercises = defaultExercises)
+        val repo = SettingsRepository(dataStore = migrateStore, defaultExercisesByMode = defaultExercisesByMode)
 
         repo.weekSchedule.test {
             val schedule = awaitItem()
@@ -557,7 +572,7 @@ class SettingsRepositoryTest {
             mutable[androidx.datastore.preferences.core.stringPreferencesKey("used_exercise_names")] = "not valid"
             mutable
         }
-        val repo = SettingsRepository(dataStore = corruptStore, defaultExercises = defaultExercises)
+        val repo = SettingsRepository(dataStore = corruptStore, defaultExercisesByMode = defaultExercisesByMode)
 
         repo.usedExerciseNames.test {
             assertEquals(emptySet<String>(), awaitItem())
@@ -782,13 +797,121 @@ class SettingsRepositoryTest {
 
     @Test
     fun `exercises flow leaves unknown names without nameResKey`() = runTest {
-        repository.setExercises(listOf(Exercise(name = "Plank", nameResKey = null)))
+        repository.setExercises(listOf(Exercise(name = "My Rare Exercise", nameResKey = null)))
 
         repository.exercises.test {
             val exercises = awaitItem()
             assertNull(exercises[0].nameResKey)
             cancelAndConsumeRemainingEvents()
         }
+    }
+
+    // --- Exercise Mode ---
+
+    @Test
+    fun `exerciseMode emits HOME_WORKOUT when empty`() = runTest {
+        repository.exerciseMode.test {
+            assertEquals(ExerciseMode.HOME_WORKOUT, awaitItem())
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `setExerciseMode persists and re-emits`() = runTest {
+        repository.exerciseMode.test {
+            assertEquals(ExerciseMode.HOME_WORKOUT, awaitItem())
+
+            repository.setExerciseMode(ExerciseMode.OFFICE)
+            assertEquals(ExerciseMode.OFFICE, awaitItem())
+
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `exercises flow reflects active mode`() = runTest {
+        repository.exercises.test {
+            assertEquals(defaultHomeWorkout, awaitItem())
+
+            repository.setExerciseMode(ExerciseMode.OFFICE)
+            assertEquals(defaultOffice, awaitItem())
+
+            repository.setExerciseMode(ExerciseMode.HOME_MOBILITY)
+            assertEquals(defaultHomeMobility, awaitItem())
+
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `setExercises writes to active mode key`() = runTest {
+        repository.setExerciseMode(ExerciseMode.OFFICE)
+        val custom = listOf(Exercise(name = "Custom Office"))
+        repository.setExercises(custom)
+
+        // Office mode should show custom
+        assertEquals(custom, repository.exercisesForMode(ExerciseMode.OFFICE).first())
+        // Home workout should still show defaults
+        assertEquals(defaultHomeWorkout, repository.exercisesForMode(ExerciseMode.HOME_WORKOUT).first())
+    }
+
+    @Test
+    fun `exercisesForMode returns defaults when key absent`() = runTest {
+        assertEquals(defaultHomeMobility, repository.exercisesForMode(ExerciseMode.HOME_MOBILITY).first())
+    }
+
+    @Test
+    fun `exercisesForMode HOME_WORKOUT falls back to legacy exercises key`() = runTest {
+        // Simulate a legacy install: write to the old "exercises" key directly
+        val legacyExercises = listOf(Exercise(name = "Legacy Push Ups"))
+        dataStore.updateData { prefs ->
+            val mutable = prefs.toMutablePreferences()
+            mutable[androidx.datastore.preferences.core.stringPreferencesKey("exercises")] =
+                AppJson.encodeToString(legacyExercises)
+            mutable
+        }
+
+        val exercises = repository.exercisesForMode(ExerciseMode.HOME_WORKOUT).first()
+        assertEquals("Legacy Push Ups", exercises[0].name)
+    }
+
+    @Test
+    fun `restoreFromBackup restores per-mode exercises from v2`() = runTest {
+        val homeWorkout = listOf(Exercise(name = "Plank", nameResKey = "exercise_plank"))
+        val homeMobility = listOf(Exercise(name = "Cat-Cow Stretch", nameResKey = "exercise_cat_cow"))
+        val office = listOf(Exercise(name = "Neck Stretch", nameResKey = "exercise_neck_stretch"))
+
+        val backupData = createMinimalBackupData().copy(
+            exerciseMode = ExerciseMode.OFFICE.name,
+            exercisesHomeWorkout = homeWorkout,
+            exercisesHomeMobility = homeMobility,
+            exercisesOffice = office,
+        )
+
+        repository.restoreFromBackup(backupData)
+
+        assertEquals(ExerciseMode.OFFICE, repository.exerciseMode.first())
+        assertEquals(homeWorkout, repository.exercisesForMode(ExerciseMode.HOME_WORKOUT).first())
+        assertEquals(homeMobility, repository.exercisesForMode(ExerciseMode.HOME_MOBILITY).first())
+        assertEquals(office, repository.exercisesForMode(ExerciseMode.OFFICE).first())
+    }
+
+    @Test
+    fun `restoreFromBackup maps v1 exercises to HOME_WORKOUT`() = runTest {
+        // Use exercises with nameResKey to avoid migration adding it
+        val v1Exercises = listOf(
+            Exercise(name = "Push Ups", nameResKey = "exercise_push_ups"),
+            Exercise(name = "Squats", nameResKey = "exercise_squats"),
+        )
+        val backupData = createMinimalBackupData().copy(
+            exercises = v1Exercises,
+            exercisesHomeWorkout = emptyList(),
+        )
+
+        repository.restoreFromBackup(backupData)
+
+        assertEquals(ExerciseMode.HOME_WORKOUT, repository.exerciseMode.first())
+        assertEquals(v1Exercises, repository.exercisesForMode(ExerciseMode.HOME_WORKOUT).first())
     }
 
     private fun createMinimalBackupData() = BackupData(

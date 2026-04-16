@@ -102,12 +102,49 @@
     <string name="add_exercise">Hinzufügen</string>
     <string name="remove_exercise">Entfernen</string>
 
+    <!-- Home Workout Übungen -->
     <string name="exercise_push_ups">Liegestütze</string>
-    <string name="exercise_squats">Kniebeuge</string>
+    <string name="exercise_squats">Kniebeugen</string>
     <string name="exercise_deadlifts">Kreuzheben</string>
-    <string name="exercise_lunges">Ausfallschritt</string>
+    <string name="exercise_lunges">Ausfallschritte</string>
     <string name="exercise_sit_ups">Sit Ups</string>
     <string name="exercise_superman_angels">Superman Angels</string>
+    <string name="exercise_plank">Plank</string>
+    <string name="exercise_glute_bridge">Hüftheben</string>
+    <!-- Home Mobility Übungen -->
+    <string name="exercise_cat_cow">Katze-Kuh</string>
+    <string name="exercise_childs_pose">Kindhaltung</string>
+    <string name="exercise_downward_dog">Herabschauender Hund</string>
+    <string name="exercise_seated_twist">Rumpfdrehung</string>
+    <string name="exercise_hip_circles">Hüftkreise</string>
+    <string name="exercise_standing_forward_fold">Stehende Vorbeuge</string>
+    <string name="exercise_thread_the_needle">Thread the Needle</string>
+    <string name="exercise_pigeon_stretch">Pigeon Stretch</string>
+    <!-- Büro Übungen -->
+    <string name="exercise_shoulder_blade_squeeze">Schulterblätter zusammenziehen</string>
+    <string name="exercise_chest_opener">Brustöffner</string>
+    <string name="exercise_neck_stretch">Nacken dehnen</string>
+    <string name="exercise_calf_raises">Wadenheben</string>
+    <string name="exercise_seated_leg_extension">Sitzende Beinstreckung</string>
+    <string name="exercise_wrist_circles">Handgelenke kreisen</string>
+    <string name="exercise_ankle_circles">Fußgelenke kreisen</string>
+    <string name="exercise_seated_cat_cow">Katze-Kuh im Sitzen</string>
+    <string name="exercise_seated_core_bracing">Bauchspannung halten</string>
+
+    <!-- Übungsmodi -->
+    <string name="exercise_mode_home_workout">Home-Office Workout</string>
+    <string name="exercise_mode_home_workout_desc">Bodyweight-Übungen für Kraft und Fitness</string>
+    <string name="exercise_mode_home_mobility">Home-Office Mobilität</string>
+    <string name="exercise_mode_home_mobility_desc">Yoga-inspirierte Dehnübungen für Beweglichkeit</string>
+    <string name="exercise_mode_office">Büro</string>
+    <string name="exercise_mode_office_desc">Dezente Übungen für den Schreibtisch</string>
+    <string name="onboarding_mode_title">Wähle deinen Übungsstil</string>
+    <string name="onboarding_mode_subtitle">Du kannst den Modus jederzeit in den Einstellungen wechseln</string>
+    <string name="exercise_mode_label">Übungsmodus</string>
+    <string name="exercise_mode_short_home_workout">Workout</string>
+    <string name="exercise_mode_short_home_mobility">Mobilität</string>
+    <string name="exercise_mode_short_office">Büro</string>
+    <string name="onboarding_summary_mode">Modus: %1$s</string>
 
     <string name="dialog_confirm_ok">OK</string>
 

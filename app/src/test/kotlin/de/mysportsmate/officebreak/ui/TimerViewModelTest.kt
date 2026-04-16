@@ -6,6 +6,7 @@ import app.cash.turbine.test
 import de.mysportsmate.officebreak.MainDispatcherRule
 import de.mysportsmate.officebreak.data.AchievementDefinition
 import de.mysportsmate.officebreak.data.Exercise
+import de.mysportsmate.officebreak.data.ExerciseMode
 import de.mysportsmate.officebreak.data.FakeDataStore
 import de.mysportsmate.officebreak.data.FitnessLevel
 import de.mysportsmate.officebreak.data.SettingsRepository
@@ -54,6 +55,12 @@ class TimerViewModelTest {
         Exercise(name = "Squats", nameResKey = "exercise_squats"),
     )
 
+    private val defaultExercisesByMode = mapOf(
+        ExerciseMode.HOME_WORKOUT to defaultExercises,
+        ExerciseMode.HOME_MOBILITY to listOf(Exercise(name = "Cat-Cow Stretch", nameResKey = "exercise_cat_cow")),
+        ExerciseMode.OFFICE to listOf(Exercise(name = "Neck Stretch", nameResKey = "exercise_neck_stretch")),
+    )
+
     @Before
     fun setUp() {
         mockkObject(WidgetUpdater)
@@ -64,7 +71,7 @@ class TimerViewModelTest {
         statsDataStore = FakeDataStore()
         repository = SettingsRepository(
             dataStore = dataStore,
-            defaultExercises = defaultExercises,
+            defaultExercisesByMode = defaultExercisesByMode,
         )
         statsRepository = StatsRepository(dataStore = statsDataStore)
         timerStateHolder = TimerStateHolder()
@@ -591,14 +598,10 @@ class TimerViewModelTest {
     fun `completeOnboarding applies fitness level presets`() = runTest {
         val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
         val onboardingCollector = launch { viewModel.onboardingCompleted.collect {} }
+        val modeCollector = launch { viewModel.exerciseMode.collect {} }
         advanceUntilIdle()
 
-        val selectedExercises = listOf(
-            Exercise(name = "Push Ups", isEnabled = true, nameResKey = "exercise_push_ups"),
-            Exercise(name = "Squats", isEnabled = false, nameResKey = "exercise_squats"),
-        )
-
-        viewModel.completeOnboarding(FitnessLevel.MODERATE, selectedExercises)
+        viewModel.completeOnboarding(FitnessLevel.MODERATE, ExerciseMode.HOME_WORKOUT)
         advanceUntilIdle()
 
         assertEquals(0, viewModel.hours.value)
@@ -606,9 +609,10 @@ class TimerViewModelTest {
         assertEquals(10, viewModel.repsMin.value)
         assertEquals(10, viewModel.repsMax.value)
         assertEquals(true, viewModel.repsLinked.value)
-        assertEquals(selectedExercises, viewModel.exercises.value)
+        assertEquals(ExerciseMode.HOME_WORKOUT, viewModel.exerciseMode.value)
         assertEquals(true, viewModel.onboardingCompleted.value)
 
+        modeCollector.cancel()
         onboardingCollector.cancel()
         collectors.forEach { it.cancel() }
     }
@@ -619,7 +623,7 @@ class TimerViewModelTest {
         val onboardingCollector = launch { viewModel.onboardingCompleted.collect {} }
         advanceUntilIdle()
 
-        viewModel.completeOnboarding(FitnessLevel.BEGINNER, defaultExercises)
+        viewModel.completeOnboarding(FitnessLevel.BEGINNER, ExerciseMode.HOME_WORKOUT)
         advanceUntilIdle()
 
         assertEquals(1, viewModel.hours.value)
@@ -637,7 +641,7 @@ class TimerViewModelTest {
         val onboardingCollector = launch { viewModel.onboardingCompleted.collect {} }
         advanceUntilIdle()
 
-        viewModel.completeOnboarding(FitnessLevel.ATHLETIC, defaultExercises)
+        viewModel.completeOnboarding(FitnessLevel.ATHLETIC, ExerciseMode.OFFICE)
         advanceUntilIdle()
 
         assertEquals(0, viewModel.hours.value)
@@ -646,6 +650,38 @@ class TimerViewModelTest {
         assertEquals(15, viewModel.repsMax.value)
 
         onboardingCollector.cancel()
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `setExerciseMode changes active mode`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        val modeCollector = launch { viewModel.exerciseMode.collect {} }
+        advanceUntilIdle()
+
+        viewModel.setExerciseMode(ExerciseMode.OFFICE)
+        advanceUntilIdle()
+
+        assertEquals(ExerciseMode.OFFICE, viewModel.exerciseMode.value)
+
+        modeCollector.cancel()
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `setExerciseMode updates exercises to new mode defaults`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        val modeCollector = launch { viewModel.exerciseMode.collect {} }
+        advanceUntilIdle()
+
+        assertEquals(defaultExercises, viewModel.exercises.value)
+
+        viewModel.setExerciseMode(ExerciseMode.OFFICE)
+        advanceUntilIdle()
+
+        assertEquals(defaultExercisesByMode[ExerciseMode.OFFICE], viewModel.exercises.value)
+
+        modeCollector.cancel()
         collectors.forEach { it.cancel() }
     }
 

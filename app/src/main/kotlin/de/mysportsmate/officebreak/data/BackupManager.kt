@@ -40,6 +40,11 @@ class BackupManager(
             workScheduleEnabled = settings.workScheduleEnabled,
             weekSchedule = settings.weekSchedule,
 
+            exerciseMode = settings.exerciseMode.name,
+            exercisesHomeWorkout = settings.exercisesHomeWorkout,
+            exercisesHomeMobility = settings.exercisesHomeMobility,
+            exercisesOffice = settings.exercisesOffice,
+
             trackingEnabled = stats.trackingEnabled,
             breakRecords = stats.breakRecords,
             dailyAggregates = stats.dailyAggregates,

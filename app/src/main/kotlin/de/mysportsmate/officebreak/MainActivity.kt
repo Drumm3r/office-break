@@ -51,7 +51,6 @@ class MainActivity : ComponentActivity() {
             val language by viewModel.language.collectAsState()
             val themeMode by viewModel.themeMode.collectAsState()
             val onboardingCompleted by viewModel.onboardingCompleted.collectAsState()
-            val exercises by viewModel.exercises.collectAsState()
 
             LaunchedEffect(language) {
                 if (currentLanguage != null && currentLanguage != language) {
@@ -71,7 +70,6 @@ class MainActivity : ComponentActivity() {
                     null -> Box(Modifier.fillMaxSize())
                     true -> TimerScreen(viewModel = viewModel)
                     false -> OnboardingScreen(
-                        exercises = exercises,
                         onComplete = viewModel::completeOnboarding,
                         onWorkScheduleConfigured = { enabled, schedule ->
                             viewModel.applyWorkSchedule(enabled, schedule)

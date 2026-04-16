@@ -102,12 +102,49 @@
     <string name="add_exercise">Add</string>
     <string name="remove_exercise">Remove</string>
 
+    <!-- Home Workout exercises -->
     <string name="exercise_push_ups">Push Ups</string>
     <string name="exercise_squats">Squats</string>
     <string name="exercise_deadlifts">Deadlifts</string>
     <string name="exercise_lunges">Lunges</string>
     <string name="exercise_sit_ups">Sit Ups</string>
     <string name="exercise_superman_angels">Superman Angels</string>
+    <string name="exercise_plank">Plank</string>
+    <string name="exercise_glute_bridge">Glute Bridge</string>
+    <!-- Home Mobility exercises -->
+    <string name="exercise_cat_cow">Cat-Cow Stretch</string>
+    <string name="exercise_childs_pose">Child\'s Pose</string>
+    <string name="exercise_downward_dog">Downward Dog</string>
+    <string name="exercise_seated_twist">Seated Spinal Twist</string>
+    <string name="exercise_hip_circles">Hip Circles</string>
+    <string name="exercise_standing_forward_fold">Standing Forward Fold</string>
+    <string name="exercise_thread_the_needle">Thread the Needle</string>
+    <string name="exercise_pigeon_stretch">Pigeon Stretch</string>
+    <!-- Office exercises -->
+    <string name="exercise_shoulder_blade_squeeze">Shoulder Blade Squeeze</string>
+    <string name="exercise_chest_opener">Chest Opener</string>
+    <string name="exercise_neck_stretch">Neck Stretch</string>
+    <string name="exercise_calf_raises">Calf Raises</string>
+    <string name="exercise_seated_leg_extension">Seated Leg Extension</string>
+    <string name="exercise_wrist_circles">Wrist Circles</string>
+    <string name="exercise_ankle_circles">Ankle Circles</string>
+    <string name="exercise_seated_cat_cow">Seated Cat-Cow</string>
+    <string name="exercise_seated_core_bracing">Seated Core Bracing</string>
+
+    <!-- Exercise Modes -->
+    <string name="exercise_mode_home_workout">Home Office Workout</string>
+    <string name="exercise_mode_home_workout_desc">Bodyweight exercises for strength and fitness</string>
+    <string name="exercise_mode_home_mobility">Home Office Mobility</string>
+    <string name="exercise_mode_home_mobility_desc">Yoga-inspired stretches for flexibility and range of motion</string>
+    <string name="exercise_mode_office">Office</string>
+    <string name="exercise_mode_office_desc">Subtle exercises you can do at your desk</string>
+    <string name="onboarding_mode_title">Choose your exercise style</string>
+    <string name="onboarding_mode_subtitle">You can switch between modes anytime in settings</string>
+    <string name="exercise_mode_label">Exercise mode</string>
+    <string name="exercise_mode_short_home_workout">Workout</string>
+    <string name="exercise_mode_short_home_mobility">Mobility</string>
+    <string name="exercise_mode_short_office">Office</string>
+    <string name="onboarding_summary_mode">Mode: %1$s</string>
 
     <string name="dialog_confirm_ok">OK</string>
 

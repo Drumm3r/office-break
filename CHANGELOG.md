@@ -6,6 +6,8 @@ All notable changes to Office Break are documented here. Newest on top.
 
 ### New Features
 
+- **Exercise context modes** — Three switchable exercise modes (Home Office Workout, Home Office Mobility, Office) replace the flat exercise list. Each mode pre-selects exercises suited to the context — bodyweight strength for home workouts, yoga-inspired mobility stretches for flexibility, and subtle desk-friendly exercises for the office. Users switch modes instantly via a segmented button in the exercise settings. All 25 exercises are always visible; modes control which are enabled. Custom toggles, additions, and removals persist independently per mode. Onboarding now asks users to pick their exercise style instead of toggling individual exercises.
+- **19 new built-in exercises** — Plank, Glute Bridge, Cat-Cow Stretch, Child's Pose, Downward Dog, Seated Spinal Twist, Hip Circles, Standing Forward Fold, Thread the Needle, Pigeon Stretch, Shoulder Blade Squeeze, Chest Opener, Neck Stretch, Calf Raises, Seated Leg Extension, Wrist Circles, Ankle Circles, Seated Cat-Cow, and Seated Core Bracing — all with English and German translations.
 - **Boot-time alarm re-registration** — A new `BootReceiver` listens for `BOOT_COMPLETED` (and `MY_PACKAGE_REPLACED`) and automatically re-registers work-start alarms if a work schedule is enabled, so alarms survive device reboots and app updates.
 - **10-minute delayed work-start reminder** — The work-start notification now fires 10 minutes *before* the configured start time, giving a brief warm-up window rather than pinging exactly at shift start.
 - **"Start" action on the work-start notification** — The notification now includes a direct action button that starts the break timer with the configured break interval and language, so users can begin the day without opening the app.
@@ -17,6 +19,9 @@ All notable changes to Office Break are documented here. Newest on top.
 
 ### Changes
 
+- **Backup format bumped to v2** — Exports now include per-mode exercise lists and the active mode. v1 backups import seamlessly (exercises map to Home Workout mode).
+- **Exercise settings use checkboxes** — Replaced switches with checkboxes for consistent sizing. Enabled exercises sort to the top of the list.
+- **Onboarding step 1 redesigned** — Individual exercise toggles replaced by three mode-selection cards (Workout / Mobility / Office) with icons and descriptions.
 - **Work-start notification copy clarified** — Updated to "Your work day has started" / "Do you want to start your break timer?" to align with the new inline Start action.
 - **More detailed alarm-scheduling logs** — `WorkScheduleManager` now logs the next scheduled alarm time, exact-alarm permission status, and fallback path to aid debugging on OEM-restricted devices.
 

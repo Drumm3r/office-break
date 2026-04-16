@@ -55,6 +55,7 @@ import de.mysportsmate.officebreak.ui.components.DynamicIncreaseDialog
 import de.mysportsmate.officebreak.ui.components.ExerciseDialog
 import de.mysportsmate.officebreak.ui.components.TimerSetup
 import de.mysportsmate.officebreak.ui.components.VolumeBar
+import de.mysportsmate.officebreak.data.ExerciseMode
 import de.mysportsmate.officebreak.data.SettingsRepository
 import de.mysportsmate.officebreak.locale.LocaleHelper
 import de.mysportsmate.officebreak.tts.BreakTtsManager
@@ -88,6 +89,7 @@ fun TimerScreen(
     val ttsEnabled by viewModel.ttsEnabled.collectAsState()
     val customSoundUri by viewModel.customSoundUri.collectAsState()
     val isMusicPlaying by viewModel.isMusicPlaying.collectAsState()
+    val exerciseMode by viewModel.exerciseMode.collectAsState()
     val workScheduleEnabled by viewModel.workScheduleEnabled.collectAsState()
     val weekSchedule by viewModel.weekSchedule.collectAsState()
     val dynamicIncreaseOffer by viewModel.dynamicIncreaseOffer.collectAsState()
@@ -198,6 +200,8 @@ fun TimerScreen(
     if (showExerciseSettings) {
         ExerciseSettingsScreen(
             exercises = exercises,
+            exerciseMode = exerciseMode,
+            onModeChange = viewModel::setExerciseMode,
             onToggle = viewModel::toggleExercise,
             onAdd = viewModel::addExercise,
             onRemove = viewModel::removeExercise,

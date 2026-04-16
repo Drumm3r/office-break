@@ -16,13 +16,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.SelfImprovement
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -44,7 +44,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -52,27 +51,30 @@ import androidx.compose.ui.unit.dp
 import de.mysportsmate.officebreak.R
 import de.mysportsmate.officebreak.data.DEFAULT_WEEK_SCHEDULE
 import de.mysportsmate.officebreak.data.DaySchedule
-import de.mysportsmate.officebreak.data.Exercise
+import de.mysportsmate.officebreak.data.ExerciseMode
 import de.mysportsmate.officebreak.data.FitnessLevel
 import de.mysportsmate.officebreak.data.resolveEffectiveSchedule
 import de.mysportsmate.officebreak.ui.theme.OfficeBreakTheme
 
 @Composable
 fun OnboardingScreen(
-    exercises: List<Exercise>,
-    onComplete: (FitnessLevel, List<Exercise>) -> Unit,
+    onComplete: (FitnessLevel, ExerciseMode) -> Unit,
     onWorkScheduleConfigured: (Boolean, List<DaySchedule>) -> Unit = { _, _ -> },
 ) {
     var currentStep by rememberSaveable { mutableIntStateOf(0) }
     var selectedLevelOrdinal by rememberSaveable { mutableIntStateOf(-1) }
-    var exerciseToggles by rememberSaveable(exercises) {
-        mutableStateOf(exercises.map { it.isEnabled })
-    }
+    var selectedModeOrdinal by rememberSaveable { mutableIntStateOf(-1) }
     var workScheduleEnabled by remember { mutableStateOf(false) }
     var weekSchedule by remember { mutableStateOf(DEFAULT_WEEK_SCHEDULE) }
 
     val selectedLevel = if (selectedLevelOrdinal >= 0) {
         FitnessLevel.entries[selectedLevelOrdinal]
+    } else {
+        null
+    }
+
+    val selectedMode = if (selectedModeOrdinal >= 0) {
+        ExerciseMode.entries[selectedModeOrdinal]
     } else {
         null
     }
@@ -101,14 +103,9 @@ fun OnboardingScreen(
                         selectedLevel = selectedLevel,
                         onSelect = { selectedLevelOrdinal = it.ordinal },
                     )
-                    1 -> ExerciseSelectionStep(
-                        exercises = exercises,
-                        toggles = exerciseToggles,
-                        onToggle = { index ->
-                            exerciseToggles = exerciseToggles.toMutableList().also {
-                                it[index] = !it[index]
-                            }
-                        },
+                    1 -> ExerciseModeSelectionStep(
+                        selectedMode = selectedMode,
+                        onSelect = { selectedModeOrdinal = it.ordinal },
                     )
                     2 -> WorkScheduleStep(
                         enabled = workScheduleEnabled,
@@ -118,7 +115,7 @@ fun OnboardingScreen(
                     )
                     3 -> SummaryStep(
                         level = selectedLevel!!,
-                        exerciseCount = exerciseToggles.count { it },
+                        mode = selectedMode!!,
                         workScheduleEnabled = workScheduleEnabled,
                         weekSchedule = weekSchedule,
                     )
@@ -132,17 +129,14 @@ fun OnboardingScreen(
                 totalSteps = totalSteps,
                 canAdvance = when (currentStep) {
                     0 -> selectedLevel != null
-                    1 -> exerciseToggles.any { it }
+                    1 -> selectedMode != null
                     else -> true
                 },
                 onBack = { currentStep-- },
                 onNext = { currentStep++ },
                 onComplete = {
-                    val selected = exercises.mapIndexed { index, exercise ->
-                        exercise.copy(isEnabled = exerciseToggles.getOrElse(index) { true })
-                    }
                     onWorkScheduleConfigured(workScheduleEnabled, weekSchedule)
-                    onComplete(selectedLevel!!, selected)
+                    onComplete(selectedLevel!!, selectedMode!!)
                 },
             )
         }
@@ -335,17 +329,16 @@ private fun FitnessLevelCard(
 }
 
 @Composable
-private fun ExerciseSelectionStep(
-    exercises: List<Exercise>,
-    toggles: List<Boolean>,
-    onToggle: (Int) -> Unit,
+private fun ExerciseModeSelectionStep(
+    selectedMode: ExerciseMode?,
+    onSelect: (ExerciseMode) -> Unit,
 ) {
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = stringResource(R.string.onboarding_exercises_title),
+            text = stringResource(R.string.onboarding_mode_title),
             style = MaterialTheme.typography.headlineMedium,
             textAlign = TextAlign.Center,
         )
@@ -353,7 +346,7 @@ private fun ExerciseSelectionStep(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = stringResource(R.string.onboarding_exercises_subtitle),
+            text = stringResource(R.string.onboarding_mode_subtitle),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -361,27 +354,99 @@ private fun ExerciseSelectionStep(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        LazyColumn(modifier = Modifier.fillMaxWidth()) {
-            itemsIndexed(
-                exercises,
-                key = { _, exercise -> exercise.name },
-            ) { index, exercise ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Switch(
-                        checked = toggles.getOrElse(index) { true },
-                        onCheckedChange = { onToggle(index) },
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = exercise.displayName(LocalContext.current),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                }
+        ExerciseMode.entries.forEach { mode ->
+            ExerciseModeCard(
+                mode = mode,
+                isSelected = mode == selectedMode,
+                onClick = { onSelect(mode) },
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+    }
+}
+
+@Composable
+private fun ExerciseModeCard(
+    mode: ExerciseMode,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+) {
+    val icon: ImageVector
+    val labelRes: Int
+    val descRes: Int
+
+    when (mode) {
+        ExerciseMode.HOME_WORKOUT -> {
+            icon = Icons.Default.FitnessCenter
+            labelRes = R.string.exercise_mode_home_workout
+            descRes = R.string.exercise_mode_home_workout_desc
+        }
+        ExerciseMode.HOME_MOBILITY -> {
+            icon = Icons.Default.SelfImprovement
+            labelRes = R.string.exercise_mode_home_mobility
+            descRes = R.string.exercise_mode_home_mobility_desc
+        }
+        ExerciseMode.OFFICE -> {
+            icon = Icons.Default.Business
+            labelRes = R.string.exercise_mode_office
+            descRes = R.string.exercise_mode_office_desc
+        }
+    }
+
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            },
+        ),
+        border = if (isSelected) {
+            BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+        } else {
+            null
+        },
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = stringResource(labelRes),
+                modifier = Modifier.size(40.dp),
+                tint = if (isSelected) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+            )
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column {
+                Text(
+                    text = stringResource(labelRes),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (isSelected) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                )
+                Text(
+                    text = stringResource(descRes),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (isSelected) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                )
             }
         }
     }
@@ -468,7 +533,7 @@ private fun WorkScheduleStep(
 @Composable
 private fun SummaryStep(
     level: FitnessLevel,
-    exerciseCount: Int,
+    mode: ExerciseMode,
     workScheduleEnabled: Boolean,
     weekSchedule: List<DaySchedule>,
 ) {
@@ -476,6 +541,12 @@ private fun SummaryStep(
         FitnessLevel.BEGINNER -> R.string.onboarding_level_beginner
         FitnessLevel.MODERATE -> R.string.onboarding_level_moderate
         FitnessLevel.ATHLETIC -> R.string.onboarding_level_athletic
+    }
+
+    val modeLabelRes = when (mode) {
+        ExerciseMode.HOME_WORKOUT -> R.string.exercise_mode_home_workout
+        ExerciseMode.HOME_MOBILITY -> R.string.exercise_mode_home_mobility
+        ExerciseMode.OFFICE -> R.string.exercise_mode_office
     }
 
     val intervalText = if (level.hours > 0 && level.minutes > 0) {
@@ -525,7 +596,12 @@ private fun SummaryStep(
                     label = stringResource(R.string.onboarding_summary_reps, level.reps),
                 )
                 SummaryRow(
-                    label = stringResource(R.string.onboarding_summary_exercises, exerciseCount),
+                    label = stringResource(R.string.onboarding_summary_mode, stringResource(modeLabelRes)),
+                    icon = when (mode) {
+                        ExerciseMode.HOME_WORKOUT -> Icons.Default.FitnessCenter
+                        ExerciseMode.HOME_MOBILITY -> Icons.Default.SelfImprovement
+                        ExerciseMode.OFFICE -> Icons.Default.Business
+                    },
                 )
                 if (workScheduleEnabled) {
                     val dayNames = listOf(
@@ -663,11 +739,6 @@ private fun buildScheduleGroups(
 private fun OnboardingScreenPreview() {
     OfficeBreakTheme {
         OnboardingScreen(
-            exercises = listOf(
-                Exercise(name = "Push Ups", nameResKey = "exercise_push_ups", isEnabled = true),
-                Exercise(name = "Squats", nameResKey = "exercise_squats", isEnabled = true),
-                Exercise(name = "Sit Ups", nameResKey = "exercise_sit_ups", isEnabled = false),
-            ),
             onComplete = { _, _ -> },
             onWorkScheduleConfigured = { _, _ -> },
         )
