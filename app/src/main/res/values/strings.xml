@@ -288,6 +288,8 @@
     <string name="widget_no_streak">No streak</string>
     <string name="widget_timer_idle">Timer not running</string>
     <string name="widget_timer_running">Timer is running</string>
+    <string name="widget_timer_remaining">Next break in %s</string>
+    <string name="widget_timer_paused">Paused · %s</string>
     <string name="widget_timer_expired">Break time!</string>
     <string name="widget_start">Start</string>
     <string name="widget_open">Open</string>

@@ -59,7 +59,6 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
-        <!-- Widget disabled for now — re-enable by uncommenting
         <receiver
             android:name=".widget.OfficeBreakWidgetReceiver"
             android:exported="true">
@@ -70,7 +69,6 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_info" />
         </receiver>
-        -->
 
     </application>
 

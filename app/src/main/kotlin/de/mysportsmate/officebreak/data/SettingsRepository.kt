@@ -266,10 +266,6 @@ class SettingsRepository(
         dataStore.edit { it[KEY_USED_EXERCISE_NAMES] = json.encodeToString(names.toList()) }
     }
 
-    suspend fun setWidgetTimerStatus(status: String) {
-        dataStore.edit { it[KEY_WIDGET_TIMER_STATUS] = status }
-    }
-
     suspend fun setLastPickedName(name: String?) {
         dataStore.edit {
             if (name != null) {
@@ -399,7 +395,6 @@ class SettingsRepository(
         private val KEY_LUNCH_END_MINUTE = intPreferencesKey("lunch_end_minute")
         private val KEY_DYNAMIC_INCREASE_ENABLED = booleanPreferencesKey("dynamic_increase_enabled")
         private val KEY_BREAKS_SINCE_LAST_INCREASE = intPreferencesKey("breaks_since_last_increase")
-        private val KEY_WIDGET_TIMER_STATUS = stringPreferencesKey("widget_timer_status")
         private val KEY_USED_EXERCISE_NAMES = stringPreferencesKey("used_exercise_names")
         private val KEY_LAST_PICKED_NAME = stringPreferencesKey("last_picked_name")
         private val KEY_ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")

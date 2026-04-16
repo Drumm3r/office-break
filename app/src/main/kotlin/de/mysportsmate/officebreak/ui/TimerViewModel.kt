@@ -586,10 +586,6 @@ class TimerViewModel @JvmOverloads constructor(
         _isFreestyle = freestyle
 
         serviceController.startTimer(totalSeconds, language.value, freestyle)
-        viewModelScope.launch {
-            repository.setWidgetTimerStatus("running")
-            WidgetUpdater.requestUpdate(getApplication())
-        }
     }
 
     private fun shouldStartAsFreestyle(): Boolean {
@@ -628,10 +624,7 @@ class TimerViewModel @JvmOverloads constructor(
     fun dismissWorkEnded() {
         _isFreestyle = false
         timerStateHolder.update(TimerState.Idle)
-        viewModelScope.launch {
-            repository.setWidgetTimerStatus("idle")
-            WidgetUpdater.requestUpdate(getApplication())
-        }
+        serviceController.resetTimer()
     }
 
     fun onTimerExpired() {
@@ -792,16 +785,13 @@ class TimerViewModel @JvmOverloads constructor(
         if (!autoRestart.value) {
             _isFreestyle = false
             serviceController.resetTimer()
-            repository.setWidgetTimerStatus("idle")
-            WidgetUpdater.requestUpdate(getApplication())
+
             return
         }
         val totalSeconds = (hours.value * 3600L) + (minutes.value * 60L)
         if (totalSeconds <= 0) return
 
         serviceController.restartTimer(totalSeconds, language.value, _isFreestyle)
-        repository.setWidgetTimerStatus("running")
-        WidgetUpdater.requestUpdate(getApplication())
     }
 
     fun dismissAchievementCelebration() {

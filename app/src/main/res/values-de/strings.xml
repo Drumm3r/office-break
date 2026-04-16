@@ -288,6 +288,8 @@
     <string name="widget_no_streak">Keine Serie</string>
     <string name="widget_timer_idle">Timer nicht aktiv</string>
     <string name="widget_timer_running">Timer läuft</string>
+    <string name="widget_timer_remaining">Nächste Pause in %s</string>
+    <string name="widget_timer_paused">Pausiert · %s</string>
     <string name="widget_timer_expired">Pausenzeit!</string>
     <string name="widget_start">Start</string>
     <string name="widget_open">Öffnen</string>

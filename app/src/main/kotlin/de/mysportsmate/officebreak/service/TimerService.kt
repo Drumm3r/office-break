@@ -17,9 +17,11 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.core.app.NotificationCompat
+import android.os.SystemClock
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import de.mysportsmate.officebreak.MainActivity
 import de.mysportsmate.officebreak.OfficeBreakApp
@@ -40,6 +42,8 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalTime
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -111,7 +115,7 @@ class TimerService : Service() {
 
         timerJob = scope.launch {
             try {
-                writeWidgetTimerStatus("running")
+                writeWidgetState("running", remainingSeconds = totalSeconds, totalSeconds = totalSeconds)
                 WidgetUpdater.requestUpdate(this@TimerService)
 
                 val schedulePrefs = dataStore.data.first()
@@ -134,6 +138,7 @@ class TimerService : Service() {
                 }
 
                 var remaining = totalSeconds
+                var ticksSinceWidgetUpdate = 0
                 while (remaining > 0) {
                     delay(1000L)
 
@@ -146,7 +151,7 @@ class TimerService : Service() {
 
                         if (isTimeInRange(now, workEnd, workStart)) {
                             timerStateHolder.update(TimerState.WorkEnded)
-                            writeWidgetTimerStatus("work_ended")
+                            writeWidgetState("work_ended")
                             WidgetUpdater.requestUpdate(this@TimerService)
                             releaseWakeLock()
                             stopForeground(STOP_FOREGROUND_REMOVE)
@@ -159,6 +164,8 @@ class TimerService : Service() {
                                 remainingSeconds = remaining,
                                 totalSeconds = totalSeconds,
                             ))
+                            writeWidgetState("paused", remainingSeconds = remaining, totalSeconds = totalSeconds)
+                            WidgetUpdater.requestUpdate(this@TimerService)
                             updateNotification(localizedContext.getString(R.string.notification_text_lunch_pause))
                             while (isTimeInRange(LocalTime.now(), lunchStart, lunchEnd)) {
                                 delay(1000L)
@@ -167,6 +174,8 @@ class TimerService : Service() {
                                 remainingSeconds = remaining,
                                 totalSeconds = totalSeconds,
                             ))
+                            writeWidgetState("running", remainingSeconds = remaining, totalSeconds = totalSeconds)
+                            WidgetUpdater.requestUpdate(this@TimerService)
                         }
                     }
 
@@ -176,9 +185,15 @@ class TimerService : Service() {
                         totalSeconds = totalSeconds,
                     ))
                     updateNotification(localizedContext.getString(R.string.notification_text_running, formatTime(remaining)))
+
+                    ticksSinceWidgetUpdate++
+                    if (ticksSinceWidgetUpdate >= 30) {
+                        ticksSinceWidgetUpdate = 0
+                        WidgetUpdater.requestUpdate(this@TimerService)
+                    }
                 }
                 timerStateHolder.update(TimerState.Expired)
-                writeWidgetTimerStatus("expired")
+                writeWidgetState("expired")
                 WidgetUpdater.requestUpdate(this@TimerService)
                 wakeScreen()
                 updateNotification(localizedContext.getString(R.string.notification_text_expired))
@@ -215,7 +230,7 @@ class TimerService : Service() {
         val manager = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
         manager.cancel(EXPIRED_NOTIFICATION_ID)
         scope.launch {
-            writeWidgetTimerStatus("idle")
+            writeWidgetState("idle")
             WidgetUpdater.requestUpdate(this@TimerService)
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
@@ -502,12 +517,31 @@ class TimerService : Service() {
         stopVibration()
         scope.cancel()
         releaseWakeLock()
+        runBlocking(Dispatchers.IO) {
+            withTimeoutOrNull(2000L) {
+                writeWidgetState("idle")
+            }
+        }
         super.onDestroy()
     }
 
-    private suspend fun writeWidgetTimerStatus(status: String) {
+    private suspend fun writeWidgetState(
+        status: String,
+        remainingSeconds: Long = 0L,
+        totalSeconds: Long = 0L,
+    ) {
         try {
-            dataStore.edit { it[KEY_WIDGET_TIMER_STATUS] = status }
+            val endRealtime = if (status == "running" && remainingSeconds > 0) {
+                SystemClock.elapsedRealtime() + remainingSeconds * 1000L
+            } else {
+                0L
+            }
+            dataStore.edit {
+                it[KEY_WIDGET_TIMER_STATUS] = status
+                it[KEY_WIDGET_TIMER_END_REALTIME] = endRealtime
+                it[KEY_WIDGET_TIMER_TOTAL_SECONDS] = totalSeconds
+                it[KEY_WIDGET_TIMER_REMAINING_SECONDS] = remainingSeconds
+            }
         } catch (_: Exception) {
             // Non-critical
         }
@@ -522,7 +556,10 @@ class TimerService : Service() {
     }
 
     companion object {
-        private val KEY_WIDGET_TIMER_STATUS = stringPreferencesKey("widget_timer_status")
+        val KEY_WIDGET_TIMER_STATUS = stringPreferencesKey("widget_timer_status")
+        val KEY_WIDGET_TIMER_END_REALTIME = longPreferencesKey("widget_timer_end_realtime")
+        val KEY_WIDGET_TIMER_TOTAL_SECONDS = longPreferencesKey("widget_timer_total_seconds")
+        val KEY_WIDGET_TIMER_REMAINING_SECONDS = longPreferencesKey("widget_timer_remaining_seconds")
 
         const val ACTION_START = "de.mysportsmate.officebreak.ACTION_START"
         const val ACTION_RESET = "de.mysportsmate.officebreak.ACTION_RESET"

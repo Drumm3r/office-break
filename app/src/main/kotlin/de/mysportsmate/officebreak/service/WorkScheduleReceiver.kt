@@ -115,6 +115,12 @@ class WorkScheduleReceiver : BroadcastReceiver() {
                         putExtra(TimerService.EXTRA_FREESTYLE, false)
                     }
                     context.startForegroundService(serviceIntent)
+
+                    val activityIntent = Intent(context, MainActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                        setPackage(context.packageName)
+                    }
+                    context.startActivity(activityIntent)
                 }
             } catch (e: Exception) {
                 android.util.Log.e("WorkScheduleReceiver", "Failed to start timer from notification", e)

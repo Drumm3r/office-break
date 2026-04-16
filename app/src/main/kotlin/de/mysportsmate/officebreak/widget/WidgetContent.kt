@@ -36,6 +36,7 @@ fun WidgetContent(
     todayBreaks: Int,
     currentStreak: Int,
     timerStatus: String,
+    remainingSeconds: Long = 0L,
 ) {
     GlanceTheme {
         Column(
@@ -99,15 +100,30 @@ fun WidgetContent(
             ) {
                 Text(
                     text = when (timerStatus) {
-                        "running" -> context.getString(R.string.widget_timer_running)
+                        "running" -> {
+                            if (remainingSeconds > 0) {
+                                val formatted = "%02d:%02d".format(remainingSeconds / 60, remainingSeconds % 60)
+                                context.getString(R.string.widget_timer_remaining, formatted)
+                            } else {
+                                context.getString(R.string.widget_timer_running)
+                            }
+                        }
+                        "paused" -> {
+                            if (remainingSeconds > 0) {
+                                val formatted = "%02d:%02d".format(remainingSeconds / 60, remainingSeconds % 60)
+                                context.getString(R.string.widget_timer_paused, formatted)
+                            } else {
+                                context.getString(R.string.widget_timer_running)
+                            }
+                        }
                         "expired" -> context.getString(R.string.widget_timer_expired)
                         else -> context.getString(R.string.widget_timer_idle)
                     },
                     style = TextStyle(
-                        color = if (timerStatus == "expired") {
-                            WidgetColors.primary
-                        } else {
-                            WidgetColors.onBackgroundSecondary
+                        color = when (timerStatus) {
+                            "expired" -> WidgetColors.primary
+                            "running", "paused" -> WidgetColors.onBackground
+                            else -> WidgetColors.onBackgroundSecondary
                         },
                         fontSize = 13.sp,
                         fontWeight = if (timerStatus == "expired") FontWeight.Bold else FontWeight.Normal,
