@@ -4,6 +4,9 @@ import android.app.Application
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import de.mysportsmate.officebreak.R
@@ -145,6 +148,9 @@ class TimerViewModel @JvmOverloads constructor(
     val weekSchedule: StateFlow<List<DaySchedule>> = repository.weekSchedule
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DEFAULT_WEEK_SCHEDULE)
 
+    val autoModeByDayEnabled: StateFlow<Boolean> = repository.autoModeByDayEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_AUTO_MODE_BY_DAY)
+
     val dynamicIncreaseEnabled: StateFlow<Boolean> = repository.dynamicIncreaseEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_DYNAMIC_INCREASE_ENABLED)
 
@@ -213,6 +219,55 @@ class TimerViewModel @JvmOverloads constructor(
                 statsRepository.runYearlyCompaction()
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to run yearly compaction", e)
+            }
+        }
+
+        try {
+            val lifecycleObserver = object : DefaultLifecycleObserver {
+                override fun onStart(owner: LifecycleOwner) {
+                    applyDayDefaultModeIfEnabled()
+                }
+            }
+            ProcessLifecycleOwner.get().lifecycle.addObserver(lifecycleObserver)
+        } catch (e: Exception) {
+            Log.w(TAG, "ProcessLifecycleOwner unavailable (likely unit test)", e)
+        }
+    }
+
+    fun applyDayDefaultModeIfEnabled() {
+        viewModelScope.launch {
+            applyDayDefaultModeNow()
+        }
+    }
+
+    private suspend fun applyDayDefaultModeNow() {
+        try {
+            val enabled = repository.autoModeByDayEnabled.first()
+            if (!enabled) return
+            val schedule = repository.weekSchedule.first()
+            val dayIndex = LocalDate.now().dayOfWeek.ordinal
+            val effective = resolveEffectiveSchedule(schedule, dayIndex) ?: return
+            val currentMode = repository.exerciseMode.first()
+            if (effective.defaultMode != currentMode) {
+                repository.setExerciseMode(effective.defaultMode)
+                usedExerciseNames.clear()
+                lastPickedName = null
+                repository.setUsedExerciseNames(emptySet())
+                repository.setLastPickedName(null)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to apply day default mode", e)
+        }
+    }
+
+    fun setAutoModeByDayEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            try {
+                val seed = if (enabled) exerciseMode.value else null
+                repository.setAutoModeByDayEnabled(enabled, seed)
+                if (enabled) applyDayDefaultModeNow()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set auto mode by day enabled", e)
             }
         }
     }
@@ -345,12 +400,12 @@ class TimerViewModel @JvmOverloads constructor(
                             .build(),
                     )
                     .setBufferSizeInBytes(samples.size * 2)
-                    .setTransferMode(android.media.AudioTrack.MODE_STATIC)
+                    .setTransferMode(android.media.AudioTrack.MODE_STREAM)
                     .build()
                 previewTrack = track
                 try {
-                    track.write(samples, 0, samples.size)
                     track.play()
+                    track.write(samples, 0, samples.size)
                     kotlinx.coroutines.delay(beepDurationMs.toLong() + 50)
                 } finally {
                     try {
@@ -511,6 +566,7 @@ class TimerViewModel @JvmOverloads constructor(
                             getApplication(), current,
                         )
                     }
+                    applyDayDefaultModeNow()
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to update day schedule", e)
@@ -883,11 +939,12 @@ class TimerViewModel @JvmOverloads constructor(
         _backupState.value = BackupUiState.Idle
     }
 
-    fun applyWorkSchedule(enabled: Boolean, schedule: List<DaySchedule>) {
+    fun applyWorkSchedule(enabled: Boolean, autoModeByDay: Boolean, schedule: List<DaySchedule>) {
         viewModelScope.launch {
             try {
                 repository.setWorkScheduleEnabled(enabled)
                 repository.setWeekSchedule(schedule)
+                repository.setAutoModeByDayEnabled(autoModeByDay)
                 if (enabled) {
                     WorkScheduleManager.scheduleNextWorkStartReminder(
                         getApplication(), schedule,
@@ -909,6 +966,7 @@ class TimerViewModel @JvmOverloads constructor(
                 repository.setRepsLinked(true)
                 repository.setExerciseMode(mode)
                 repository.setOnboardingCompleted(true)
+                applyDayDefaultModeNow()
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to complete onboarding", e)
             }

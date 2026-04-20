@@ -146,6 +146,10 @@ class SettingsRepository(
         prefs[KEY_WORK_SCHEDULE_ENABLED] ?: DEFAULT_WORK_SCHEDULE_ENABLED
     }
 
+    val autoModeByDayEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[KEY_AUTO_MODE_BY_DAY] ?: DEFAULT_AUTO_MODE_BY_DAY
+    }
+
     val weekSchedule: Flow<List<DaySchedule>> = dataStore.data.map { prefs ->
         val raw = prefs[KEY_WEEK_SCHEDULE]
         if (raw != null) {
@@ -190,7 +194,7 @@ class SettingsRepository(
     }
 
     val onboardingCompleted: Flow<Boolean> = dataStore.data.map { prefs ->
-        prefs[KEY_ONBOARDING_COMPLETED] ?: prefs.asMap().isNotEmpty()
+        prefs[KEY_ONBOARDING_COMPLETED] ?: (prefs[KEY_TIMER_HOURS] != null)
     }
 
     val usedExerciseNames: Flow<Set<String>> = dataStore.data.map { prefs ->
@@ -292,6 +296,24 @@ class SettingsRepository(
         dataStore.edit { it[KEY_WEEK_SCHEDULE] = json.encodeToString(schedule) }
     }
 
+    suspend fun setAutoModeByDayEnabled(enabled: Boolean, seedMode: ExerciseMode? = null) {
+        dataStore.edit { prefs ->
+            val wasEnabled = prefs[KEY_AUTO_MODE_BY_DAY] ?: DEFAULT_AUTO_MODE_BY_DAY
+            prefs[KEY_AUTO_MODE_BY_DAY] = enabled
+            if (enabled && !wasEnabled && seedMode != null) {
+                val existing = prefs[KEY_WEEK_SCHEDULE]?.let { raw ->
+                    try {
+                        json.decodeFromString<List<DaySchedule>>(raw)
+                    } catch (_: Exception) {
+                        null
+                    }
+                } ?: DEFAULT_WEEK_SCHEDULE
+                val seeded = existing.map { it.copy(defaultMode = seedMode) }
+                prefs[KEY_WEEK_SCHEDULE] = json.encodeToString(seeded)
+            }
+        }
+    }
+
     suspend fun setCustomSoundUri(uri: String?) {
         dataStore.edit {
             if (uri != null) {
@@ -365,6 +387,7 @@ class SettingsRepository(
             customSoundUri = prefs[KEY_CUSTOM_SOUND_URI],
             workScheduleEnabled = prefs[KEY_WORK_SCHEDULE_ENABLED] ?: DEFAULT_WORK_SCHEDULE_ENABLED,
             weekSchedule = weekSchedule.first(),
+            autoModeByDayEnabled = prefs[KEY_AUTO_MODE_BY_DAY] ?: DEFAULT_AUTO_MODE_BY_DAY,
         )
     }
 
@@ -387,6 +410,7 @@ class SettingsRepository(
             prefs[KEY_TTS_ENABLED] = data.ttsEnabled
             // customSoundUri is device-specific, not restored from backup
             prefs[KEY_WORK_SCHEDULE_ENABLED] = data.workScheduleEnabled
+            prefs[KEY_AUTO_MODE_BY_DAY] = data.autoModeByDayEnabled
             if (data.weekSchedule.isNotEmpty()) {
                 prefs[KEY_WEEK_SCHEDULE] = json.encodeToString(data.weekSchedule)
             } else {
@@ -447,6 +471,7 @@ class SettingsRepository(
         val customSoundUri: String?,
         val workScheduleEnabled: Boolean,
         val weekSchedule: List<DaySchedule>,
+        val autoModeByDayEnabled: Boolean,
     )
 
     companion object {
@@ -471,6 +496,7 @@ class SettingsRepository(
         private val KEY_CUSTOM_SOUND_URI = stringPreferencesKey("custom_sound_uri")
         private val KEY_WORK_SCHEDULE_ENABLED = booleanPreferencesKey("work_schedule_enabled")
         private val KEY_WEEK_SCHEDULE = stringPreferencesKey("week_schedule")
+        private val KEY_AUTO_MODE_BY_DAY = booleanPreferencesKey("auto_mode_by_day_enabled")
         // Legacy keys for migration from old flat format
         private val KEY_WORK_START_HOUR = intPreferencesKey("work_start_hour")
         private val KEY_WORK_START_MINUTE = intPreferencesKey("work_start_minute")
@@ -510,6 +536,7 @@ class SettingsRepository(
         const val DEFAULT_TTS_ENABLED = false
 
         const val DEFAULT_WORK_SCHEDULE_ENABLED = false
+        const val DEFAULT_AUTO_MODE_BY_DAY = false
         const val DEFAULT_WORK_START_HOUR = 8
         const val DEFAULT_WORK_START_MINUTE = 0
         const val DEFAULT_WORK_END_HOUR = 17

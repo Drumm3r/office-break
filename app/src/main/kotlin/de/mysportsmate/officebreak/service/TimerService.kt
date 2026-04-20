@@ -116,7 +116,7 @@ class TimerService : Service() {
         timerJob = scope.launch {
             try {
                 writeWidgetState("running", remainingSeconds = totalSeconds, totalSeconds = totalSeconds)
-                WidgetUpdater.requestUpdate(this@TimerService)
+                WidgetUpdater.requestUpdate(this@TimerService, "running", totalSeconds, totalSeconds)
 
                 val schedulePrefs = dataStore.data.first()
                 val scheduleEnabled = schedulePrefs[booleanPreferencesKey("work_schedule_enabled")] ?: false
@@ -138,7 +138,6 @@ class TimerService : Service() {
                 }
 
                 var remaining = totalSeconds
-                var ticksSinceWidgetUpdate = 0
                 while (remaining > 0) {
                     delay(1000L)
 
@@ -152,7 +151,7 @@ class TimerService : Service() {
                         if (isTimeInRange(now, workEnd, workStart)) {
                             timerStateHolder.update(TimerState.WorkEnded)
                             writeWidgetState("work_ended")
-                            WidgetUpdater.requestUpdate(this@TimerService)
+                            WidgetUpdater.requestUpdate(this@TimerService, "work_ended")
                             releaseWakeLock()
                             stopForeground(STOP_FOREGROUND_REMOVE)
                             stopSelf()
@@ -165,7 +164,7 @@ class TimerService : Service() {
                                 totalSeconds = totalSeconds,
                             ))
                             writeWidgetState("paused", remainingSeconds = remaining, totalSeconds = totalSeconds)
-                            WidgetUpdater.requestUpdate(this@TimerService)
+                            WidgetUpdater.requestUpdate(this@TimerService, "paused", remaining, totalSeconds)
                             updateNotification(localizedContext.getString(R.string.notification_text_lunch_pause))
                             while (isTimeInRange(LocalTime.now(), lunchStart, lunchEnd)) {
                                 delay(1000L)
@@ -175,7 +174,7 @@ class TimerService : Service() {
                                 totalSeconds = totalSeconds,
                             ))
                             writeWidgetState("running", remainingSeconds = remaining, totalSeconds = totalSeconds)
-                            WidgetUpdater.requestUpdate(this@TimerService)
+                            WidgetUpdater.requestUpdate(this@TimerService, "running", remaining, totalSeconds)
                         }
                     }
 
@@ -186,15 +185,14 @@ class TimerService : Service() {
                     ))
                     updateNotification(localizedContext.getString(R.string.notification_text_running, formatTime(remaining)))
 
-                    ticksSinceWidgetUpdate++
-                    if (ticksSinceWidgetUpdate >= 30) {
-                        ticksSinceWidgetUpdate = 0
-                        WidgetUpdater.requestUpdate(this@TimerService)
+                    if (remaining > 0) {
+                        writeWidgetState("running", remainingSeconds = remaining, totalSeconds = totalSeconds)
+                        WidgetUpdater.requestUpdate(this@TimerService, "running", remaining, totalSeconds)
                     }
                 }
                 timerStateHolder.update(TimerState.Expired)
                 writeWidgetState("expired")
-                WidgetUpdater.requestUpdate(this@TimerService)
+                WidgetUpdater.requestUpdate(this@TimerService, "expired")
                 wakeScreen()
                 updateNotification(localizedContext.getString(R.string.notification_text_expired))
                 showExpiredNotification()
@@ -231,7 +229,7 @@ class TimerService : Service() {
         manager.cancel(EXPIRED_NOTIFICATION_ID)
         scope.launch {
             writeWidgetState("idle")
-            WidgetUpdater.requestUpdate(this@TimerService)
+            WidgetUpdater.requestUpdate(this@TimerService, "idle")
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         }
@@ -354,11 +352,11 @@ class TimerService : Service() {
                         .build(),
                 )
                 .setBufferSizeInBytes(bufferSize)
-                .setTransferMode(AudioTrack.MODE_STATIC)
+                .setTransferMode(AudioTrack.MODE_STREAM)
                 .build()
             alarmTrack = track
-            track.write(samples, 0, samples.size)
             track.play()
+            track.write(samples, 0, samples.size)
         } catch (e: Exception) {
             android.util.Log.e("TimerService", "Failed to play beep sound", e)
         }
@@ -520,6 +518,7 @@ class TimerService : Service() {
         runBlocking(Dispatchers.IO) {
             withTimeoutOrNull(2000L) {
                 writeWidgetState("idle")
+                WidgetUpdater.requestUpdate(this@TimerService, "idle")
             }
         }
         super.onDestroy()

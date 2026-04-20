@@ -2,8 +2,10 @@ package de.mysportsmate.officebreak.ui.screen
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -41,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.mysportsmate.officebreak.R
@@ -85,16 +88,19 @@ fun ExerciseSettingsScreen(
             SingleChoiceSegmentedButtonRow(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .height(IntrinsicSize.Max)
                     .padding(horizontal = 16.dp),
             ) {
                 ExerciseMode.entries.forEachIndexed { index, mode ->
                     SegmentedButton(
                         selected = mode == exerciseMode,
                         onClick = { onModeChange(mode) },
+                        modifier = Modifier.fillMaxHeight(),
                         shape = SegmentedButtonDefaults.itemShape(
                             index = index,
                             count = ExerciseMode.entries.size,
                         ),
+                        icon = {},
                     ) {
                         Text(
                             text = when (mode) {
@@ -102,6 +108,8 @@ fun ExerciseSettingsScreen(
                                 ExerciseMode.HOME_MOBILITY -> stringResource(R.string.exercise_mode_short_home_mobility)
                                 ExerciseMode.OFFICE -> stringResource(R.string.exercise_mode_short_office)
                             },
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
                         )
                     }
                 }

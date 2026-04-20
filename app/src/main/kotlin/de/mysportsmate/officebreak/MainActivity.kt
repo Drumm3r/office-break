@@ -71,8 +71,8 @@ class MainActivity : ComponentActivity() {
                     true -> TimerScreen(viewModel = viewModel)
                     false -> OnboardingScreen(
                         onComplete = viewModel::completeOnboarding,
-                        onWorkScheduleConfigured = { enabled, schedule ->
-                            viewModel.applyWorkSchedule(enabled, schedule)
+                        onWorkScheduleConfigured = { enabled, autoMode, schedule ->
+                            viewModel.applyWorkSchedule(enabled, autoMode, schedule)
                         },
                     )
                 }

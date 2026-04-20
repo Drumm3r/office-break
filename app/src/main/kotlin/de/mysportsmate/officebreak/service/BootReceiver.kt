@@ -32,7 +32,7 @@ class BootReceiver : BroadcastReceiver() {
                     it[TimerService.KEY_WIDGET_TIMER_TOTAL_SECONDS] = 0L
                     it[TimerService.KEY_WIDGET_TIMER_REMAINING_SECONDS] = 0L
                 }
-                WidgetUpdater.requestUpdate(context)
+                WidgetUpdater.requestUpdate(context, "idle")
 
                 val prefs = context.dataStore.data.first()
                 val enabled = prefs[booleanPreferencesKey("work_schedule_enabled")] ?: false

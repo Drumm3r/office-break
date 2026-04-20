@@ -45,6 +45,8 @@ class BackupManager(
             exercisesHomeMobility = settings.exercisesHomeMobility,
             exercisesOffice = settings.exercisesOffice,
 
+            autoModeByDayEnabled = settings.autoModeByDayEnabled,
+
             trackingEnabled = stats.trackingEnabled,
             breakRecords = stats.breakRecords,
             dailyAggregates = stats.dailyAggregates,

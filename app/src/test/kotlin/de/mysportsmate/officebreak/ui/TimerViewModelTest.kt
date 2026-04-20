@@ -8,6 +8,7 @@ import de.mysportsmate.officebreak.data.AchievementDefinition
 import de.mysportsmate.officebreak.data.Exercise
 import de.mysportsmate.officebreak.data.ExerciseMode
 import de.mysportsmate.officebreak.data.FakeDataStore
+import de.mysportsmate.officebreak.data.DEFAULT_WEEK_SCHEDULE
 import de.mysportsmate.officebreak.data.FitnessLevel
 import de.mysportsmate.officebreak.data.SettingsRepository
 import de.mysportsmate.officebreak.data.StatsRepository
@@ -19,6 +20,7 @@ import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -1383,6 +1385,195 @@ class TimerViewModelTest {
         advanceUntilIdle()
 
         assertEquals(0, viewModel.statsSnapshot.value.totalBreaksAllTime)
+
+        collectors.forEach { it.cancel() }
+    }
+
+    // --- auto mode by day ---
+
+    @Test
+    fun `autoModeByDayEnabled emits default false`() = runTest {
+        viewModel.autoModeByDayEnabled.test {
+            assertEquals(false, awaitItem())
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `setAutoModeByDayEnabled true seeds all days with current exercise mode`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        val autoCollector = launch { viewModel.autoModeByDayEnabled.collect {} }
+        val modeCollector = launch { viewModel.exerciseMode.collect {} }
+        advanceUntilIdle()
+
+        repository.setExerciseMode(ExerciseMode.OFFICE)
+        advanceUntilIdle()
+
+        viewModel.setAutoModeByDayEnabled(true)
+        advanceUntilIdle()
+
+        val schedule = repository.weekSchedule.first()
+        schedule.forEach { day ->
+            assertEquals(ExerciseMode.OFFICE, day.defaultMode)
+        }
+        assertTrue(repository.autoModeByDayEnabled.first())
+
+        (collectors + autoCollector + modeCollector).forEach { it.cancel() }
+    }
+
+    @Test
+    fun `applyDayDefaultModeIfEnabled is no-op when autoMode is disabled`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        repository.setExerciseMode(ExerciseMode.HOME_WORKOUT)
+        // Write schedule where today has OFFICE mode, but master toggle off
+        val todayIndex = java.time.LocalDate.now().dayOfWeek.ordinal
+        val schedule = DEFAULT_WEEK_SCHEDULE.toMutableList().apply {
+            this[todayIndex] = this[todayIndex].copy(
+                enabled = true,
+                linked = false,
+                defaultMode = ExerciseMode.OFFICE,
+            )
+        }
+        repository.setWeekSchedule(schedule)
+        advanceUntilIdle()
+
+        viewModel.applyDayDefaultModeIfEnabled()
+        advanceUntilIdle()
+
+        assertEquals(ExerciseMode.HOME_WORKOUT, repository.exerciseMode.first())
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `applyDayDefaultModeIfEnabled switches mode when todays mode differs`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        repository.setExerciseMode(ExerciseMode.HOME_WORKOUT)
+        val todayIndex = java.time.LocalDate.now().dayOfWeek.ordinal
+        val schedule = DEFAULT_WEEK_SCHEDULE.toMutableList().apply {
+            for (i in indices) {
+                this[i] = this[i].copy(enabled = true, linked = false)
+            }
+            this[todayIndex] = this[todayIndex].copy(defaultMode = ExerciseMode.OFFICE)
+        }
+        repository.setWeekSchedule(schedule)
+        repository.setAutoModeByDayEnabled(enabled = true, seedMode = null)
+        advanceUntilIdle()
+
+        viewModel.applyDayDefaultModeIfEnabled()
+        advanceUntilIdle()
+
+        assertEquals(ExerciseMode.OFFICE, repository.exerciseMode.first())
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `applyDayDefaultModeIfEnabled is no-op when today is disabled`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        repository.setExerciseMode(ExerciseMode.HOME_WORKOUT)
+        val todayIndex = java.time.LocalDate.now().dayOfWeek.ordinal
+        val schedule = DEFAULT_WEEK_SCHEDULE.toMutableList().apply {
+            this[todayIndex] = this[todayIndex].copy(
+                enabled = false,
+                linked = false,
+                defaultMode = ExerciseMode.OFFICE,
+            )
+        }
+        repository.setWeekSchedule(schedule)
+        repository.setAutoModeByDayEnabled(enabled = true, seedMode = null)
+        advanceUntilIdle()
+
+        viewModel.applyDayDefaultModeIfEnabled()
+        advanceUntilIdle()
+
+        // Mode stays what it was — today disabled, no switch
+        assertEquals(ExerciseMode.HOME_WORKOUT, repository.exerciseMode.first())
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `applyDayDefaultModeIfEnabled does nothing when current matches target mode`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        repository.setExerciseMode(ExerciseMode.OFFICE)
+        val todayIndex = java.time.LocalDate.now().dayOfWeek.ordinal
+        val schedule = DEFAULT_WEEK_SCHEDULE.toMutableList().apply {
+            this[todayIndex] = this[todayIndex].copy(
+                enabled = true,
+                linked = false,
+                defaultMode = ExerciseMode.OFFICE,
+            )
+        }
+        repository.setWeekSchedule(schedule)
+        repository.setAutoModeByDayEnabled(enabled = true, seedMode = null)
+        advanceUntilIdle()
+
+        viewModel.applyDayDefaultModeIfEnabled()
+        advanceUntilIdle()
+
+        assertEquals(ExerciseMode.OFFICE, repository.exerciseMode.first())
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `updateDaySchedule triggers mode switch when editing today`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        val autoCollector = launch { viewModel.autoModeByDayEnabled.collect {} }
+        val weekCollector = launch { viewModel.weekSchedule.collect {} }
+        advanceUntilIdle()
+
+        repository.setExerciseMode(ExerciseMode.HOME_WORKOUT)
+        repository.setAutoModeByDayEnabled(enabled = true, seedMode = ExerciseMode.HOME_WORKOUT)
+        val schedule = DEFAULT_WEEK_SCHEDULE.toMutableList().apply {
+            for (i in indices) {
+                this[i] = this[i].copy(enabled = true, linked = false)
+            }
+        }
+        repository.setWeekSchedule(schedule)
+        advanceUntilIdle()
+
+        val todayIndex = java.time.LocalDate.now().dayOfWeek.ordinal
+        viewModel.updateDaySchedule(
+            todayIndex,
+            schedule[todayIndex].copy(defaultMode = ExerciseMode.OFFICE),
+        )
+        advanceUntilIdle()
+
+        assertEquals(ExerciseMode.OFFICE, repository.exerciseMode.first())
+
+        (collectors + autoCollector + weekCollector).forEach { it.cancel() }
+    }
+
+    @Test
+    fun `completeOnboarding with autoMode seeded applies todays mode`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        val todayIndex = java.time.LocalDate.now().dayOfWeek.ordinal
+        val schedule = DEFAULT_WEEK_SCHEDULE.toMutableList().apply {
+            for (i in indices) {
+                this[i] = this[i].copy(enabled = true, linked = false, defaultMode = ExerciseMode.OFFICE)
+            }
+        }
+        repository.setWeekSchedule(schedule)
+        repository.setAutoModeByDayEnabled(enabled = true, seedMode = null)
+        advanceUntilIdle()
+
+        viewModel.completeOnboarding(FitnessLevel.MODERATE, ExerciseMode.HOME_WORKOUT)
+        advanceUntilIdle()
+
+        // completeOnboarding sets mode = HOME_WORKOUT, then applyDayDefaultMode switches to today's OFFICE
+        assertEquals(ExerciseMode.OFFICE, repository.exerciseMode.first())
 
         collectors.forEach { it.cancel() }
     }

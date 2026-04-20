@@ -939,4 +939,102 @@ class SettingsRepositoryTest {
         statsSnapshot = StatsSnapshot(),
         achievementState = AchievementState(),
     )
+
+    // --- autoModeByDayEnabled ---
+
+    @Test
+    fun `autoModeByDayEnabled emits default false when empty`() = runTest {
+        repository.autoModeByDayEnabled.test {
+            assertEquals(SettingsRepository.DEFAULT_AUTO_MODE_BY_DAY, awaitItem())
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `setAutoModeByDayEnabled true persists and re-emits`() = runTest {
+        repository.autoModeByDayEnabled.test {
+            assertEquals(false, awaitItem())
+            repository.setAutoModeByDayEnabled(enabled = true, seedMode = ExerciseMode.OFFICE)
+            assertEquals(true, awaitItem())
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `setAutoModeByDayEnabled false does not seed`() = runTest {
+        // Start with known custom schedule — Wed has HOME_MOBILITY
+        val schedule = DEFAULT_WEEK_SCHEDULE.toMutableList().apply {
+            this[2] = this[2].copy(defaultMode = ExerciseMode.HOME_MOBILITY)
+        }
+        repository.setWeekSchedule(schedule)
+
+        repository.setAutoModeByDayEnabled(enabled = false, seedMode = ExerciseMode.OFFICE)
+        val persisted = repository.weekSchedule.first()
+        assertEquals(ExerciseMode.HOME_MOBILITY, persisted[2].defaultMode)
+    }
+
+    @Test
+    fun `setAutoModeByDayEnabled false to true seeds all days with seedMode`() = runTest {
+        repository.setAutoModeByDayEnabled(enabled = true, seedMode = ExerciseMode.OFFICE)
+        val persisted = repository.weekSchedule.first()
+        assertEquals(7, persisted.size)
+        persisted.forEach { day ->
+            assertEquals(ExerciseMode.OFFICE, day.defaultMode)
+        }
+    }
+
+    @Test
+    fun `setAutoModeByDayEnabled true when already true does not re-seed`() = runTest {
+        // Enable first with OFFICE
+        repository.setAutoModeByDayEnabled(enabled = true, seedMode = ExerciseMode.OFFICE)
+        // User customizes Wed
+        val schedule = repository.weekSchedule.first().toMutableList().apply {
+            this[2] = this[2].copy(defaultMode = ExerciseMode.HOME_MOBILITY)
+        }
+        repository.setWeekSchedule(schedule)
+
+        // Re-enable with HOME_WORKOUT — should NOT overwrite
+        repository.setAutoModeByDayEnabled(enabled = true, seedMode = ExerciseMode.HOME_WORKOUT)
+        val persisted = repository.weekSchedule.first()
+        assertEquals(ExerciseMode.HOME_MOBILITY, persisted[2].defaultMode)
+        assertEquals(ExerciseMode.OFFICE, persisted[0].defaultMode)
+    }
+
+    @Test
+    fun `setAutoModeByDayEnabled true with null seedMode does not overwrite schedule`() = runTest {
+        val schedule = DEFAULT_WEEK_SCHEDULE.toMutableList().apply {
+            this[0] = this[0].copy(defaultMode = ExerciseMode.HOME_MOBILITY)
+        }
+        repository.setWeekSchedule(schedule)
+
+        repository.setAutoModeByDayEnabled(enabled = true, seedMode = null)
+        val persisted = repository.weekSchedule.first()
+        assertEquals(ExerciseMode.HOME_MOBILITY, persisted[0].defaultMode)
+    }
+
+    // --- onboardingCompleted fallback ---
+
+    @Test
+    fun `onboardingCompleted emits false when DataStore is empty`() = runTest {
+        assertEquals(false, repository.onboardingCompleted.first())
+    }
+
+    @Test
+    fun `onboardingCompleted emits false when only autoModeByDay written`() = runTest {
+        // autoMode is not a usage-indicator — onboarding should still show
+        repository.setAutoModeByDayEnabled(enabled = false)
+        assertEquals(false, repository.onboardingCompleted.first())
+    }
+
+    @Test
+    fun `onboardingCompleted emits true when explicitly set`() = runTest {
+        repository.setOnboardingCompleted(true)
+        assertEquals(true, repository.onboardingCompleted.first())
+    }
+
+    @Test
+    fun `onboardingCompleted emits true when timer hours present (legacy migration)`() = runTest {
+        repository.setTimerHours(1)
+        assertEquals(true, repository.onboardingCompleted.first())
+    }
 }

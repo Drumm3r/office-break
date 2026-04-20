@@ -89,6 +89,10 @@
     <string name="day_sat">Sa</string>
     <string name="day_sun">So</string>
     <string name="settings_work_schedule_day_linked">Zeiten vom Vortag übernehmen</string>
+    <string name="settings_auto_mode_by_day">Modus automatisch pro Tag</string>
+    <string name="settings_auto_mode_by_day_hint">Wechselt den Übungsmodus automatisch passend zum Wochentag</string>
+    <string name="settings_day_mode_label">Modus</string>
+    <string name="settings_day_mode_inherited">Übernommen von %1$s</string>
 
     <!-- Dynamische Steigerung -->
     <string name="dynamic_increase_title">Du wirst stärker!</string>
@@ -141,8 +145,8 @@
     <string name="onboarding_mode_title">Wähle deinen Übungsstil</string>
     <string name="onboarding_mode_subtitle">Du kannst den Modus jederzeit in den Einstellungen wechseln</string>
     <string name="exercise_mode_label">Übungsmodus</string>
-    <string name="exercise_mode_short_home_workout">Workout</string>
-    <string name="exercise_mode_short_home_mobility">Mobilität</string>
+    <string name="exercise_mode_short_home_workout">Home Office\nWorkout</string>
+    <string name="exercise_mode_short_home_mobility">Home Office\nMobilität</string>
     <string name="exercise_mode_short_office">Büro</string>
     <string name="onboarding_summary_mode">Modus: %1$s</string>
 

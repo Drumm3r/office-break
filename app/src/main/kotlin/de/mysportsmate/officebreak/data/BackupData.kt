@@ -43,6 +43,9 @@ data class BackupData(
     val exercisesHomeMobility: List<Exercise> = emptyList(),
     val exercisesOffice: List<Exercise> = emptyList(),
 
+    // Per-day default mode (v3)
+    val autoModeByDayEnabled: Boolean = false,
+
     // Stats
     val trackingEnabled: Boolean,
     val breakRecords: List<BreakRecord>,
@@ -52,7 +55,7 @@ data class BackupData(
     val achievementState: AchievementState,
 ) {
     companion object {
-        const val CURRENT_FORMAT_VERSION = 2
+        const val CURRENT_FORMAT_VERSION = 3
     }
 }
 

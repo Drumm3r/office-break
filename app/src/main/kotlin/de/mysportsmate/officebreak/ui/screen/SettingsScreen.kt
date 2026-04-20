@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
@@ -27,6 +28,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.LinkOff
@@ -57,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import de.mysportsmate.officebreak.R
 import de.mysportsmate.officebreak.data.DEFAULT_WEEK_SCHEDULE
 import de.mysportsmate.officebreak.data.DaySchedule
+import de.mysportsmate.officebreak.data.ExerciseMode
 import de.mysportsmate.officebreak.data.resolveEffectiveSchedule
 import de.mysportsmate.officebreak.data.validated
 import de.mysportsmate.officebreak.data.SettingsRepository
@@ -98,7 +105,9 @@ fun SettingsScreen(
     onStopPreview: () -> Unit,
     workScheduleEnabled: Boolean,
     weekSchedule: List<DaySchedule>,
+    autoModeByDayEnabled: Boolean,
     onWorkScheduleEnabledChange: (Boolean) -> Unit,
+    onAutoModeByDayEnabledChange: (Boolean) -> Unit,
     onDayScheduleChange: (Int, DaySchedule) -> Unit,
     onTrackingEnabledChange: (Boolean) -> Unit,
     onResetStats: () -> Unit,
@@ -263,12 +272,29 @@ fun SettingsScreen(
                     stringResource(R.string.day_sun),
                 )
 
+                SettingsToggleRow(
+                    label = stringResource(R.string.settings_auto_mode_by_day),
+                    checked = autoModeByDayEnabled,
+                    onCheckedChange = onAutoModeByDayEnabledChange,
+                )
+
+                Text(
+                    text = stringResource(R.string.settings_auto_mode_by_day_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+
                 weekSchedule.forEachIndexed { index, day ->
                     DayScheduleRow(
                         dayName = dayNames[index],
                         day = day,
                         effectiveDay = resolveEffectiveSchedule(weekSchedule, index),
                         isFirstEnabled = weekSchedule.indexOfFirst { it.enabled } == index,
+                        showModeSelector = autoModeByDayEnabled,
+                        dayNames = dayNames,
+                        weekSchedule = weekSchedule,
+                        dayIndex = index,
                         onDayChange = { onDayScheduleChange(index, it) },
                     )
                 }
@@ -613,12 +639,17 @@ private fun BeepCountSlider(
     }
 }
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 internal fun DayScheduleRow(
     dayName: String,
     day: DaySchedule,
     effectiveDay: DaySchedule?,
     isFirstEnabled: Boolean,
+    showModeSelector: Boolean = false,
+    dayNames: List<String> = emptyList(),
+    weekSchedule: List<DaySchedule> = emptyList(),
+    dayIndex: Int = -1,
     onDayChange: (DaySchedule) -> Unit,
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
@@ -721,8 +752,88 @@ internal fun DayScheduleRow(
                     onTimeSelected = { h, m -> onDayChange(day.copy(lunchEndHour = h, lunchEndMinute = m).validated()) },
                 )
             }
+            if (showModeSelector) {
+                DayModeSelector(
+                    selected = day.defaultMode,
+                    onSelect = { onDayChange(day.copy(defaultMode = it)) },
+                )
+            }
+        }
+
+        if (expanded && day.enabled && !timesEditable && showModeSelector) {
+            val sourceIndex = (1..6).firstOrNull { i ->
+                val idx = (dayIndex - i + 7) % 7
+                weekSchedule.getOrNull(idx)?.let { it.enabled && !it.linked } == true
+            }?.let { (dayIndex - it + 7) % 7 } ?: dayIndex
+            val sourceName = dayNames.getOrNull(sourceIndex) ?: ""
+            Column(modifier = Modifier.padding(start = 48.dp, top = 4.dp, bottom = 8.dp)) {
+                Text(
+                    text = stringResource(R.string.settings_day_mode_inherited, sourceName),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = modeLabel(effectiveDay?.defaultMode ?: day.defaultMode),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
         }
     }
+}
+
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun DayModeSelector(
+    selected: ExerciseMode,
+    onSelect: (ExerciseMode) -> Unit,
+) {
+    Column(modifier = Modifier.padding(vertical = 8.dp)) {
+        Text(
+            text = stringResource(R.string.settings_day_mode_label),
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(bottom = 12.dp),
+        )
+        SingleChoiceSegmentedButtonRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Max),
+        ) {
+            ExerciseMode.entries.forEachIndexed { index, mode ->
+                SegmentedButton(
+                    selected = mode == selected,
+                    onClick = { onSelect(mode) },
+                    modifier = Modifier.fillMaxHeight(),
+                    shape = SegmentedButtonDefaults.itemShape(
+                        index = index,
+                        count = ExerciseMode.entries.size,
+                    ),
+                    icon = {},
+                ) {
+                    Text(
+                        text = modeShortLabel(mode),
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun modeShortLabel(mode: ExerciseMode): String = when (mode) {
+    ExerciseMode.HOME_WORKOUT -> stringResource(R.string.exercise_mode_short_home_workout)
+    ExerciseMode.HOME_MOBILITY -> stringResource(R.string.exercise_mode_short_home_mobility)
+    ExerciseMode.OFFICE -> stringResource(R.string.exercise_mode_short_office)
+}
+
+@Composable
+private fun modeLabel(mode: ExerciseMode): String = when (mode) {
+    ExerciseMode.HOME_WORKOUT -> stringResource(R.string.exercise_mode_home_workout)
+    ExerciseMode.HOME_MOBILITY -> stringResource(R.string.exercise_mode_home_mobility)
+    ExerciseMode.OFFICE -> stringResource(R.string.exercise_mode_office)
 }
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
@@ -848,7 +959,9 @@ private fun SettingsScreenPreview() {
             onStopPreview = {},
             workScheduleEnabled = true,
             weekSchedule = DEFAULT_WEEK_SCHEDULE,
+            autoModeByDayEnabled = false,
             onWorkScheduleEnabledChange = {},
+            onAutoModeByDayEnabledChange = {},
             onDayScheduleChange = { _, _ -> },
             onTrackingEnabledChange = {},
             onResetStats = {},

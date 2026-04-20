@@ -59,12 +59,13 @@ import de.mysportsmate.officebreak.ui.theme.OfficeBreakTheme
 @Composable
 fun OnboardingScreen(
     onComplete: (FitnessLevel, ExerciseMode) -> Unit,
-    onWorkScheduleConfigured: (Boolean, List<DaySchedule>) -> Unit = { _, _ -> },
+    onWorkScheduleConfigured: (Boolean, Boolean, List<DaySchedule>) -> Unit = { _, _, _ -> },
 ) {
     var currentStep by rememberSaveable { mutableIntStateOf(0) }
     var selectedLevelOrdinal by rememberSaveable { mutableIntStateOf(-1) }
     var selectedModeOrdinal by rememberSaveable { mutableIntStateOf(-1) }
     var workScheduleEnabled by remember { mutableStateOf(false) }
+    var autoModeByDayEnabled by remember { mutableStateOf(false) }
     var weekSchedule by remember { mutableStateOf(DEFAULT_WEEK_SCHEDULE) }
 
     val selectedLevel = if (selectedLevelOrdinal >= 0) {
@@ -110,13 +111,22 @@ fun OnboardingScreen(
                     2 -> WorkScheduleStep(
                         enabled = workScheduleEnabled,
                         weekSchedule = weekSchedule,
+                        autoModeByDayEnabled = autoModeByDayEnabled,
+                        selectedMode = selectedMode,
                         onEnabledChange = { workScheduleEnabled = it },
+                        onAutoModeChange = { newEnabled ->
+                            autoModeByDayEnabled = newEnabled
+                            if (newEnabled && selectedMode != null) {
+                                weekSchedule = weekSchedule.map { it.copy(defaultMode = selectedMode) }
+                            }
+                        },
                         onScheduleChange = { weekSchedule = it },
                     )
                     3 -> SummaryStep(
                         level = selectedLevel!!,
                         mode = selectedMode!!,
                         workScheduleEnabled = workScheduleEnabled,
+                        autoModeByDayEnabled = autoModeByDayEnabled,
                         weekSchedule = weekSchedule,
                     )
                 }
@@ -135,7 +145,7 @@ fun OnboardingScreen(
                 onBack = { currentStep-- },
                 onNext = { currentStep++ },
                 onComplete = {
-                    onWorkScheduleConfigured(workScheduleEnabled, weekSchedule)
+                    onWorkScheduleConfigured(workScheduleEnabled, autoModeByDayEnabled, weekSchedule)
                     onComplete(selectedLevel!!, selectedMode!!)
                 },
             )
@@ -456,7 +466,10 @@ private fun ExerciseModeCard(
 private fun WorkScheduleStep(
     enabled: Boolean,
     weekSchedule: List<DaySchedule>,
+    autoModeByDayEnabled: Boolean,
+    selectedMode: ExerciseMode?,
     onEnabledChange: (Boolean) -> Unit,
+    onAutoModeChange: (Boolean) -> Unit,
     onScheduleChange: (List<DaySchedule>) -> Unit,
 ) {
     val dayNames = listOf(
@@ -512,12 +525,41 @@ private fun WorkScheduleStep(
         if (enabled) {
             Spacer(modifier = Modifier.height(8.dp))
 
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_auto_mode_by_day),
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(
+                    checked = autoModeByDayEnabled,
+                    onCheckedChange = onAutoModeChange,
+                    enabled = selectedMode != null,
+                )
+            }
+
+            Text(
+                text = stringResource(R.string.settings_auto_mode_by_day_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+
             weekSchedule.forEachIndexed { index, day ->
                 DayScheduleRow(
                     dayName = dayNames[index],
                     day = day,
                     effectiveDay = resolveEffectiveSchedule(weekSchedule, index),
                     isFirstEnabled = weekSchedule.indexOfFirst { it.enabled } == index,
+                    showModeSelector = autoModeByDayEnabled,
+                    dayNames = dayNames,
+                    weekSchedule = weekSchedule,
+                    dayIndex = index,
                     onDayChange = {
                         val updated = weekSchedule.toMutableList()
                         updated[index] = it
@@ -535,6 +577,7 @@ private fun SummaryStep(
     level: FitnessLevel,
     mode: ExerciseMode,
     workScheduleEnabled: Boolean,
+    autoModeByDayEnabled: Boolean,
     weekSchedule: List<DaySchedule>,
 ) {
     val levelLabelRes = when (level) {
@@ -595,14 +638,16 @@ private fun SummaryStep(
                 SummaryRow(
                     label = stringResource(R.string.onboarding_summary_reps, level.reps),
                 )
-                SummaryRow(
-                    label = stringResource(R.string.onboarding_summary_mode, stringResource(modeLabelRes)),
-                    icon = when (mode) {
-                        ExerciseMode.HOME_WORKOUT -> Icons.Default.FitnessCenter
-                        ExerciseMode.HOME_MOBILITY -> Icons.Default.SelfImprovement
-                        ExerciseMode.OFFICE -> Icons.Default.Business
-                    },
-                )
+                if (!(workScheduleEnabled && autoModeByDayEnabled)) {
+                    SummaryRow(
+                        label = stringResource(R.string.onboarding_summary_mode, stringResource(modeLabelRes)),
+                        icon = when (mode) {
+                            ExerciseMode.HOME_WORKOUT -> Icons.Default.FitnessCenter
+                            ExerciseMode.HOME_MOBILITY -> Icons.Default.SelfImprovement
+                            ExerciseMode.OFFICE -> Icons.Default.Business
+                        },
+                    )
+                }
                 if (workScheduleEnabled) {
                     val dayNames = listOf(
                         stringResource(R.string.day_mon),
@@ -614,13 +659,35 @@ private fun SummaryStep(
                         stringResource(R.string.day_sun),
                     )
 
-                    val groups = buildScheduleGroups(weekSchedule, dayNames)
+                    val groups = buildScheduleGroups(weekSchedule, dayNames, autoModeByDayEnabled)
 
-                    groups.forEach { (days, ws, we, ls, le) ->
-                        SummaryRow(label = "$days: $ws–$we")
+                    groups.forEach { group ->
+                        SummaryRow(label = "${group.days}: ${group.workStart}–${group.workEnd}")
                         SummaryRow(
-                            label = stringResource(R.string.onboarding_summary_lunch, ls, le),
+                            label = stringResource(
+                                R.string.onboarding_summary_lunch,
+                                group.lunchStart,
+                                group.lunchEnd,
+                            ),
+                            indent = 16.dp,
                         )
+                        if (group.mode != null) {
+                            val modeRes = when (group.mode) {
+                                ExerciseMode.HOME_WORKOUT -> R.string.exercise_mode_home_workout
+                                ExerciseMode.HOME_MOBILITY -> R.string.exercise_mode_home_mobility
+                                ExerciseMode.OFFICE -> R.string.exercise_mode_office
+                            }
+                            val modeIcon = when (group.mode) {
+                                ExerciseMode.HOME_WORKOUT -> Icons.Default.FitnessCenter
+                                ExerciseMode.HOME_MOBILITY -> Icons.Default.SelfImprovement
+                                ExerciseMode.OFFICE -> Icons.Default.Business
+                            }
+                            ModeSummaryRow(
+                                modeName = stringResource(modeRes),
+                                icon = modeIcon,
+                                indent = 16.dp,
+                            )
+                        }
                     }
                 } else {
                     SummaryRow(
@@ -633,11 +700,45 @@ private fun SummaryStep(
 }
 
 @Composable
+private fun ModeSummaryRow(
+    modeName: String,
+    icon: ImageVector,
+    indent: androidx.compose.ui.unit.Dp = 0.dp,
+) {
+    val labelPrefix = stringResource(R.string.onboarding_summary_mode, "").trimEnd()
+    Row(
+        modifier = Modifier.padding(start = indent),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = labelPrefix,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Icon(
+            imageVector = icon,
+            contentDescription = modeName,
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = modeName,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
 private fun SummaryRow(
     label: String,
     icon: ImageVector? = null,
+    indent: androidx.compose.ui.unit.Dp = 0.dp,
 ) {
     Row(
+        modifier = Modifier.padding(start = indent),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
@@ -703,13 +804,21 @@ private data class ScheduleGroup(
     val workEnd: String,
     val lunchStart: String,
     val lunchEnd: String,
+    val mode: ExerciseMode?,
 )
 
 private fun buildScheduleGroups(
     weekSchedule: List<DaySchedule>,
     dayNames: List<String>,
+    includeMode: Boolean,
 ): List<ScheduleGroup> {
-    data class Key(val ws: String, val we: String, val ls: String, val le: String)
+    data class Key(
+        val ws: String,
+        val we: String,
+        val ls: String,
+        val le: String,
+        val mode: ExerciseMode?,
+    )
 
     return weekSchedule.indices
         .filter { weekSchedule[it].enabled }
@@ -720,6 +829,7 @@ private fun buildScheduleGroups(
                 we = "%02d:%02d".format(eff.workEndHour, eff.workEndMinute),
                 ls = "%02d:%02d".format(eff.lunchStartHour, eff.lunchStartMinute),
                 le = "%02d:%02d".format(eff.lunchEndHour, eff.lunchEndMinute),
+                mode = if (includeMode) eff.defaultMode else null,
             )
         }
         .groupBy({ it.second }, { it.first })
@@ -730,6 +840,7 @@ private fun buildScheduleGroups(
                 workEnd = key.we,
                 lunchStart = key.ls,
                 lunchEnd = key.le,
+                mode = key.mode,
             )
         }
 }
@@ -740,7 +851,7 @@ private fun OnboardingScreenPreview() {
     OfficeBreakTheme {
         OnboardingScreen(
             onComplete = { _, _ -> },
-            onWorkScheduleConfigured = { _, _ -> },
+            onWorkScheduleConfigured = { _, _, _ -> },
         )
     }
 }

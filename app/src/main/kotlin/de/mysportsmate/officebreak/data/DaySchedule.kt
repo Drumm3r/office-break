@@ -14,6 +14,7 @@ data class DaySchedule(
     val lunchStartMinute: Int = 0,
     val lunchEndHour: Int = 13,
     val lunchEndMinute: Int = 0,
+    val defaultMode: ExerciseMode = ExerciseMode.HOME_WORKOUT,
 )
 
 val DEFAULT_WEEK_SCHEDULE: List<DaySchedule> = listOf(
@@ -79,6 +80,7 @@ fun resolveEffectiveSchedule(schedule: List<DaySchedule>, dayIndex: Int): DaySch
                 lunchStartMinute = prev.lunchStartMinute,
                 lunchEndHour = prev.lunchEndHour,
                 lunchEndMinute = prev.lunchEndMinute,
+                defaultMode = prev.defaultMode,
             )
         }
     }

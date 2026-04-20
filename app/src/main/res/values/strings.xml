@@ -89,6 +89,10 @@
     <string name="day_sat">Sat</string>
     <string name="day_sun">Sun</string>
     <string name="settings_work_schedule_day_linked">Inherit times from previous day</string>
+    <string name="settings_auto_mode_by_day">Auto mode by weekday</string>
+    <string name="settings_auto_mode_by_day_hint">Automatically switches exercise mode based on the weekday</string>
+    <string name="settings_day_mode_label">Mode</string>
+    <string name="settings_day_mode_inherited">Inherited from %1$s</string>
 
     <!-- Dynamic Increase -->
     <string name="dynamic_increase_title">You\'re getting stronger!</string>
@@ -141,8 +145,8 @@
     <string name="onboarding_mode_title">Choose your exercise style</string>
     <string name="onboarding_mode_subtitle">You can switch between modes anytime in settings</string>
     <string name="exercise_mode_label">Exercise mode</string>
-    <string name="exercise_mode_short_home_workout">Workout</string>
-    <string name="exercise_mode_short_home_mobility">Mobility</string>
+    <string name="exercise_mode_short_home_workout">Home Office\nWorkout</string>
+    <string name="exercise_mode_short_home_mobility">Home Office\nMobility</string>
     <string name="exercise_mode_short_office">Office</string>
     <string name="onboarding_summary_mode">Mode: %1$s</string>
 

@@ -92,6 +92,7 @@ fun TimerScreen(
     val exerciseMode by viewModel.exerciseMode.collectAsState()
     val workScheduleEnabled by viewModel.workScheduleEnabled.collectAsState()
     val weekSchedule by viewModel.weekSchedule.collectAsState()
+    val autoModeByDayEnabled by viewModel.autoModeByDayEnabled.collectAsState()
     val dynamicIncreaseOffer by viewModel.dynamicIncreaseOffer.collectAsState()
     val newlyUnlockedAchievements by viewModel.newlyUnlockedAchievements.collectAsState()
     val backupState by viewModel.backupState.collectAsState()
@@ -241,7 +242,9 @@ fun TimerScreen(
             onStopPreview = viewModel::stopPreview,
             workScheduleEnabled = workScheduleEnabled,
             weekSchedule = weekSchedule,
+            autoModeByDayEnabled = autoModeByDayEnabled,
             onWorkScheduleEnabledChange = viewModel::setWorkScheduleEnabled,
+            onAutoModeByDayEnabledChange = viewModel::setAutoModeByDayEnabled,
             onDayScheduleChange = viewModel::updateDaySchedule,
             onTrackingEnabledChange = viewModel::setTrackingEnabled,
             onResetStats = viewModel::resetStats,
