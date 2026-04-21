@@ -706,6 +706,35 @@ class TimerViewModelTest {
         assertEquals(exercise, restoredVm.currentExercise.value)
     }
 
+    @Test
+    fun `onTimerExpired does not repick when currentExercise already set`() = runTest {
+        val exercise = Exercise(name = "Push Ups", isEnabled = true)
+        val json = Json { ignoreUnknownKeys = true }
+        val encoded = json.encodeToString(exercise)
+
+        val restoredHandle = SavedStateHandle(
+            mapOf(
+                "current_exercise" to encoded,
+                "current_reps" to 7,
+            ),
+        )
+        val restoredVm = TimerViewModel(
+            application = application,
+            savedStateHandle = restoredHandle,
+            repository = repository,
+            statsRepository = statsRepository,
+            timerStateHolder = timerStateHolder,
+            serviceController = serviceController,
+        )
+        advanceUntilIdle()
+
+        restoredVm.onTimerExpired()
+        advanceUntilIdle()
+
+        assertEquals(exercise, restoredVm.currentExercise.value)
+        assertEquals(7, restoredVm.currentReps.value)
+    }
+
     // --- Input coercion / clamping tests ---
 
     @Test

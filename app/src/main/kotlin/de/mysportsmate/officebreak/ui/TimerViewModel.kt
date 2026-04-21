@@ -666,6 +666,7 @@ class TimerViewModel @JvmOverloads constructor(
     }
 
     fun onTimerExpired() {
+        if (_currentExercise.value != null) return
         viewModelScope.launch {
             val enabledExercises = repository.exercises.first().filter { it.isEnabled }
             val picked = shuffleBag.pick(enabledExercises) ?: return@launch
