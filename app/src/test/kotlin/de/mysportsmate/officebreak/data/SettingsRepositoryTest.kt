@@ -936,7 +936,7 @@ class SettingsRepositoryTest {
 
     @Test
     fun `setAutoModeByDayEnabled false does not seed`() = runTest {
-        // Start with known custom schedule — Wed has HOME_MOBILITY
+        // Start with known custom schedule - Wed has HOME_MOBILITY
         val schedule = DEFAULT_WEEK_SCHEDULE.toMutableList().apply {
             this[2] = this[2].copy(defaultMode = ExerciseMode.HOME_MOBILITY)
         }
@@ -967,7 +967,7 @@ class SettingsRepositoryTest {
         }
         repository.setWeekSchedule(schedule)
 
-        // Re-enable with HOME_WORKOUT — should NOT overwrite
+        // Re-enable with HOME_WORKOUT - should NOT overwrite
         repository.setAutoModeByDayEnabled(enabled = true, seedMode = ExerciseMode.HOME_WORKOUT)
         val persisted = repository.weekSchedule.first()
         assertEquals(ExerciseMode.HOME_MOBILITY, persisted[2].defaultMode)
@@ -995,7 +995,7 @@ class SettingsRepositoryTest {
 
     @Test
     fun `onboardingCompleted emits false when only autoModeByDay written`() = runTest {
-        // autoMode is not a usage-indicator — onboarding should still show
+        // autoMode is not a usage-indicator - onboarding should still show
         repository.setAutoModeByDayEnabled(enabled = false)
         assertEquals(false, repository.onboardingCompleted.first())
     }

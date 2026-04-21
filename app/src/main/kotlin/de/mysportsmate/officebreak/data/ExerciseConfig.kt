@@ -37,7 +37,7 @@ object ExerciseConfig {
     )
 
     private val knownNameToResKey: Map<String, String> = mapOf(
-        // English — Home Workout
+        // English - Home Workout
         "Push Ups" to "exercise_push_ups",
         "Squats" to "exercise_squats",
         "Deadlifts" to "exercise_deadlifts",
@@ -46,7 +46,7 @@ object ExerciseConfig {
         "Superman Angels" to "exercise_superman_angels",
         "Plank" to "exercise_plank",
         "Glute Bridge" to "exercise_glute_bridge",
-        // English — Home Mobility
+        // English - Home Mobility
         "Cat-Cow Stretch" to "exercise_cat_cow",
         "Child's Pose" to "exercise_childs_pose",
         "Downward Dog" to "exercise_downward_dog",
@@ -55,7 +55,7 @@ object ExerciseConfig {
         "Standing Forward Fold" to "exercise_standing_forward_fold",
         "Thread the Needle" to "exercise_thread_the_needle",
         "Pigeon Stretch" to "exercise_pigeon_stretch",
-        // English — Office
+        // English - Office
         "Shoulder Blade Squeeze" to "exercise_shoulder_blade_squeeze",
         "Chest Opener" to "exercise_chest_opener",
         "Neck Stretch" to "exercise_neck_stretch",
@@ -65,7 +65,7 @@ object ExerciseConfig {
         "Ankle Circles" to "exercise_ankle_circles",
         "Seated Cat-Cow" to "exercise_seated_cat_cow",
         "Seated Core Bracing" to "exercise_seated_core_bracing",
-        // German — Home Workout
+        // German - Home Workout
         "Liegestütze" to "exercise_push_ups",
         "Kniebeugen" to "exercise_squats",
         "Kniebeuge" to "exercise_squats",
@@ -73,14 +73,14 @@ object ExerciseConfig {
         "Ausfallschritte" to "exercise_lunges",
         "Ausfallschritt" to "exercise_lunges",
         "Hüftheben" to "exercise_glute_bridge",
-        // German — Home Mobility
+        // German - Home Mobility
         "Katze-Kuh" to "exercise_cat_cow",
         "Kindhaltung" to "exercise_childs_pose",
         "Herabschauender Hund" to "exercise_downward_dog",
         "Rumpfdrehung" to "exercise_seated_twist",
         "Hüftkreise" to "exercise_hip_circles",
         "Stehende Vorbeuge" to "exercise_standing_forward_fold",
-        // German — Office
+        // German - Office
         "Schulterblätter zusammenziehen" to "exercise_shoulder_blade_squeeze",
         "Brustöffner" to "exercise_chest_opener",
         "Nacken dehnen" to "exercise_neck_stretch",

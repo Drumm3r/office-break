@@ -1,7 +1,11 @@
 package de.mysportsmate.officebreak.ui.screen
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
@@ -13,11 +17,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.DropdownMenuItem
@@ -49,6 +55,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -119,10 +126,32 @@ fun SettingsScreen(
     onResetStats: () -> Unit,
     onExportToUri: (Uri) -> Unit,
     onImportFromUri: (Uri) -> Unit,
+    onOpenKofi: () -> Unit,
+    devModeEnabled: Boolean,
+    settingsDump: String?,
+    onDevModeEnabledChange: (Boolean) -> Unit,
+    onResetDonationPrompt: () -> Unit,
+    onResetOnboarding: () -> Unit,
+    onShowDataStoreDump: () -> Unit,
+    onDismissSettingsDump: () -> Unit,
+    onClearAllData: () -> Unit,
     onBack: () -> Unit,
 ) {
     var showResetStatsDialog by rememberSaveable { mutableStateOf(false) }
     var showImportConfirmDialog by rememberSaveable { mutableStateOf(false) }
+    var showClearAllDialog by rememberSaveable { mutableStateOf(false) }
+    var devTapCount by rememberSaveable { mutableStateOf(0) }
+    val settingsContext = LocalContext.current
+    val devTapTarget = 7
+    val showToast: (String) -> Unit = { msg ->
+        Toast.makeText(settingsContext, msg, Toast.LENGTH_SHORT).show()
+    }
+    LaunchedEffect(devTapCount) {
+        if (devTapCount in 1 until devTapTarget) {
+            kotlinx.coroutines.delay(3_000)
+            devTapCount = 0
+        }
+    }
 
     val soundPickerLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
@@ -191,11 +220,43 @@ fun SettingsScreen(
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
         ) {
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onOpenKofi)
+                    .padding(vertical = 12.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Favorite,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.settings_support_project),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_support_project_summary),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(16.dp))
+
             Text(
                 text = stringResource(R.string.settings_language),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier
-                    .padding(top = 16.dp, bottom = 8.dp)
+                    .padding(bottom = 8.dp)
                     .semantics { heading() },
             )
 
@@ -462,6 +523,16 @@ fun SettingsScreen(
                 text = stringResource(R.string.settings_statistics),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClickLabel = null) {
+                        if (devModeEnabled) return@clickable
+                        devTapCount++
+                        if (devTapCount >= devTapTarget) {
+                            devTapCount = 0
+                            onDevModeEnabledChange(true)
+                            showToast(settingsContext.getString(R.string.dev_mode_enabled_toast))
+                        }
+                    }
                     .padding(bottom = 8.dp)
                     .semantics { heading() },
             )
@@ -519,9 +590,164 @@ fun SettingsScreen(
                 Text(text = stringResource(R.string.settings_import_data))
             }
 
+            if (devModeEnabled) {
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = stringResource(R.string.dev_section_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier
+                        .padding(bottom = 8.dp)
+                        .semantics { heading() },
+                )
+
+                DevModeActionRow(
+                    title = stringResource(R.string.dev_reset_donation),
+                    summary = stringResource(R.string.dev_reset_donation_summary),
+                    onClick = {
+                        onResetDonationPrompt()
+                        showToast(settingsContext.getString(R.string.dev_reset_done))
+                    },
+                )
+
+                DevModeActionRow(
+                    title = stringResource(R.string.dev_reset_onboarding),
+                    summary = stringResource(R.string.dev_reset_onboarding_summary),
+                    onClick = {
+                        onResetOnboarding()
+                        showToast(settingsContext.getString(R.string.dev_reset_done))
+                    },
+                )
+
+                DevModeActionRow(
+                    title = stringResource(R.string.dev_show_dump),
+                    summary = stringResource(R.string.dev_show_dump_summary),
+                    onClick = onShowDataStoreDump,
+                )
+
+                DevModeActionRow(
+                    title = stringResource(R.string.dev_clear_all),
+                    summary = stringResource(R.string.dev_clear_all_summary),
+                    destructive = true,
+                    onClick = { showClearAllDialog = true },
+                )
+
+                DevModeActionRow(
+                    title = stringResource(R.string.dev_disable),
+                    summary = stringResource(R.string.dev_disable_summary),
+                    onClick = {
+                        onDevModeEnabledChange(false)
+                        showToast(settingsContext.getString(R.string.dev_mode_disabled_toast))
+                    },
+                )
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
+
+    if (showClearAllDialog) {
+        ConfirmationDialog(
+            titleRes = R.string.dev_clear_all_confirm_title,
+            messageRes = R.string.dev_clear_all_confirm_message,
+            confirmRes = R.string.dev_clear_all_confirm_yes,
+            dismissRes = R.string.reset_confirm_no,
+            onConfirm = {
+                showClearAllDialog = false
+                onClearAllData()
+            },
+            onDismiss = { showClearAllDialog = false },
+        )
+    }
+
+    if (settingsDump != null) {
+        SettingsDumpDialog(
+            dump = settingsDump,
+            onDismiss = onDismissSettingsDump,
+        )
+    }
+}
+
+@Composable
+private fun DevModeActionRow(
+    title: String,
+    summary: String,
+    destructive: Boolean = false,
+    onClick: () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp),
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (destructive) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
+            )
+            Text(
+                text = summary,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsDumpDialog(
+    dump: String,
+    onDismiss: () -> Unit,
+) {
+    val context = LocalContext.current
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.dev_dump_title)) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 400.dp)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                Text(
+                    text = dump,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    clipboard.setPrimaryClip(ClipData.newPlainText("office-break state", dump))
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.dev_dump_copied),
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                },
+            ) {
+                Text(stringResource(R.string.dev_dump_copy))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.dev_dump_close))
+            }
+        },
+    )
 }
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
@@ -741,7 +967,7 @@ internal fun DayScheduleRow(
                     },
                 ) {
                     Text(
-                        text = "%02d:%02d–%02d:%02d".format(
+                        text = "%02d:%02d-%02d:%02d".format(
                             displayDay.workStartHour, displayDay.workStartMinute,
                             displayDay.workEndHour, displayDay.workEndMinute,
                         ),
@@ -975,6 +1201,15 @@ private fun SettingsScreenPreview() {
             onResetStats = {},
             onExportToUri = {},
             onImportFromUri = {},
+            onOpenKofi = {},
+            devModeEnabled = false,
+            settingsDump = null,
+            onDevModeEnabledChange = {},
+            onResetDonationPrompt = {},
+            onResetOnboarding = {},
+            onShowDataStoreDump = {},
+            onDismissSettingsDump = {},
+            onClearAllData = {},
             onBack = {},
         )
     }

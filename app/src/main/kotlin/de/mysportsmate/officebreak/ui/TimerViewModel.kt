@@ -1,6 +1,7 @@
 package de.mysportsmate.officebreak.ui
 
 import android.app.Application
+import android.content.ActivityNotFoundException
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.util.Log
@@ -89,6 +90,7 @@ class TimerViewModel @JvmOverloads constructor(
         private const val WORK_DAY_MINUTES = 480
         private const val WORK_DAYS_FOR_INCREASE = 3
         private const val MIN_THRESHOLD = 5
+        const val KOFI_URL = "https://ko-fi.com/drumm3r"
     }
 
     private val json = AppJson
@@ -186,6 +188,21 @@ class TimerViewModel @JvmOverloads constructor(
     private val _newlyUnlockedAchievements = MutableStateFlow<List<AchievementDefinition>>(emptyList())
     val newlyUnlockedAchievements: StateFlow<List<AchievementDefinition>> = _newlyUnlockedAchievements.asStateFlow()
 
+    private val installTimestamp: StateFlow<Long> = repository.installTimestamp
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 0L)
+
+    private val donationPromptLastShown: StateFlow<Long> = repository.donationPromptLastShown
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 0L)
+
+    private val donationPromptDismissed: StateFlow<Boolean> = repository.donationPromptDismissed
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    val devModeEnabled: StateFlow<Boolean> = repository.devModeEnabled
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    private val _settingsDump = MutableStateFlow<String?>(null)
+    val settingsDump: StateFlow<String?> = _settingsDump.asStateFlow()
+
     private val restoredExerciseFromHandle: Exercise? =
         savedStateHandle.get<String>(KEY_CURRENT_EXERCISE)?.let { raw ->
             try {
@@ -222,6 +239,23 @@ class TimerViewModel @JvmOverloads constructor(
         savedStateHandle.get<Int>(KEY_CURRENT_REPS) ?: restoredFromDataStore?.reps,
     )
     val currentReps: StateFlow<Int?> = _currentReps.asStateFlow()
+
+    val showDonationPrompt: StateFlow<Boolean> = combine(
+        installTimestamp,
+        donationPromptLastShown,
+        donationPromptDismissed,
+        timerState,
+        _currentExercise,
+    ) { installedAt, lastShown, dismissed, state, activeExercise ->
+        val busy = state !is TimerState.Idle || activeExercise != null
+        DonationPromptResolver.shouldShow(
+            installTimestamp = installedAt,
+            lastShown = lastShown,
+            dismissed = dismissed,
+            timerActive = busy,
+            nowMillis = System.currentTimeMillis(),
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     private var previewTrack: android.media.AudioTrack? = null
     private var previewPlayer: android.media.MediaPlayer? = null
@@ -273,6 +307,9 @@ class TimerViewModel @JvmOverloads constructor(
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to run yearly compaction", e)
             }
+        }
+        launchSafely("Failed to ensure install timestamp") {
+            repository.ensureInstallTimestamp(System.currentTimeMillis())
         }
 
         try {
@@ -893,7 +930,7 @@ class TimerViewModel @JvmOverloads constructor(
                 } ?: -1L
 
                 if (size in 1..MAX_BACKUP_SIZE_BYTES) {
-                    // size known and within bounds — proceed
+                    // size known and within bounds - proceed
                 } else if (size > MAX_BACKUP_SIZE_BYTES) {
                     _backupState.value = BackupUiState.Error(app.getString(R.string.import_error_too_large))
                     return@launch
@@ -943,6 +980,111 @@ class TimerViewModel @JvmOverloads constructor(
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to apply work schedule", e)
             }
+        }
+    }
+
+    fun onDonationShown() {
+        launchSafely("Failed to mark donation prompt shown") {
+            repository.markDonationPromptShown(System.currentTimeMillis())
+        }
+    }
+
+    fun onDonationSupport() {
+        launchSafely("Failed to mark donation prompt supported") {
+            repository.markDonationPromptDismissed()
+        }
+        openKofiLink()
+    }
+
+    fun onDonationLater() {
+        launchSafely("Failed to snooze donation prompt") {
+            repository.markDonationPromptShown(System.currentTimeMillis())
+        }
+    }
+
+    fun onDonationDismiss() {
+        launchSafely("Failed to dismiss donation prompt") {
+            repository.markDonationPromptDismissed()
+        }
+    }
+
+    fun setDevModeEnabled(enabled: Boolean) {
+        launchSafely("Failed to toggle dev mode") {
+            repository.setDevModeEnabled(enabled)
+        }
+    }
+
+    fun resetDonationPromptForTesting() {
+        launchSafely("Failed to reset donation prompt") {
+            repository.resetDonationPrompt(System.currentTimeMillis())
+        }
+    }
+
+    fun resetOnboarding() {
+        launchSafely("Failed to reset onboarding") {
+            repository.setOnboardingCompleted(false)
+        }
+    }
+
+    fun clearAllData() {
+        viewModelScope.launch {
+            try {
+                repository.clearAll()
+                statsRepository.resetAllStats()
+                WidgetUpdater.requestUpdate(getApplication())
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to clear all data", e)
+            }
+        }
+    }
+
+    fun loadSettingsDump() {
+        viewModelScope.launch {
+            try {
+                val prefs = repository.dumpPreferences()
+                val formatted = buildString {
+                    append("App: ")
+                    append(getApplication<Application>().packageName)
+                    append('\n')
+                    append("Version: ")
+                    append(de.mysportsmate.officebreak.BuildConfig.VERSION_NAME)
+                    append(" (")
+                    append(de.mysportsmate.officebreak.BuildConfig.VERSION_CODE)
+                    append(")\n")
+                    append("Build: ")
+                    append(if (de.mysportsmate.officebreak.BuildConfig.DEBUG) "debug" else "release")
+                    append('\n')
+                    append("Git: ")
+                    append(de.mysportsmate.officebreak.BuildConfig.GIT_SHA)
+                    append('\n')
+                    append("Built: ")
+                    append(de.mysportsmate.officebreak.BuildConfig.BUILD_TIMESTAMP)
+                    append("\n\n=== DataStore ===\n")
+                    prefs.toSortedMap().forEach { (key, value) ->
+                        append(key).append(" = ").append(value).append('\n')
+                    }
+                }
+                _settingsDump.value = formatted
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to dump settings", e)
+                _settingsDump.value = "Error: ${e.message}"
+            }
+        }
+    }
+
+    fun clearSettingsDump() {
+        _settingsDump.value = null
+    }
+
+    fun openKofiLink() {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(KOFI_URL))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        try {
+            getApplication<Application>().startActivity(intent)
+        } catch (e: ActivityNotFoundException) {
+            Log.w(TAG, "No activity available to open Ko-fi link", e)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to open Ko-fi link", e)
         }
     }
 

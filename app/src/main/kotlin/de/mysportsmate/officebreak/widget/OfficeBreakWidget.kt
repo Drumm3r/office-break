@@ -50,7 +50,7 @@ class OfficeBreakWidget : GlanceAppWidget() {
         val localizedContext = LocaleHelper.createLocalizedContext(context, language)
 
         provideContent {
-            // Read timer state from Glance state (reactive — recomposes on change)
+            // Read timer state from Glance state (reactive - recomposes on change)
             val glanceState = currentState<Preferences>()
             val storedStatus = glanceState[WidgetUpdater.KEY_TIMER_STATUS] ?: WidgetTimerState.STATUS_IDLE
             val endRealtime = glanceState[WidgetUpdater.KEY_TIMER_END_REALTIME] ?: 0L

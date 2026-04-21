@@ -1566,7 +1566,7 @@ class TimerViewModelTest {
         viewModel.applyDayDefaultModeIfEnabled()
         advanceUntilIdle()
 
-        // Mode stays what it was — today disabled, no switch
+        // Mode stays what it was - today disabled, no switch
         assertEquals(ExerciseMode.HOME_WORKOUT, repository.exerciseMode.first())
 
         collectors.forEach { it.cancel() }

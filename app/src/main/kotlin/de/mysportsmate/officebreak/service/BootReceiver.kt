@@ -24,7 +24,7 @@ class BootReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                // Reset widget timer state — elapsedRealtime() resets on reboot and
+                // Reset widget timer state - elapsedRealtime() resets on reboot and
                 // TimerService (START_NOT_STICKY) does not survive reboot
                 context.dataStore.edit {
                     it[TimerService.KEY_WIDGET_TIMER_STATUS] = WidgetTimerState.STATUS_IDLE

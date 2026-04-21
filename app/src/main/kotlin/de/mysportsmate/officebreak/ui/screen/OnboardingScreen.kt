@@ -662,7 +662,7 @@ private fun SummaryStep(
                     val groups = buildScheduleGroups(weekSchedule, dayNames, autoModeByDayEnabled)
 
                     groups.forEach { group ->
-                        SummaryRow(label = "${group.days}: ${group.workStart}–${group.workEnd}")
+                        SummaryRow(label = "${group.days}: ${group.workStart}-${group.workEnd}")
                         SummaryRow(
                             label = stringResource(
                                 R.string.onboarding_summary_lunch,

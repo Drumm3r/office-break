@@ -1,7 +1,19 @@
+import java.time.Instant
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
+}
+
+fun readGitSha(): String = try {
+    val process = ProcessBuilder("git", "rev-parse", "--short", "HEAD")
+        .directory(rootDir)
+        .redirectErrorStream(true)
+        .start()
+    process.inputStream.bufferedReader().use { it.readText() }.trim().ifEmpty { "unknown" }
+} catch (_: Exception) {
+    "unknown"
 }
 
 android {
@@ -14,6 +26,9 @@ android {
         targetSdk = 36
         versionCode = 8
         versionName = "0.8.0"
+
+        buildConfigField("String", "GIT_SHA", "\"${readGitSha()}\"")
+        buildConfigField("String", "BUILD_TIMESTAMP", "\"${Instant.now()}\"")
     }
 
     buildTypes {
@@ -34,6 +49,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     testOptions {

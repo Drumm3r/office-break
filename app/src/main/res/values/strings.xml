@@ -68,7 +68,7 @@
     <string name="settings_work_end">Work end</string>
     <string name="settings_lunch_start">Break start</string>
     <string name="settings_lunch_end">Break end</string>
-    <string name="notification_text_lunch_pause">Break — timer paused</string>
+    <string name="notification_text_lunch_pause">Break - timer paused</string>
     <string name="work_ended_title">Enjoy your time off!</string>
     <string name="work_ended_message">Your shift has ended. The timer was stopped automatically.</string>
     <string name="work_ended_dismiss">OK</string>
@@ -81,7 +81,7 @@
     <string name="notification_work_start_action">Start</string>
     <string name="timer_paused_lunch">Break</string>
     <string name="onboarding_schedule_title">Set your work schedule</string>
-    <string name="onboarding_schedule_subtitle">Optional — you can set this up later in settings</string>
+    <string name="onboarding_schedule_subtitle">Optional - you can set this up later in settings</string>
     <string name="onboarding_schedule_select_days">Select your work days</string>
     <string name="day_mon">Mon</string>
     <string name="day_tue">Tue</string>
@@ -175,8 +175,8 @@
     <string name="onboarding_summary_interval">Break every %1$s</string>
     <string name="onboarding_summary_reps">%d reps per exercise</string>
     <string name="onboarding_summary_exercises">%d exercises selected</string>
-    <string name="onboarding_summary_work_schedule">Work schedule: %1$s – %2$s</string>
-    <string name="onboarding_summary_lunch">Break: %1$s – %2$s</string>
+    <string name="onboarding_summary_work_schedule">Work schedule: %1$s - %2$s</string>
+    <string name="onboarding_summary_lunch">Break: %1$s - %2$s</string>
     <string name="onboarding_summary_work_schedule_off">Work schedule: off</string>
     <string name="onboarding_next">Next</string>
     <string name="onboarding_back">Back</string>
@@ -340,6 +340,38 @@
     <string name="widget_start">Start</string>
     <string name="widget_open">Open</string>
     <string name="navigate_back">Navigate back</string>
+
+    <!-- Donation prompt -->
+    <string name="donation_prompt_title">Thanks for using Office Break</string>
+    <string name="donation_prompt_message">This app is free and always will be. If it helps your daily routine, a small tip on Ko-fi keeps development going - totally optional.</string>
+    <string name="donation_prompt_support">Support</string>
+    <string name="donation_prompt_later">Maybe later</string>
+    <string name="donation_prompt_dismiss">No thanks</string>
+    <string name="settings_support_project">Support the project</string>
+    <string name="settings_support_project_summary">Buy me a coffee on Ko-fi</string>
+
+    <!-- Developer mode -->
+    <string name="dev_mode_enabled_toast">Developer mode enabled</string>
+    <string name="dev_mode_disabled_toast">Developer mode disabled</string>
+    <string name="dev_section_title">Developer</string>
+    <string name="dev_reset_donation">Reset donation popup</string>
+    <string name="dev_reset_donation_summary">Clears dismissed/snoozed state and rewinds install date</string>
+    <string name="dev_reset_onboarding">Reset onboarding</string>
+    <string name="dev_reset_onboarding_summary">Show onboarding flow on next launch</string>
+    <string name="dev_show_dump">Show DataStore dump</string>
+    <string name="dev_show_dump_summary">View all settings values (for bug reports)</string>
+    <string name="dev_clear_all">Wipe all app data</string>
+    <string name="dev_clear_all_summary">Resets settings, stats, achievements - cannot be undone</string>
+    <string name="dev_clear_all_confirm_title">Wipe all app data?</string>
+    <string name="dev_clear_all_confirm_message">This deletes all settings, statistics, achievements, and custom exercises. Cannot be undone.</string>
+    <string name="dev_clear_all_confirm_yes">Wipe</string>
+    <string name="dev_disable">Disable developer mode</string>
+    <string name="dev_disable_summary">Hide this section</string>
+    <string name="dev_dump_title">App &amp; DataStore state</string>
+    <string name="dev_dump_copy">Copy</string>
+    <string name="dev_dump_close">Close</string>
+    <string name="dev_dump_copied">Copied to clipboard</string>
+    <string name="dev_reset_done">Done</string>
 
     <!-- Share Achievement -->
     <string name="share_achievement">Share</string>

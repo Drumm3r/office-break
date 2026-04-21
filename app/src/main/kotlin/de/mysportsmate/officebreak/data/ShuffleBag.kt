@@ -3,7 +3,7 @@ package de.mysportsmate.officebreak.data
 /**
  * Exercise shuffle-bag. Picks a random exercise from the enabled set, tracking
  * used names so the same exercise isn't picked twice in a row (unless there's
- * only one enabled exercise). When all names have been used, the bag refills —
+ * only one enabled exercise). When all names have been used, the bag refills -
  * keeping the most recent pick out of the refill to avoid back-to-back repeats.
  */
 class ShuffleBag(

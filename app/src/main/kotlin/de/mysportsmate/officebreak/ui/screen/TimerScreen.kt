@@ -55,6 +55,7 @@ import de.mysportsmate.officebreak.ui.TimerViewModel
 import de.mysportsmate.officebreak.ui.components.AchievementUnlockDialog
 import de.mysportsmate.officebreak.ui.components.ConfirmationDialog
 import de.mysportsmate.officebreak.ui.components.CountdownDisplay
+import de.mysportsmate.officebreak.ui.components.DonationPromptDialog
 import de.mysportsmate.officebreak.ui.components.DynamicIncreaseDialog
 import de.mysportsmate.officebreak.ui.components.ExerciseDialog
 import de.mysportsmate.officebreak.ui.components.TimerSetup
@@ -100,6 +101,9 @@ fun TimerScreen(
     val dynamicIncreaseOffer by viewModel.dynamicIncreaseOffer.collectAsState()
     val newlyUnlockedAchievements by viewModel.newlyUnlockedAchievements.collectAsState()
     val backupState by viewModel.backupState.collectAsState()
+    val showDonationPrompt by viewModel.showDonationPrompt.collectAsState()
+    val devModeEnabled by viewModel.devModeEnabled.collectAsState()
+    val settingsDump by viewModel.settingsDump.collectAsState()
     val ttsContext = LocalContext.current
     val ttsManager = remember { BreakTtsManager(ttsContext) }
     DisposableEffect(Unit) {
@@ -185,6 +189,35 @@ fun TimerScreen(
         )
     }
 
+    var donationDialogVisible by rememberSaveable { mutableStateOf(false) }
+    val donationDialogAllowed = showDonationPrompt &&
+        currentExercise == null &&
+        newlyUnlockedAchievements.isEmpty() &&
+        dynamicIncreaseOffer == null &&
+        !showResetDialog
+    LaunchedEffect(donationDialogAllowed) {
+        if (donationDialogAllowed && !donationDialogVisible) {
+            donationDialogVisible = true
+            viewModel.onDonationShown()
+        }
+    }
+    if (donationDialogVisible) {
+        DonationPromptDialog(
+            onSupport = {
+                donationDialogVisible = false
+                viewModel.onDonationSupport()
+            },
+            onLater = {
+                donationDialogVisible = false
+                viewModel.onDonationLater()
+            },
+            onDismiss = {
+                donationDialogVisible = false
+                viewModel.onDonationDismiss()
+            },
+        )
+    }
+
     if (showStats) {
         StatsScreen(
             snapshot = statsSnapshot,
@@ -255,6 +288,15 @@ fun TimerScreen(
             onResetStats = viewModel::resetStats,
             onExportToUri = viewModel::exportData,
             onImportFromUri = viewModel::importData,
+            onOpenKofi = viewModel::openKofiLink,
+            devModeEnabled = devModeEnabled,
+            settingsDump = settingsDump,
+            onDevModeEnabledChange = viewModel::setDevModeEnabled,
+            onResetDonationPrompt = viewModel::resetDonationPromptForTesting,
+            onResetOnboarding = viewModel::resetOnboarding,
+            onShowDataStoreDump = viewModel::loadSettingsDump,
+            onDismissSettingsDump = viewModel::clearSettingsDump,
+            onClearAllData = viewModel::clearAllData,
             onBack = { showSettings = false },
         )
 

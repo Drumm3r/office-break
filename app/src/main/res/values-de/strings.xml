@@ -68,7 +68,7 @@
     <string name="settings_work_end">Arbeitsende</string>
     <string name="settings_lunch_start">Pause Beginn</string>
     <string name="settings_lunch_end">Pause Ende</string>
-    <string name="notification_text_lunch_pause">Pause — Timer pausiert</string>
+    <string name="notification_text_lunch_pause">Pause - Timer pausiert</string>
     <string name="work_ended_title">Schönen Feierabend!</string>
     <string name="work_ended_message">Dein Arbeitstag ist vorbei. Der Timer wurde automatisch gestoppt.</string>
     <string name="work_ended_dismiss">OK</string>
@@ -81,7 +81,7 @@
     <string name="notification_work_start_action">Starten</string>
     <string name="timer_paused_lunch">Pause</string>
     <string name="onboarding_schedule_title">Deine Arbeitszeiten</string>
-    <string name="onboarding_schedule_subtitle">Optional — du kannst das später in den Einstellungen ändern</string>
+    <string name="onboarding_schedule_subtitle">Optional - du kannst das später in den Einstellungen ändern</string>
     <string name="onboarding_schedule_select_days">Wähle deine Arbeitstage</string>
     <string name="day_mon">Mo</string>
     <string name="day_tue">Di</string>
@@ -175,8 +175,8 @@
     <string name="onboarding_summary_interval">Pause alle %1$s</string>
     <string name="onboarding_summary_reps">%d Wiederholungen pro Übung</string>
     <string name="onboarding_summary_exercises">%d Übungen ausgewählt</string>
-    <string name="onboarding_summary_work_schedule">Arbeitszeiten: %1$s – %2$s</string>
-    <string name="onboarding_summary_lunch">Pause: %1$s – %2$s</string>
+    <string name="onboarding_summary_work_schedule">Arbeitszeiten: %1$s - %2$s</string>
+    <string name="onboarding_summary_lunch">Pause: %1$s - %2$s</string>
     <string name="onboarding_summary_work_schedule_off">Arbeitszeiten: aus</string>
     <string name="onboarding_next">Weiter</string>
     <string name="onboarding_back">Zurück</string>
@@ -340,6 +340,38 @@
     <string name="widget_start">Start</string>
     <string name="widget_open">Öffnen</string>
     <string name="navigate_back">Zurück</string>
+
+    <!-- Donation prompt -->
+    <string name="donation_prompt_title">Danke, dass du Office Break nutzt</string>
+    <string name="donation_prompt_message">Die App ist und bleibt kostenlos. Wenn sie dir im Alltag hilft, freue ich mich über einen kleinen Beitrag auf Ko-fi - rein freiwillig, hilft aber bei der Weiterentwicklung.</string>
+    <string name="donation_prompt_support">Unterstützen</string>
+    <string name="donation_prompt_later">Später</string>
+    <string name="donation_prompt_dismiss">Nein danke</string>
+    <string name="settings_support_project">Projekt unterstützen</string>
+    <string name="settings_support_project_summary">Spendier mir einen Kaffee auf Ko-fi</string>
+
+    <!-- Developer mode -->
+    <string name="dev_mode_enabled_toast">Entwicklermodus aktiviert</string>
+    <string name="dev_mode_disabled_toast">Entwicklermodus deaktiviert</string>
+    <string name="dev_section_title">Entwickler</string>
+    <string name="dev_reset_donation">Spenden-Popup zurücksetzen</string>
+    <string name="dev_reset_donation_summary">Löscht Dismiss/Snooze und setzt das Installationsdatum zurück</string>
+    <string name="dev_reset_onboarding">Onboarding zurücksetzen</string>
+    <string name="dev_reset_onboarding_summary">Onboarding beim nächsten Start erneut anzeigen</string>
+    <string name="dev_show_dump">DataStore-Dump anzeigen</string>
+    <string name="dev_show_dump_summary">Alle Einstellungswerte anzeigen (für Bug-Reports)</string>
+    <string name="dev_clear_all">Alle App-Daten löschen</string>
+    <string name="dev_clear_all_summary">Setzt Einstellungen, Statistiken, Erfolge zurück - nicht umkehrbar</string>
+    <string name="dev_clear_all_confirm_title">Alle Daten löschen?</string>
+    <string name="dev_clear_all_confirm_message">Das löscht alle Einstellungen, Statistiken, Erfolge und eigenen Übungen. Kann nicht rückgängig gemacht werden.</string>
+    <string name="dev_clear_all_confirm_yes">Löschen</string>
+    <string name="dev_disable">Entwicklermodus deaktivieren</string>
+    <string name="dev_disable_summary">Diesen Bereich ausblenden</string>
+    <string name="dev_dump_title">App- und DataStore-Status</string>
+    <string name="dev_dump_copy">Kopieren</string>
+    <string name="dev_dump_close">Schließen</string>
+    <string name="dev_dump_copied">In Zwischenablage kopiert</string>
+    <string name="dev_reset_done">Erledigt</string>
 
     <!-- Share Achievement -->
     <string name="share_achievement">Teilen</string>

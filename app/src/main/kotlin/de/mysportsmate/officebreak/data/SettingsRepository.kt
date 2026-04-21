@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -219,6 +220,22 @@ class SettingsRepository(
         prefs[KEY_ACTIVE_BREAK_STATE]
     }
 
+    val installTimestamp: Flow<Long> = dataStore.data.map { prefs ->
+        prefs[KEY_INSTALL_TIMESTAMP] ?: 0L
+    }
+
+    val donationPromptLastShown: Flow<Long> = dataStore.data.map { prefs ->
+        prefs[KEY_DONATION_PROMPT_LAST_SHOWN] ?: 0L
+    }
+
+    val donationPromptDismissed: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[KEY_DONATION_PROMPT_DISMISSED] ?: false
+    }
+
+    val devModeEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[KEY_DEV_MODE_ENABLED] ?: false
+    }
+
     suspend fun setTimerHours(hours: Int) {
         dataStore.edit { it[KEY_TIMER_HOURS] = hours }
     }
@@ -362,6 +379,45 @@ class SettingsRepository(
                 it.remove(KEY_ACTIVE_BREAK_STATE)
             }
         }
+    }
+
+    suspend fun ensureInstallTimestamp(nowMillis: Long) {
+        dataStore.edit { prefs ->
+            if (prefs[KEY_INSTALL_TIMESTAMP] == null) {
+                prefs[KEY_INSTALL_TIMESTAMP] = nowMillis
+            }
+        }
+    }
+
+    suspend fun markDonationPromptShown(nowMillis: Long) {
+        dataStore.edit { it[KEY_DONATION_PROMPT_LAST_SHOWN] = nowMillis }
+    }
+
+    suspend fun markDonationPromptDismissed() {
+        dataStore.edit { it[KEY_DONATION_PROMPT_DISMISSED] = true }
+    }
+
+    suspend fun setDevModeEnabled(value: Boolean) {
+        dataStore.edit { it[KEY_DEV_MODE_ENABLED] = value }
+    }
+
+    suspend fun resetDonationPrompt(nowMillis: Long) {
+        dataStore.edit { prefs ->
+            prefs.remove(KEY_DONATION_PROMPT_LAST_SHOWN)
+            prefs.remove(KEY_DONATION_PROMPT_DISMISSED)
+            prefs[KEY_INSTALL_TIMESTAMP] = nowMillis - java.util.concurrent.TimeUnit.DAYS.toMillis(
+                DONATION_PROMPT_INITIAL_DAYS + 1,
+            )
+        }
+    }
+
+    suspend fun dumpPreferences(): Map<String, Any?> {
+        val prefs = dataStore.data.first()
+        return prefs.asMap().mapKeys { it.key.name }
+    }
+
+    suspend fun clearAll() {
+        dataStore.edit { it.clear() }
     }
 
     suspend fun snapshotForExport(): SettingsExportSnapshot {
@@ -531,6 +587,10 @@ class SettingsRepository(
         internal val KEY_LAST_PICKED_NAME = stringPreferencesKey("last_picked_name")
         internal val KEY_ACTIVE_BREAK_STATE = stringPreferencesKey("active_break_state")
         internal val KEY_ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
+        internal val KEY_INSTALL_TIMESTAMP = longPreferencesKey("install_timestamp")
+        internal val KEY_DONATION_PROMPT_LAST_SHOWN = longPreferencesKey("donation_prompt_last_shown")
+        internal val KEY_DONATION_PROMPT_DISMISSED = booleanPreferencesKey("donation_prompt_dismissed")
+        internal val KEY_DEV_MODE_ENABLED = booleanPreferencesKey("dev_mode_enabled")
 
         const val DEFAULT_HOURS = 0
         const val DEFAULT_MINUTES = 30
@@ -569,8 +629,11 @@ class SettingsRepository(
         const val DEFAULT_DYNAMIC_INCREASE_ENABLED = true
         const val DEFAULT_BREAKS_SINCE_LAST_INCREASE = 0
 
+        const val DONATION_PROMPT_INITIAL_DAYS = 21L
+        const val DONATION_PROMPT_SNOOZE_DAYS = 60L
+
         private val KNOWN_DEFAULT_NAMES: Map<String, String> = mapOf(
-            // English — Home Workout
+            // English - Home Workout
             "Push Ups" to "exercise_push_ups",
             "Squats" to "exercise_squats",
             "Deadlifts" to "exercise_deadlifts",
@@ -579,7 +642,7 @@ class SettingsRepository(
             "Superman Angels" to "exercise_superman_angels",
             "Plank" to "exercise_plank",
             "Glute Bridge" to "exercise_glute_bridge",
-            // English — Home Mobility
+            // English - Home Mobility
             "Cat-Cow Stretch" to "exercise_cat_cow",
             "Child's Pose" to "exercise_childs_pose",
             "Downward Dog" to "exercise_downward_dog",
@@ -588,7 +651,7 @@ class SettingsRepository(
             "Standing Forward Fold" to "exercise_standing_forward_fold",
             "Thread the Needle" to "exercise_thread_the_needle",
             "Pigeon Stretch" to "exercise_pigeon_stretch",
-            // English — Office
+            // English - Office
             "Shoulder Blade Squeeze" to "exercise_shoulder_blade_squeeze",
             "Chest Opener" to "exercise_chest_opener",
             "Neck Stretch" to "exercise_neck_stretch",
@@ -598,7 +661,7 @@ class SettingsRepository(
             "Ankle Circles" to "exercise_ankle_circles",
             "Seated Cat-Cow" to "exercise_seated_cat_cow",
             "Seated Core Bracing" to "exercise_seated_core_bracing",
-            // German — Home Workout
+            // German - Home Workout
             "Liegestütze" to "exercise_push_ups",
             "Kniebeugen" to "exercise_squats",
             "Kniebeuge" to "exercise_squats",
@@ -606,14 +669,14 @@ class SettingsRepository(
             "Ausfallschritte" to "exercise_lunges",
             "Ausfallschritt" to "exercise_lunges",
             "Hüftheben" to "exercise_glute_bridge",
-            // German — Home Mobility
+            // German - Home Mobility
             "Katze-Kuh" to "exercise_cat_cow",
             "Kindhaltung" to "exercise_childs_pose",
             "Herabschauender Hund" to "exercise_downward_dog",
             "Rumpfdrehung" to "exercise_seated_twist",
             "Hüftkreise" to "exercise_hip_circles",
             "Stehende Vorbeuge" to "exercise_standing_forward_fold",
-            // German — Office
+            // German - Office
             "Schulterblätter zusammenziehen" to "exercise_shoulder_blade_squeeze",
             "Brustöffner" to "exercise_chest_opener",
             "Nacken dehnen" to "exercise_neck_stretch",
