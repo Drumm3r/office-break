@@ -5,9 +5,11 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.Celebration
 import androidx.compose.material.icons.filled.Create
+import androidx.compose.material.icons.filled.Diversity3
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.LunchDining
 import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Shuffle
@@ -36,8 +38,13 @@ class AchievementIconTest {
     }
 
     @Test
-    fun `iconForName maps Diversity3 to AutoAwesome`() {
-        assertEquals(Icons.Default.AutoAwesome, iconForName("Diversity3"))
+    fun `iconForName returns Diversity3 for Diversity3`() {
+        assertEquals(Icons.Default.Diversity3, iconForName("Diversity3"))
+    }
+
+    @Test
+    fun `iconForName returns AutoAwesome for AutoAwesome`() {
+        assertEquals(Icons.Default.AutoAwesome, iconForName("AutoAwesome"))
     }
 
     @Test
@@ -71,8 +78,8 @@ class AchievementIconTest {
     }
 
     @Test
-    fun `iconForName maps LunchDining to Today`() {
-        assertEquals(Icons.Default.Today, iconForName("LunchDining"))
+    fun `iconForName returns LunchDining for LunchDining`() {
+        assertEquals(Icons.Default.LunchDining, iconForName("LunchDining"))
     }
 
     @Test

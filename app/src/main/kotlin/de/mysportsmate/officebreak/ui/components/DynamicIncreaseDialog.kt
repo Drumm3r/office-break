@@ -33,6 +33,7 @@ fun DynamicIncreaseDialog(
     onAcceptReps: () -> Unit,
     onAcceptInterval: () -> Unit,
     onDecline: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Dialog(
         onDismissRequest = { /* Not dismissible */ },
@@ -46,7 +47,7 @@ fun DynamicIncreaseDialog(
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface,
             ),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = modifier.fillMaxWidth(),
         ) {
             Column(
                 modifier = Modifier

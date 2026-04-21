@@ -6,7 +6,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
+import de.mysportsmate.officebreak.R
 import de.mysportsmate.officebreak.ui.theme.OfficeBreakTheme
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,10 +31,22 @@ fun CountdownDisplay(
     val primaryColor = MaterialTheme.colorScheme.primary
     val trackColor = MaterialTheme.colorScheme.surfaceVariant
     val timeText = formatTime(remainingSeconds)
+    val remainingMinutes = (remainingSeconds / 60).toInt()
+    val remainingSecs = (remainingSeconds % 60).toInt()
+    val description = stringResource(
+        R.string.countdown_remaining_description,
+        remainingMinutes,
+        remainingSecs,
+    )
 
     Box(
         contentAlignment = Alignment.Center,
-        modifier = modifier.size(280.dp),
+        modifier = modifier
+            .size(280.dp)
+            .semantics(mergeDescendants = true) {
+                contentDescription = description
+                progressBarRangeInfo = ProgressBarRangeInfo(progress, 0f..1f)
+            },
     ) {
         Canvas(modifier = Modifier.size(280.dp)) {
             val strokeWidth = 12.dp.toPx()

@@ -1,5 +1,6 @@
 package de.mysportsmate.officebreak.ui.share
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -9,6 +10,8 @@ import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.Shader
 import android.graphics.Typeface
+import android.util.Log
+import android.widget.Toast
 import androidx.annotation.VisibleForTesting
 import androidx.core.content.FileProvider
 import androidx.core.content.res.ResourcesCompat
@@ -40,11 +43,23 @@ suspend fun shareAchievement(
     title: String,
     description: String,
 ) {
-    val file = withContext(Dispatchers.Default) {
-        val bitmap = renderShareCard(context, title, description)
-        saveBitmapToCache(context, bitmap)
+    try {
+        val file = withContext(Dispatchers.Default) {
+            val bitmap = renderShareCard(context, title, description)
+            saveBitmapToCache(context, bitmap)
+        }
+        launchShareIntent(context, file, title)
+    } catch (e: ActivityNotFoundException) {
+        Log.e("ShareAchievement", "No share target available", e)
+        withContext(Dispatchers.Main) {
+            Toast.makeText(context, R.string.share_error, Toast.LENGTH_SHORT).show()
+        }
+    } catch (e: Exception) {
+        Log.e("ShareAchievement", "Failed to share achievement", e)
+        withContext(Dispatchers.Main) {
+            Toast.makeText(context, R.string.share_error, Toast.LENGTH_SHORT).show()
+        }
     }
-    launchShareIntent(context, file, title)
 }
 
 private fun renderShareCard(

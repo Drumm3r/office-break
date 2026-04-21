@@ -393,34 +393,39 @@ class SettingsRepository(
 
     suspend fun restoreFromBackup(data: BackupData) {
         dataStore.edit { prefs ->
-            prefs[KEY_TIMER_HOURS] = data.timerHours
-            prefs[KEY_TIMER_MINUTES] = data.timerMinutes
-            prefs[KEY_REPS_MIN] = data.repsMin
-            prefs[KEY_REPS_MAX] = data.repsMax
+            prefs[KEY_TIMER_HOURS] = data.timerHours.coerceIn(0, 23)
+            prefs[KEY_TIMER_MINUTES] = data.timerMinutes.coerceIn(0, 59)
+            prefs[KEY_REPS_MIN] = data.repsMin.coerceIn(0, 999)
+            prefs[KEY_REPS_MAX] = data.repsMax.coerceIn(0, 999)
             prefs[KEY_REPS_LINKED] = data.repsLinked
             prefs[KEY_LANGUAGE] = data.language
             prefs[KEY_THEME_MODE] = data.themeMode
-            prefs[KEY_BEEP_VOLUME] = data.beepVolume
+            prefs[KEY_BEEP_VOLUME] = data.beepVolume.coerceIn(0, 100)
             prefs[KEY_VIBRATION_ENABLED] = data.vibrationEnabled
-            prefs[KEY_BEEP_COUNT] = data.beepCount
+            prefs[KEY_BEEP_COUNT] = data.beepCount.coerceIn(1, 10)
             prefs[KEY_KEEP_SCREEN_ON] = data.keepScreenOn
             prefs[KEY_AUTO_RESTART] = data.autoRestart
             prefs[KEY_DYNAMIC_INCREASE_ENABLED] = data.dynamicIncreaseEnabled
-            prefs[KEY_BREAKS_SINCE_LAST_INCREASE] = data.breaksSinceLastIncrease
+            prefs[KEY_BREAKS_SINCE_LAST_INCREASE] = data.breaksSinceLastIncrease.coerceIn(0, 10_000)
             prefs[KEY_TTS_ENABLED] = data.ttsEnabled
             // customSoundUri is device-specific, not restored from backup
             prefs[KEY_WORK_SCHEDULE_ENABLED] = data.workScheduleEnabled
             prefs[KEY_AUTO_MODE_BY_DAY] = data.autoModeByDayEnabled
             if (data.weekSchedule.isNotEmpty()) {
-                prefs[KEY_WEEK_SCHEDULE] = json.encodeToString(data.weekSchedule)
+                val clamped = data.weekSchedule.take(7).map { it.clamp() }
+                prefs[KEY_WEEK_SCHEDULE] = json.encodeToString(clamped)
             } else {
                 // Migrate from old flat fields
                 val baseDay = DaySchedule(
                     enabled = true, linked = false,
-                    workStartHour = data.workStartHour, workStartMinute = data.workStartMinute,
-                    workEndHour = data.workEndHour, workEndMinute = data.workEndMinute,
-                    lunchStartHour = data.lunchStartHour, lunchStartMinute = data.lunchStartMinute,
-                    lunchEndHour = data.lunchEndHour, lunchEndMinute = data.lunchEndMinute,
+                    workStartHour = data.workStartHour.coerceIn(0, 23),
+                    workStartMinute = data.workStartMinute.coerceIn(0, 59),
+                    workEndHour = data.workEndHour.coerceIn(0, 23),
+                    workEndMinute = data.workEndMinute.coerceIn(0, 59),
+                    lunchStartHour = data.lunchStartHour.coerceIn(0, 23),
+                    lunchStartMinute = data.lunchStartMinute.coerceIn(0, 59),
+                    lunchEndHour = data.lunchEndHour.coerceIn(0, 23),
+                    lunchEndMinute = data.lunchEndMinute.coerceIn(0, 59),
                 )
                 val linkedDay = baseDay.copy(linked = true)
                 val offDay = DaySchedule(enabled = false, linked = false)
@@ -475,42 +480,42 @@ class SettingsRepository(
     )
 
     companion object {
-        private val KEY_TIMER_HOURS = intPreferencesKey("timer_hours")
-        private val KEY_TIMER_MINUTES = intPreferencesKey("timer_minutes")
-        private val KEY_REPS_MIN = intPreferencesKey("reps_min")
-        private val KEY_REPS_MAX = intPreferencesKey("reps_max")
-        private val KEY_REPS_LINKED = booleanPreferencesKey("reps_linked")
-        private val KEY_EXERCISES = stringPreferencesKey("exercises")
-        private val KEY_EXERCISE_MODE = stringPreferencesKey("exercise_mode")
-        private val KEY_EXERCISES_HOME_WORKOUT = stringPreferencesKey("exercises_home_workout")
-        private val KEY_EXERCISES_HOME_MOBILITY = stringPreferencesKey("exercises_home_mobility")
-        private val KEY_EXERCISES_OFFICE = stringPreferencesKey("exercises_office")
-        private val KEY_LANGUAGE = stringPreferencesKey("language")
-        private val KEY_BEEP_VOLUME = intPreferencesKey("beep_volume")
-        private val KEY_VIBRATION_ENABLED = booleanPreferencesKey("vibration_enabled")
-        private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
-        private val KEY_KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
-        private val KEY_AUTO_RESTART = booleanPreferencesKey("auto_restart")
-        private val KEY_BEEP_COUNT = intPreferencesKey("beep_count")
-        private val KEY_TTS_ENABLED = booleanPreferencesKey("tts_enabled")
-        private val KEY_CUSTOM_SOUND_URI = stringPreferencesKey("custom_sound_uri")
-        private val KEY_WORK_SCHEDULE_ENABLED = booleanPreferencesKey("work_schedule_enabled")
-        private val KEY_WEEK_SCHEDULE = stringPreferencesKey("week_schedule")
-        private val KEY_AUTO_MODE_BY_DAY = booleanPreferencesKey("auto_mode_by_day_enabled")
+        internal val KEY_TIMER_HOURS = intPreferencesKey("timer_hours")
+        internal val KEY_TIMER_MINUTES = intPreferencesKey("timer_minutes")
+        internal val KEY_REPS_MIN = intPreferencesKey("reps_min")
+        internal val KEY_REPS_MAX = intPreferencesKey("reps_max")
+        internal val KEY_REPS_LINKED = booleanPreferencesKey("reps_linked")
+        internal val KEY_EXERCISES = stringPreferencesKey("exercises")
+        internal val KEY_EXERCISE_MODE = stringPreferencesKey("exercise_mode")
+        internal val KEY_EXERCISES_HOME_WORKOUT = stringPreferencesKey("exercises_home_workout")
+        internal val KEY_EXERCISES_HOME_MOBILITY = stringPreferencesKey("exercises_home_mobility")
+        internal val KEY_EXERCISES_OFFICE = stringPreferencesKey("exercises_office")
+        internal val KEY_LANGUAGE = stringPreferencesKey("language")
+        internal val KEY_BEEP_VOLUME = intPreferencesKey("beep_volume")
+        internal val KEY_VIBRATION_ENABLED = booleanPreferencesKey("vibration_enabled")
+        internal val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
+        internal val KEY_KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
+        internal val KEY_AUTO_RESTART = booleanPreferencesKey("auto_restart")
+        internal val KEY_BEEP_COUNT = intPreferencesKey("beep_count")
+        internal val KEY_TTS_ENABLED = booleanPreferencesKey("tts_enabled")
+        internal val KEY_CUSTOM_SOUND_URI = stringPreferencesKey("custom_sound_uri")
+        internal val KEY_WORK_SCHEDULE_ENABLED = booleanPreferencesKey("work_schedule_enabled")
+        internal val KEY_WEEK_SCHEDULE = stringPreferencesKey("week_schedule")
+        internal val KEY_AUTO_MODE_BY_DAY = booleanPreferencesKey("auto_mode_by_day_enabled")
         // Legacy keys for migration from old flat format
-        private val KEY_WORK_START_HOUR = intPreferencesKey("work_start_hour")
-        private val KEY_WORK_START_MINUTE = intPreferencesKey("work_start_minute")
-        private val KEY_WORK_END_HOUR = intPreferencesKey("work_end_hour")
-        private val KEY_WORK_END_MINUTE = intPreferencesKey("work_end_minute")
-        private val KEY_LUNCH_START_HOUR = intPreferencesKey("lunch_start_hour")
-        private val KEY_LUNCH_START_MINUTE = intPreferencesKey("lunch_start_minute")
-        private val KEY_LUNCH_END_HOUR = intPreferencesKey("lunch_end_hour")
-        private val KEY_LUNCH_END_MINUTE = intPreferencesKey("lunch_end_minute")
-        private val KEY_DYNAMIC_INCREASE_ENABLED = booleanPreferencesKey("dynamic_increase_enabled")
-        private val KEY_BREAKS_SINCE_LAST_INCREASE = intPreferencesKey("breaks_since_last_increase")
-        private val KEY_USED_EXERCISE_NAMES = stringPreferencesKey("used_exercise_names")
-        private val KEY_LAST_PICKED_NAME = stringPreferencesKey("last_picked_name")
-        private val KEY_ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
+        internal val KEY_WORK_START_HOUR = intPreferencesKey("work_start_hour")
+        internal val KEY_WORK_START_MINUTE = intPreferencesKey("work_start_minute")
+        internal val KEY_WORK_END_HOUR = intPreferencesKey("work_end_hour")
+        internal val KEY_WORK_END_MINUTE = intPreferencesKey("work_end_minute")
+        internal val KEY_LUNCH_START_HOUR = intPreferencesKey("lunch_start_hour")
+        internal val KEY_LUNCH_START_MINUTE = intPreferencesKey("lunch_start_minute")
+        internal val KEY_LUNCH_END_HOUR = intPreferencesKey("lunch_end_hour")
+        internal val KEY_LUNCH_END_MINUTE = intPreferencesKey("lunch_end_minute")
+        internal val KEY_DYNAMIC_INCREASE_ENABLED = booleanPreferencesKey("dynamic_increase_enabled")
+        internal val KEY_BREAKS_SINCE_LAST_INCREASE = intPreferencesKey("breaks_since_last_increase")
+        internal val KEY_USED_EXERCISE_NAMES = stringPreferencesKey("used_exercise_names")
+        internal val KEY_LAST_PICKED_NAME = stringPreferencesKey("last_picked_name")
+        internal val KEY_ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
 
         const val DEFAULT_HOURS = 0
         const val DEFAULT_MINUTES = 30

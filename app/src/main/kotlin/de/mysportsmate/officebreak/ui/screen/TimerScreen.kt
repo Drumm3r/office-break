@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -17,10 +19,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.activity.compose.LocalActivity
 import android.view.WindowManager
-import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -45,11 +48,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import de.mysportsmate.officebreak.R
 import de.mysportsmate.officebreak.service.TimerState
+import de.mysportsmate.officebreak.widget.WidgetTimerState
 import de.mysportsmate.officebreak.data.AchievementRegistry
 import de.mysportsmate.officebreak.ui.BackupUiState
 import de.mysportsmate.officebreak.ui.TimerViewModel
 import de.mysportsmate.officebreak.ui.components.AchievementUnlockDialog
-import de.mysportsmate.officebreak.ui.components.ConfirmResetDialog
+import de.mysportsmate.officebreak.ui.components.ConfirmationDialog
 import de.mysportsmate.officebreak.ui.components.CountdownDisplay
 import de.mysportsmate.officebreak.ui.components.DynamicIncreaseDialog
 import de.mysportsmate.officebreak.ui.components.ExerciseDialog
@@ -123,16 +127,17 @@ fun TimerScreen(
         }
     }
 
-    val toastContext = LocalContext.current
+    val snackbarContext = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(backupState) {
         val message = when (backupState) {
-            is BackupUiState.ExportSuccess -> toastContext.getString(R.string.export_success)
-            is BackupUiState.ImportSuccess -> toastContext.getString(R.string.import_success)
+            is BackupUiState.ExportSuccess -> snackbarContext.getString(R.string.export_success)
+            is BackupUiState.ImportSuccess -> snackbarContext.getString(R.string.import_success)
             is BackupUiState.Error -> (backupState as BackupUiState.Error).message
             else -> null
         }
         if (message != null) {
-            Toast.makeText(toastContext, message, Toast.LENGTH_LONG).show()
+            snackbarHostState.showSnackbar(message)
             viewModel.clearBackupState()
         }
     }
@@ -257,7 +262,11 @@ fun TimerScreen(
     }
 
     if (showResetDialog) {
-        ConfirmResetDialog(
+        ConfirmationDialog(
+            titleRes = R.string.reset_confirm_title,
+            messageRes = R.string.reset_confirm_message,
+            confirmRes = R.string.reset_confirm_yes,
+            dismissRes = R.string.reset_confirm_no,
             onConfirm = {
                 showResetDialog = false
                 viewModel.resetTimer()
@@ -266,7 +275,9 @@ fun TimerScreen(
         )
     }
 
-    Scaffold { innerPadding ->
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+    ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -329,11 +340,11 @@ fun TimerScreen(
                     targetState = timerState,
                     contentKey = { state ->
                         when (state) {
-                            is TimerState.Idle -> "idle"
-                            is TimerState.Running -> "running"
-                            is TimerState.Paused -> "paused"
-                            is TimerState.Expired -> "expired"
-                            is TimerState.WorkEnded -> "work_ended"
+                            is TimerState.Idle -> WidgetTimerState.STATUS_IDLE
+                            is TimerState.Running -> WidgetTimerState.STATUS_RUNNING
+                            is TimerState.Paused -> WidgetTimerState.STATUS_PAUSED
+                            is TimerState.Expired -> WidgetTimerState.STATUS_EXPIRED
+                            is TimerState.WorkEnded -> WidgetTimerState.STATUS_WORK_ENDED
                         }
                     },
                     label = "timer_content",
@@ -342,7 +353,9 @@ fun TimerScreen(
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(rememberScrollState()),
                         ) {
                             TimerSetup(
                                 hours = hours,

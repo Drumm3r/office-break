@@ -48,6 +48,8 @@
     <string name="settings_beep_volume">Beep volume</string>
     <string name="settings_vibration">Vibration</string>
     <string name="settings_beep_count">Number of beeps</string>
+    <string name="settings_volume">Volume</string>
+    <string name="countdown_remaining_description">%1$d minutes %2$d seconds remaining</string>
     <string name="volume_mute">Mute</string>
     <string name="volume_unmute">Unmute</string>
     <string name="settings_tts_enabled">Read exercise aloud</string>
@@ -319,7 +321,10 @@
     <string name="import_success">Data imported successfully</string>
     <string name="import_error_invalid_format">The selected file is not a valid Office Break backup</string>
     <string name="import_error_newer_version">This backup was created by a newer version of Office Break. Please update the app.</string>
+    <string name="import_error_too_large">The selected file is too large to import (maximum 5 MB)</string>
     <string name="backup_error">Something went wrong: %1$s</string>
+    <string name="backup_error_generic">Something went wrong. Please try again.</string>
+    <string name="share_error">Could not share achievement. Please try again.</string>
 
     <!-- Widget -->
     <string name="widget_description">Shows your break stats and timer at a glance</string>

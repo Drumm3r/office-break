@@ -2,6 +2,7 @@ package de.mysportsmate.officebreak.ui
 
 import android.app.Application
 import android.net.Uri
+import android.provider.OpenableColumns
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.DefaultLifecycleObserver
@@ -23,7 +24,10 @@ import de.mysportsmate.officebreak.data.Exercise
 import de.mysportsmate.officebreak.data.ExerciseMode
 import de.mysportsmate.officebreak.data.FitnessLevel
 import de.mysportsmate.officebreak.data.ImportResult
+import de.mysportsmate.officebreak.data.MAX_BACKUP_SIZE_BYTES
+import de.mysportsmate.officebreak.data.MAX_EXERCISE_NAME_LENGTH
 import de.mysportsmate.officebreak.data.SettingsRepository
+import de.mysportsmate.officebreak.data.ShuffleBag
 import de.mysportsmate.officebreak.data.StatsRepository
 import de.mysportsmate.officebreak.data.StatsSnapshot
 import de.mysportsmate.officebreak.service.DefaultTimerServiceController
@@ -67,7 +71,6 @@ class TimerViewModel @JvmOverloads constructor(
 ) : AndroidViewModel(application) {
 
     companion object {
-        const val MAX_EXERCISE_NAME_LENGTH = 100
         const val REPS_INCREASE = 2
         const val INTERVAL_DECREASE_MINUTES = 5
         const val MAX_REPS = 50
@@ -196,8 +199,18 @@ class TimerViewModel @JvmOverloads constructor(
     val isPreviewPlaying: StateFlow<Boolean> = _isPreviewPlaying.asStateFlow()
 
     private var _isFreestyle = false
-    private val usedExerciseNames: MutableSet<String> = mutableSetOf()
-    private var lastPickedName: String? = null
+    private var shuffleBag = ShuffleBag()
+
+    private inline fun launchSafely(
+        errorMessage: String,
+        crossinline block: suspend () -> Unit,
+    ): kotlinx.coroutines.Job = viewModelScope.launch {
+        try {
+            block()
+        } catch (e: Exception) {
+            Log.e(TAG, errorMessage, e)
+        }
+    }
 
     init {
         viewModelScope.launch {
@@ -211,8 +224,10 @@ class TimerViewModel @JvmOverloads constructor(
             }
         }
         viewModelScope.launch {
-            usedExerciseNames.addAll(repository.usedExerciseNames.first())
-            lastPickedName = repository.lastPickedName.first()
+            shuffleBag = ShuffleBag(
+                initialUsed = repository.usedExerciseNames.first(),
+                initialLast = repository.lastPickedName.first(),
+            )
         }
         viewModelScope.launch {
             try {
@@ -250,8 +265,7 @@ class TimerViewModel @JvmOverloads constructor(
             val currentMode = repository.exerciseMode.first()
             if (effective.defaultMode != currentMode) {
                 repository.setExerciseMode(effective.defaultMode)
-                usedExerciseNames.clear()
-                lastPickedName = null
+                shuffleBag.reset()
                 repository.setUsedExerciseNames(emptySet())
                 repository.setLastPickedName(null)
             }
@@ -261,93 +275,61 @@ class TimerViewModel @JvmOverloads constructor(
     }
 
     fun setAutoModeByDayEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            try {
-                val seed = if (enabled) exerciseMode.value else null
-                repository.setAutoModeByDayEnabled(enabled, seed)
-                if (enabled) applyDayDefaultModeNow()
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to set auto mode by day enabled", e)
-            }
+        launchSafely("Failed to set auto mode by day enabled") {
+            val seed = if (enabled) exerciseMode.value else null
+            repository.setAutoModeByDayEnabled(enabled, seed)
+            if (enabled) applyDayDefaultModeNow()
         }
     }
 
     fun setHours(value: Int) {
-        viewModelScope.launch {
-            try {
-                repository.setTimerHours(value.coerceIn(0, 23))
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to set hours", e)
-            }
+        launchSafely("Failed to set hours") {
+            repository.setTimerHours(value.coerceIn(0, 23))
         }
     }
 
     fun setMinutes(value: Int) {
-        viewModelScope.launch {
-            try {
-                repository.setTimerMinutes(value.coerceIn(0, 59))
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to set minutes", e)
-            }
+        launchSafely("Failed to set minutes") {
+            repository.setTimerMinutes(value.coerceIn(0, 59))
         }
     }
 
     fun setRepsMin(value: Int) {
-        viewModelScope.launch {
-            try {
-                val coerced = value.coerceIn(1, 50)
-                repository.setRepsMin(coerced)
-                if (repsLinked.value) {
-                    repository.setRepsMax(coerced)
-                } else if (coerced > repsMax.value) {
-                    repository.setRepsMax(coerced)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to set reps min", e)
+        launchSafely("Failed to set reps min") {
+            val coerced = value.coerceIn(1, 50)
+            repository.setRepsMin(coerced)
+            if (repsLinked.value) {
+                repository.setRepsMax(coerced)
+            } else if (coerced > repsMax.value) {
+                repository.setRepsMax(coerced)
             }
         }
     }
 
     fun setRepsMax(value: Int) {
-        viewModelScope.launch {
-            try {
-                repository.setRepsMax(value.coerceIn(repsMin.value, 50))
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to set reps max", e)
-            }
+        launchSafely("Failed to set reps max") {
+            repository.setRepsMax(value.coerceIn(repsMin.value, 50))
         }
     }
 
     fun setRepsLinked(value: Boolean) {
-        viewModelScope.launch {
-            try {
-                repository.setRepsLinked(value)
-                if (value) {
-                    repository.setRepsMax(repsMin.value)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to set reps linked", e)
+        launchSafely("Failed to set reps linked") {
+            repository.setRepsLinked(value)
+            if (value) {
+                repository.setRepsMax(repsMin.value)
             }
         }
     }
 
     fun setLanguage(value: String) {
-        viewModelScope.launch {
-            try {
-                repository.setLanguage(value)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to set language", e)
-            }
+        launchSafely("Failed to set language") {
+            repository.setLanguage(value)
         }
     }
 
     fun setBeepVolume(value: Int) {
-        viewModelScope.launch {
-            try {
-                repository.setBeepVolume(value.coerceIn(0, 100))
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to set beep volume", e)
-            }
+        launchSafely("Failed to set beep volume") {
+            repository.setBeepVolume(value.coerceIn(0, 100))
         }
     }
 
@@ -365,6 +347,11 @@ class TimerViewModel @JvmOverloads constructor(
         } catch (_: Exception) { }
         previewPlayer = null
         _isPreviewPlaying.value = false
+    }
+
+    override fun onCleared() {
+        stopPreview()
+        super.onCleared()
     }
 
     fun playPreviewBeep(volume: Int) {
@@ -479,12 +466,8 @@ class TimerViewModel @JvmOverloads constructor(
 
     fun clearCustomSound() {
         stopPreview()
-        viewModelScope.launch {
-            try {
-                repository.setCustomSoundUri(null)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to clear custom sound", e)
-            }
+        launchSafely("Failed to clear custom sound") {
+            repository.setCustomSoundUri(null)
         }
     }
 
@@ -528,96 +511,67 @@ class TimerViewModel @JvmOverloads constructor(
     }
 
     fun setTtsEnabled(value: Boolean) {
-        viewModelScope.launch {
-            try {
-                repository.setTtsEnabled(value)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to set TTS enabled", e)
-            }
+        launchSafely("Failed to set TTS enabled") {
+            repository.setTtsEnabled(value)
         }
     }
 
     fun setWorkScheduleEnabled(value: Boolean) {
-        viewModelScope.launch {
-            try {
-                repository.setWorkScheduleEnabled(value)
-                val app = getApplication<Application>()
-                if (value) {
-                    val schedule = weekSchedule.value
-                    WorkScheduleManager.scheduleNextWorkStartReminder(app, schedule)
-                } else {
-                    WorkScheduleManager.cancelWorkStartReminder(app)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to set work schedule enabled", e)
+        launchSafely("Failed to set work schedule enabled") {
+            repository.setWorkScheduleEnabled(value)
+            val app = getApplication<Application>()
+            if (value) {
+                val schedule = weekSchedule.value
+                WorkScheduleManager.scheduleNextWorkStartReminder(app, schedule)
+            } else {
+                WorkScheduleManager.cancelWorkStartReminder(app)
             }
         }
     }
 
     fun updateDaySchedule(dayIndex: Int, day: DaySchedule) {
-        viewModelScope.launch {
-            try {
-                val current = weekSchedule.value.toMutableList()
-                if (dayIndex in current.indices) {
-                    current[dayIndex] = day.validated()
-                    repository.setWeekSchedule(current)
-                    if (workScheduleEnabled.value) {
-                        WorkScheduleManager.scheduleNextWorkStartReminder(
-                            getApplication(), current,
-                        )
-                    }
-                    applyDayDefaultModeNow()
+        launchSafely("Failed to update day schedule") {
+            val current = weekSchedule.value.toMutableList()
+            if (dayIndex in current.indices) {
+                current[dayIndex] = day.validated()
+                repository.setWeekSchedule(current)
+                if (workScheduleEnabled.value) {
+                    WorkScheduleManager.scheduleNextWorkStartReminder(
+                        getApplication(), current,
+                    )
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to update day schedule", e)
+                applyDayDefaultModeNow()
             }
         }
     }
 
     fun setDynamicIncreaseEnabled(value: Boolean) {
-        viewModelScope.launch {
-            try {
-                repository.setDynamicIncreaseEnabled(value)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to set dynamic increase enabled", e)
-            }
+        launchSafely("Failed to set dynamic increase enabled") {
+            repository.setDynamicIncreaseEnabled(value)
         }
     }
 
     fun setBeepCount(value: Int) {
-        viewModelScope.launch {
-            try {
-                repository.setBeepCount(value.coerceIn(1, 5))
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to set beep count", e)
-            }
+        launchSafely("Failed to set beep count") {
+            repository.setBeepCount(value.coerceIn(1, 5))
         }
     }
 
     fun setExerciseMode(mode: ExerciseMode) {
-        viewModelScope.launch {
-            try {
-                repository.setExerciseMode(mode)
-                usedExerciseNames.clear()
-                lastPickedName = null
-                repository.setUsedExerciseNames(emptySet())
-                repository.setLastPickedName(null)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to set exercise mode", e)
-            }
+        launchSafely("Failed to set exercise mode") {
+            repository.setExerciseMode(mode)
+            shuffleBag.reset()
+            repository.setUsedExerciseNames(emptySet())
+            repository.setLastPickedName(null)
         }
     }
 
     fun toggleExercise(index: Int) {
-        viewModelScope.launch {
-            try {
-                val current = exercises.value.toMutableList()
-                if (index in current.indices) {
-                    current[index] = current[index].copy(isEnabled = !current[index].isEnabled)
-                    repository.setExercises(current)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to toggle exercise", e)
+        launchSafely("Failed to toggle exercise") {
+            val current = exercises.value.toMutableList()
+            if (index in current.indices) {
+                current[index] = current[index].copy(isEnabled = !current[index].isEnabled)
+                repository.setExercises(current)
             }
         }
     }
@@ -626,19 +580,15 @@ class TimerViewModel @JvmOverloads constructor(
         val trimmed = name.trim().take(MAX_EXERCISE_NAME_LENGTH)
         if (trimmed.isEmpty()) return
 
-        viewModelScope.launch {
-            try {
-                // Add enabled to active mode, disabled to other modes
-                val activeMode = exerciseMode.value
-                for (mode in ExerciseMode.entries) {
-                    val modeExercises = repository.exercisesForMode(mode).first().toMutableList()
-                    modeExercises.add(Exercise(name = trimmed, isEnabled = mode == activeMode))
-                    repository.setExercisesForMode(mode, modeExercises)
-                }
-                statsRepository.markCustomExerciseCreated()
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to add exercise", e)
+        launchSafely("Failed to add exercise") {
+            // Add enabled to active mode, disabled to other modes
+            val activeMode = exerciseMode.value
+            for (mode in ExerciseMode.entries) {
+                val modeExercises = repository.exercisesForMode(mode).first().toMutableList()
+                modeExercises.add(Exercise(name = trimmed, isEnabled = mode == activeMode))
+                repository.setExercisesForMode(mode, modeExercises)
             }
+            statsRepository.markCustomExerciseCreated()
         }
     }
 
@@ -693,8 +643,7 @@ class TimerViewModel @JvmOverloads constructor(
         _isFreestyle = false
         _currentExercise.value = null
         _currentReps.value = null
-        usedExerciseNames.clear()
-        lastPickedName = null
+        shuffleBag.reset()
         viewModelScope.launch {
             repository.setUsedExerciseNames(emptySet())
             repository.setLastPickedName(null)
@@ -718,32 +667,15 @@ class TimerViewModel @JvmOverloads constructor(
 
     fun onTimerExpired() {
         viewModelScope.launch {
-            val allExercises = repository.exercises.first()
-            val enabledExercises = allExercises.filter { it.isEnabled }
-            if (enabledExercises.isNotEmpty()) {
-                if (lastPickedName != null && lastPickedName !in usedExerciseNames) {
-                    usedExerciseNames.add(lastPickedName!!)
-                }
+            val enabledExercises = repository.exercises.first().filter { it.isEnabled }
+            val picked = shuffleBag.pick(enabledExercises) ?: return@launch
+            repository.setUsedExerciseNames(shuffleBag.usedNames)
+            repository.setLastPickedName(picked.name)
 
-                var available = enabledExercises.filter { it.name !in usedExerciseNames }
-                if (available.isEmpty()) {
-                    usedExerciseNames.clear()
-                    if (lastPickedName != null && enabledExercises.size > 1) {
-                        usedExerciseNames.add(lastPickedName!!)
-                    }
-                    available = enabledExercises.filter { it.name !in usedExerciseNames }
-                }
-                val picked = available.random()
-                usedExerciseNames.add(picked.name)
-                lastPickedName = picked.name
-                repository.setUsedExerciseNames(usedExerciseNames)
-                repository.setLastPickedName(picked.name)
-
-                _currentExercise.value = picked
-                val min = repsMin.value
-                val max = repsMax.value
-                _currentReps.value = (min..max).random()
-            }
+            _currentExercise.value = picked
+            val min = repsMin.value
+            val max = repsMax.value
+            _currentReps.value = (min..max).random()
         }
     }
 
@@ -902,9 +834,7 @@ class TimerViewModel @JvmOverloads constructor(
                 _backupState.value = BackupUiState.ExportSuccess
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to export data", e)
-                _backupState.value = BackupUiState.Error(
-                    app.getString(R.string.backup_error, e.message ?: "Unknown error"),
-                )
+                _backupState.value = BackupUiState.Error(app.getString(R.string.backup_error_generic))
             }
         }
     }
@@ -913,9 +843,32 @@ class TimerViewModel @JvmOverloads constructor(
         val app = getApplication<Application>()
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
+                val size = app.contentResolver.query(
+                    uri,
+                    arrayOf(OpenableColumns.SIZE),
+                    null,
+                    null,
+                    null,
+                )?.use { cursor ->
+                    if (cursor.moveToFirst() && !cursor.isNull(0)) cursor.getLong(0) else -1L
+                } ?: -1L
+
+                if (size in 1..MAX_BACKUP_SIZE_BYTES) {
+                    // size known and within bounds — proceed
+                } else if (size > MAX_BACKUP_SIZE_BYTES) {
+                    _backupState.value = BackupUiState.Error(app.getString(R.string.import_error_too_large))
+                    return@launch
+                }
+                // size == -1 (unknown): fall through; readText below is still bounded by free heap.
+
                 val jsonString = app.contentResolver.openInputStream(uri)?.use { stream ->
                     stream.bufferedReader(Charsets.UTF_8).readText()
                 } ?: throw Exception("Could not open file for reading")
+
+                if (jsonString.length.toLong() > MAX_BACKUP_SIZE_BYTES) {
+                    _backupState.value = BackupUiState.Error(app.getString(R.string.import_error_too_large))
+                    return@launch
+                }
 
                 when (val result = backupManager.restoreFromJson(jsonString)) {
                     is ImportResult.Success -> {
@@ -928,9 +881,7 @@ class TimerViewModel @JvmOverloads constructor(
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to import data", e)
-                _backupState.value = BackupUiState.Error(
-                    app.getString(R.string.backup_error, e.message ?: "Unknown error"),
-                )
+                _backupState.value = BackupUiState.Error(app.getString(R.string.backup_error_generic))
             }
         }
     }

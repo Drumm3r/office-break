@@ -18,6 +18,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.mysportsmate.officebreak.R
@@ -62,6 +64,7 @@ fun VolumeBar(
             )
         }
 
+        val volumeLabel = stringResource(R.string.settings_volume)
         Slider(
             value = sliderValue.toFloat(),
             onValueChange = {
@@ -70,7 +73,9 @@ fun VolumeBar(
             },
             valueRange = 0f..100f,
             steps = 19,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .semantics { contentDescription = volumeLabel },
         )
     }
 }

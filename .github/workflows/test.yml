@@ -8,19 +8,25 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b # v4.5.0
         with:
           distribution: temurin
           java-version: 17
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@473878a77f1b98e2b5ac4af93489d1656a80a5ed # v4.2.0
 
       - name: Build debug APK
         run: ./gradlew assembleDebug
@@ -31,9 +37,25 @@ jobs:
       - name: Run lint
         run: ./gradlew lintDebug
 
+      - name: Build release APK (for tooling-leak guard)
+        run: ./gradlew assembleRelease
+
+      - name: Verify release APK has no debug tooling classes
+        run: |
+          release_apk=$(find app/build/outputs/apk/release -name '*.apk' -print -quit)
+          if [ -z "$release_apk" ]; then
+            echo "::error::No release APK found"
+            exit 1
+          fi
+          if unzip -l "$release_apk" | grep -Eiq '(ui-tooling|ui-test-manifest)'; then
+            echo "::error::Release APK contains debug tooling artifacts"
+            unzip -l "$release_apk" | grep -Ei '(ui-tooling|ui-test-manifest)' || true
+            exit 1
+          fi
+
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
           name: test-results
           path: |

@@ -21,10 +21,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -91,7 +94,9 @@ fun StatsScreen(
             Text(
                 text = stringResource(R.string.stats_overview),
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 8.dp),
+                modifier = Modifier
+                    .padding(bottom = 8.dp)
+                    .semantics { heading() },
             )
 
             Card(
@@ -123,40 +128,24 @@ fun StatsScreen(
 
             // This week section
             val today = LocalDate.now()
-            val weekStart = today.minusDays(6)
-            val thisWeekRecords = breakRecords.filter {
-                try {
-                    val date = LocalDate.parse(it.dateString)
-                    !date.isBefore(weekStart) && !date.isAfter(today)
-                } catch (_: Exception) {
-                    false
-                }
+            val weekAggregates = remember(breakRecords, today) {
+                computeWeeklyAggregates(breakRecords, today)
             }
-            val lastWeekStart = today.minusDays(13)
-            val lastWeekEnd = today.minusDays(7)
-            val lastWeekRecords = breakRecords.filter {
-                try {
-                    val date = LocalDate.parse(it.dateString)
-                    !date.isBefore(lastWeekStart) && !date.isAfter(lastWeekEnd)
-                } catch (_: Exception) {
-                    false
-                }
-            }
-
-            val breaksThisWeek = thisWeekRecords.size
-            val repsThisWeek = thisWeekRecords.sumOf { it.reps }
-            val breaksAvgPerDay = if (breaksThisWeek > 0) "%.1f".format(breaksThisWeek.toFloat() / 7f) else "0"
-            val repsAvgPerDay = if (repsThisWeek > 0) "%.1f".format(repsThisWeek.toFloat() / 7f) else "0"
-
-            val breaksLastWeek = lastWeekRecords.size
-            val repsLastWeek = lastWeekRecords.sumOf { it.reps }
-            val breaksAvgPerDayLastWeek = if (breaksLastWeek > 0) "%.1f".format(breaksLastWeek.toFloat() / 7f) else "0"
-            val repsAvgPerDayLastWeek = if (repsLastWeek > 0) "%.1f".format(repsLastWeek.toFloat() / 7f) else "0"
+            val breaksThisWeek = weekAggregates.thisWeekBreaks
+            val repsThisWeek = weekAggregates.thisWeekReps
+            val breaksAvgPerDay = weekAggregates.thisWeekBreaksAvg
+            val repsAvgPerDay = weekAggregates.thisWeekRepsAvg
+            val breaksLastWeek = weekAggregates.lastWeekBreaks
+            val repsLastWeek = weekAggregates.lastWeekReps
+            val breaksAvgPerDayLastWeek = weekAggregates.lastWeekBreaksAvg
+            val repsAvgPerDayLastWeek = weekAggregates.lastWeekRepsAvg
 
             Text(
                 text = stringResource(R.string.stats_this_week),
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 8.dp),
+                modifier = Modifier
+                    .padding(bottom = 8.dp)
+                    .semantics { heading() },
             )
 
             Card(
@@ -210,7 +199,9 @@ fun StatsScreen(
                 Text(
                     text = stringResource(R.string.stats_favorite_exercise),
                     style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(bottom = 8.dp),
+                    modifier = Modifier
+                        .padding(bottom = 8.dp)
+                        .semantics { heading() },
                 )
 
                 Card(
@@ -234,7 +225,9 @@ fun StatsScreen(
                 Text(
                     text = stringResource(R.string.stats_exercise_distribution),
                     style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(bottom = 8.dp),
+                    modifier = Modifier
+                        .padding(bottom = 8.dp)
+                        .semantics { heading() },
                 )
 
                 Card(
@@ -270,7 +263,9 @@ fun StatsScreen(
                 Text(
                     text = stringResource(R.string.stats_recent_activity),
                     style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(bottom = 8.dp),
+                    modifier = Modifier
+                        .padding(bottom = 8.dp)
+                        .semantics { heading() },
                 )
 
                 Card(
@@ -291,6 +286,56 @@ fun StatsScreen(
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
+}
+
+internal data class WeeklyAggregates(
+    val thisWeekBreaks: Int,
+    val thisWeekReps: Int,
+    val thisWeekBreaksAvg: String,
+    val thisWeekRepsAvg: String,
+    val lastWeekBreaks: Int,
+    val lastWeekReps: Int,
+    val lastWeekBreaksAvg: String,
+    val lastWeekRepsAvg: String,
+)
+
+internal fun computeWeeklyAggregates(
+    breakRecords: List<BreakRecord>,
+    today: LocalDate,
+): WeeklyAggregates {
+    val weekStart = today.minusDays(6)
+    val lastWeekStart = today.minusDays(13)
+    val lastWeekEnd = today.minusDays(7)
+    val thisWeekRecords = breakRecords.filter {
+        try {
+            val date = LocalDate.parse(it.dateString)
+            !date.isBefore(weekStart) && !date.isAfter(today)
+        } catch (_: Exception) {
+            false
+        }
+    }
+    val lastWeekRecords = breakRecords.filter {
+        try {
+            val date = LocalDate.parse(it.dateString)
+            !date.isBefore(lastWeekStart) && !date.isAfter(lastWeekEnd)
+        } catch (_: Exception) {
+            false
+        }
+    }
+    val breaksThisWeek = thisWeekRecords.size
+    val repsThisWeek = thisWeekRecords.sumOf { it.reps }
+    val breaksLastWeek = lastWeekRecords.size
+    val repsLastWeek = lastWeekRecords.sumOf { it.reps }
+    return WeeklyAggregates(
+        thisWeekBreaks = breaksThisWeek,
+        thisWeekReps = repsThisWeek,
+        thisWeekBreaksAvg = if (breaksThisWeek > 0) "%.1f".format(breaksThisWeek.toFloat() / 7f) else "0",
+        thisWeekRepsAvg = if (repsThisWeek > 0) "%.1f".format(repsThisWeek.toFloat() / 7f) else "0",
+        lastWeekBreaks = breaksLastWeek,
+        lastWeekReps = repsLastWeek,
+        lastWeekBreaksAvg = if (breaksLastWeek > 0) "%.1f".format(breaksLastWeek.toFloat() / 7f) else "0",
+        lastWeekRepsAvg = if (repsLastWeek > 0) "%.1f".format(repsLastWeek.toFloat() / 7f) else "0",
+    )
 }
 
 @Composable

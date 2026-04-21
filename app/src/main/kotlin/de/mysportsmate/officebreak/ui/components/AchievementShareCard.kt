@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -31,9 +32,10 @@ fun AchievementShareCard(
     unlockLabel: String,
     appName: String,
     icon: ImageVector,
+    modifier: Modifier = Modifier,
 ) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
@@ -61,10 +63,8 @@ fun AchievementShareCard(
             Text(
                 text = unlockLabel,
                 color = Color.White.copy(alpha = 0.85f),
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Medium,
+                style = MaterialTheme.typography.titleMedium.copy(letterSpacing = 1.sp),
                 textAlign = TextAlign.Center,
-                letterSpacing = 1.sp,
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -72,8 +72,7 @@ fun AchievementShareCard(
             Text(
                 text = title,
                 color = Color.White,
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
                 textAlign = TextAlign.Center,
             )
 
@@ -82,7 +81,7 @@ fun AchievementShareCard(
             Text(
                 text = description,
                 color = Color.White.copy(alpha = 0.8f),
-                fontSize = 18.sp,
+                style = MaterialTheme.typography.titleMedium,
                 textAlign = TextAlign.Center,
             )
         }
@@ -90,9 +89,7 @@ fun AchievementShareCard(
         Text(
             text = appName,
             color = Color.White.copy(alpha = 0.5f),
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            letterSpacing = 2.sp,
+            style = MaterialTheme.typography.labelLarge.copy(letterSpacing = 2.sp),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 32.dp),

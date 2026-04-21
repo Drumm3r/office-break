@@ -707,7 +707,7 @@ class SettingsRepositoryTest {
             DaySchedule(enabled = false, linked = false),
             DaySchedule(enabled = false, linked = false),
         )
-        val backupData = createMinimalBackupData().copy(weekSchedule = customSchedule)
+        val backupData = BackupDataFixtures.minimal().copy(weekSchedule = customSchedule)
 
         repository.restoreFromBackup(backupData)
 
@@ -716,7 +716,7 @@ class SettingsRepositoryTest {
 
     @Test
     fun `restoreFromBackup with empty weekSchedule migrates from flat fields`() = runTest {
-        val backupData = createMinimalBackupData().copy(
+        val backupData = BackupDataFixtures.minimal().copy(
             weekSchedule = emptyList(),
             workStartHour = 9,
             workStartMinute = 30,
@@ -743,7 +743,7 @@ class SettingsRepositoryTest {
     @Test
     fun `restoreFromBackup does not restore customSoundUri`() = runTest {
         repository.setCustomSoundUri("content://original/sound")
-        val backupData = createMinimalBackupData().copy(customSoundUri = "content://backup/sound")
+        val backupData = BackupDataFixtures.minimal().copy(customSoundUri = "content://backup/sound")
 
         repository.restoreFromBackup(backupData)
 
@@ -755,7 +755,7 @@ class SettingsRepositoryTest {
     fun `restoreFromBackup sets onboardingCompleted to true`() = runTest {
         assertEquals(false, repository.onboardingCompleted.first())
 
-        repository.restoreFromBackup(createMinimalBackupData())
+        repository.restoreFromBackup(BackupDataFixtures.minimal())
 
         assertEquals(true, repository.onboardingCompleted.first())
     }
@@ -881,7 +881,7 @@ class SettingsRepositoryTest {
         val homeMobility = listOf(Exercise(name = "Cat-Cow Stretch", nameResKey = "exercise_cat_cow"))
         val office = listOf(Exercise(name = "Neck Stretch", nameResKey = "exercise_neck_stretch"))
 
-        val backupData = createMinimalBackupData().copy(
+        val backupData = BackupDataFixtures.minimal().copy(
             exerciseMode = ExerciseMode.OFFICE.name,
             exercisesHomeWorkout = homeWorkout,
             exercisesHomeMobility = homeMobility,
@@ -903,7 +903,7 @@ class SettingsRepositoryTest {
             Exercise(name = "Push Ups", nameResKey = "exercise_push_ups"),
             Exercise(name = "Squats", nameResKey = "exercise_squats"),
         )
-        val backupData = createMinimalBackupData().copy(
+        val backupData = BackupDataFixtures.minimal().copy(
             exercises = v1Exercises,
             exercisesHomeWorkout = emptyList(),
         )
@@ -913,32 +913,6 @@ class SettingsRepositoryTest {
         assertEquals(ExerciseMode.HOME_WORKOUT, repository.exerciseMode.first())
         assertEquals(v1Exercises, repository.exercisesForMode(ExerciseMode.HOME_WORKOUT).first())
     }
-
-    private fun createMinimalBackupData() = BackupData(
-        exportTimestamp = 1000L,
-        appVersionCode = 5,
-        timerHours = 0,
-        timerMinutes = 30,
-        repsMin = 10,
-        repsMax = 10,
-        repsLinked = true,
-        exercises = emptyList(),
-        language = "system",
-        themeMode = "system",
-        beepVolume = 80,
-        vibrationEnabled = true,
-        beepCount = 3,
-        keepScreenOn = false,
-        autoRestart = true,
-        dynamicIncreaseEnabled = true,
-        breaksSinceLastIncrease = 0,
-        trackingEnabled = true,
-        breakRecords = emptyList(),
-        dailyAggregates = emptyList(),
-        yearlyAggregates = emptyList(),
-        statsSnapshot = StatsSnapshot(),
-        achievementState = AchievementState(),
-    )
 
     // --- autoModeByDayEnabled ---
 

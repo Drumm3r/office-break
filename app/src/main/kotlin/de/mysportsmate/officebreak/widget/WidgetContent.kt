@@ -100,7 +100,7 @@ fun WidgetContent(
             ) {
                 Text(
                     text = when (timerStatus) {
-                        "running" -> {
+                        WidgetTimerState.STATUS_RUNNING -> {
                             if (remainingSeconds > 0) {
                                 val formatted = "%02d:%02d".format(remainingSeconds / 60, remainingSeconds % 60)
                                 context.getString(R.string.widget_timer_remaining, formatted)
@@ -108,7 +108,7 @@ fun WidgetContent(
                                 context.getString(R.string.widget_timer_running)
                             }
                         }
-                        "paused" -> {
+                        WidgetTimerState.STATUS_PAUSED -> {
                             if (remainingSeconds > 0) {
                                 val formatted = "%02d:%02d".format(remainingSeconds / 60, remainingSeconds % 60)
                                 context.getString(R.string.widget_timer_paused, formatted)
@@ -116,23 +116,23 @@ fun WidgetContent(
                                 context.getString(R.string.widget_timer_running)
                             }
                         }
-                        "expired" -> context.getString(R.string.widget_timer_expired)
+                        WidgetTimerState.STATUS_EXPIRED -> context.getString(R.string.widget_timer_expired)
                         else -> context.getString(R.string.widget_timer_idle)
                     },
                     style = TextStyle(
                         color = when (timerStatus) {
-                            "expired" -> WidgetColors.primary
-                            "running", "paused" -> WidgetColors.onBackground
+                            WidgetTimerState.STATUS_EXPIRED -> WidgetColors.primary
+                            WidgetTimerState.STATUS_RUNNING, WidgetTimerState.STATUS_PAUSED -> WidgetColors.onBackground
                             else -> WidgetColors.onBackgroundSecondary
                         },
                         fontSize = 13.sp,
-                        fontWeight = if (timerStatus == "expired") FontWeight.Bold else FontWeight.Normal,
+                        fontWeight = if (timerStatus == WidgetTimerState.STATUS_EXPIRED) FontWeight.Bold else FontWeight.Normal,
                     ),
                 )
 
                 Spacer(modifier = GlanceModifier.defaultWeight())
 
-                if (timerStatus == "idle") {
+                if (timerStatus == WidgetTimerState.STATUS_IDLE) {
                     Button(
                         text = context.getString(R.string.widget_start),
                         onClick = actionRunCallback<StartTimerAction>(),
@@ -179,6 +179,6 @@ private object WidgetColors {
     )
     val buttonContent = ColorProvider(
         day = androidx.compose.ui.graphics.Color.White,
-        night = androidx.compose.ui.graphics.Color(0xFF003A00),
+        night = de.mysportsmate.officebreak.ui.theme.OnGreenPrimaryDark,
     )
 }

@@ -389,12 +389,12 @@ class StatsRepository(
     }
 
     companion object {
-        private val KEY_BREAK_RECORDS = stringPreferencesKey("break_records")
-        private val KEY_DAILY_AGGREGATES = stringPreferencesKey("daily_aggregates")
-        private val KEY_YEARLY_AGGREGATES = stringPreferencesKey("yearly_aggregates")
-        private val KEY_STATS_SNAPSHOT = stringPreferencesKey("stats_snapshot")
-        private val KEY_ACHIEVEMENT_STATE = stringPreferencesKey("achievement_state")
-        private val KEY_TRACKING_ENABLED = booleanPreferencesKey("tracking_enabled")
+        internal val KEY_BREAK_RECORDS = stringPreferencesKey("break_records")
+        internal val KEY_DAILY_AGGREGATES = stringPreferencesKey("daily_aggregates")
+        internal val KEY_YEARLY_AGGREGATES = stringPreferencesKey("yearly_aggregates")
+        internal val KEY_STATS_SNAPSHOT = stringPreferencesKey("stats_snapshot")
+        internal val KEY_ACHIEVEMENT_STATE = stringPreferencesKey("achievement_state")
+        internal val KEY_TRACKING_ENABLED = booleanPreferencesKey("tracking_enabled")
 
         const val ROLLING_WINDOW_DAYS = 90
         const val DEFAULT_TRACKING_ENABLED = true

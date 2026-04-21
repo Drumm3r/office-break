@@ -7,8 +7,6 @@ import android.content.Intent
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.datastore.preferences.core.stringPreferencesKey
 import de.mysportsmate.officebreak.MainActivity
 import de.mysportsmate.officebreak.OfficeBreakApp
 import de.mysportsmate.officebreak.R
@@ -102,19 +100,13 @@ class WorkScheduleReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val prefs = context.dataStore.data.first()
-                val hours = prefs[intPreferencesKey("timer_hours")] ?: SettingsRepository.DEFAULT_HOURS
-                val minutes = prefs[intPreferencesKey("timer_minutes")] ?: SettingsRepository.DEFAULT_MINUTES
+                val hours = prefs[SettingsRepository.KEY_TIMER_HOURS] ?: SettingsRepository.DEFAULT_HOURS
+                val minutes = prefs[SettingsRepository.KEY_TIMER_MINUTES] ?: SettingsRepository.DEFAULT_MINUTES
                 val totalSeconds = (hours * 3600L) + (minutes * 60L)
 
                 if (totalSeconds > 0) {
-                    val language = prefs[stringPreferencesKey("language")] ?: SettingsRepository.LANGUAGE_SYSTEM
-                    val serviceIntent = Intent(context, TimerService::class.java).apply {
-                        action = TimerService.ACTION_START
-                        putExtra(TimerService.EXTRA_DURATION_SECONDS, totalSeconds)
-                        putExtra(TimerService.EXTRA_LANGUAGE, language)
-                        putExtra(TimerService.EXTRA_FREESTYLE, false)
-                    }
-                    context.startForegroundService(serviceIntent)
+                    val language = prefs[SettingsRepository.KEY_LANGUAGE] ?: SettingsRepository.LANGUAGE_SYSTEM
+                    DefaultTimerServiceController(context).startTimer(totalSeconds, language, freestyle = false)
 
                     val activityIntent = Intent(context, MainActivity::class.java).apply {
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
@@ -133,9 +125,9 @@ class WorkScheduleReceiver : BroadcastReceiver() {
     private suspend fun rescheduleForTomorrow(context: Context) {
         try {
             val prefs = context.dataStore.data.first()
-            val enabled = prefs[androidx.datastore.preferences.core.booleanPreferencesKey("work_schedule_enabled")] ?: false
+            val enabled = prefs[SettingsRepository.KEY_WORK_SCHEDULE_ENABLED] ?: false
             if (enabled) {
-                val scheduleJson = prefs[androidx.datastore.preferences.core.stringPreferencesKey("week_schedule")]
+                val scheduleJson = prefs[SettingsRepository.KEY_WEEK_SCHEDULE]
                 val schedule = if (scheduleJson != null) {
                     try {
                         AppJson.decodeFromString<List<DaySchedule>>(scheduleJson)

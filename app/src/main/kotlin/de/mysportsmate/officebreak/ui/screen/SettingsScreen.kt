@@ -58,6 +58,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.mysportsmate.officebreak.R
@@ -67,9 +73,9 @@ import de.mysportsmate.officebreak.data.ExerciseMode
 import de.mysportsmate.officebreak.data.resolveEffectiveSchedule
 import de.mysportsmate.officebreak.data.validated
 import de.mysportsmate.officebreak.data.SettingsRepository
-import de.mysportsmate.officebreak.ui.components.ConfirmImportDialog
+import de.mysportsmate.officebreak.ui.components.ConfirmationDialog
+import de.mysportsmate.officebreak.ui.components.LabeledSwitchRow
 import de.mysportsmate.officebreak.ui.components.VolumeBar
-import de.mysportsmate.officebreak.ui.components.ConfirmResetStatsDialog
 import de.mysportsmate.officebreak.ui.theme.OfficeBreakTheme
 import java.time.LocalDate
 import kotlin.math.roundToInt
@@ -137,7 +143,11 @@ fun SettingsScreen(
     }
 
     if (showResetStatsDialog) {
-        ConfirmResetStatsDialog(
+        ConfirmationDialog(
+            titleRes = R.string.reset_stats_confirm_title,
+            messageRes = R.string.reset_stats_confirm_message,
+            confirmRes = R.string.reset_stats_confirm_yes,
+            dismissRes = R.string.reset_confirm_no,
             onConfirm = {
                 showResetStatsDialog = false
                 onResetStats()
@@ -147,7 +157,11 @@ fun SettingsScreen(
     }
 
     if (showImportConfirmDialog) {
-        ConfirmImportDialog(
+        ConfirmationDialog(
+            titleRes = R.string.import_confirm_title,
+            messageRes = R.string.import_confirm_message,
+            confirmRes = R.string.import_confirm_yes,
+            dismissRes = R.string.reset_confirm_no,
             onConfirm = {
                 showImportConfirmDialog = false
                 importLauncher.launch(arrayOf("application/json", "application/octet-stream"))
@@ -180,7 +194,9 @@ fun SettingsScreen(
             Text(
                 text = stringResource(R.string.settings_language),
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
+                modifier = Modifier
+                    .padding(top = 16.dp, bottom = 8.dp)
+                    .semantics { heading() },
             )
 
             LanguageDropdown(
@@ -195,7 +211,9 @@ fun SettingsScreen(
             Text(
                 text = stringResource(R.string.settings_appearance),
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 8.dp),
+                modifier = Modifier
+                    .padding(bottom = 8.dp)
+                    .semantics { heading() },
             )
 
             ThemeDropdown(
@@ -210,22 +228,24 @@ fun SettingsScreen(
             Text(
                 text = stringResource(R.string.settings_timer),
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 8.dp),
+                modifier = Modifier
+                    .padding(bottom = 8.dp)
+                    .semantics { heading() },
             )
 
-            SettingsToggleRow(
+            LabeledSwitchRow(
                 label = stringResource(R.string.settings_keep_screen_on),
                 checked = keepScreenOn,
                 onCheckedChange = onKeepScreenOnChange,
             )
 
-            SettingsToggleRow(
+            LabeledSwitchRow(
                 label = stringResource(R.string.settings_auto_restart),
                 checked = autoRestart,
                 onCheckedChange = onAutoRestartChange,
             )
 
-            SettingsToggleRow(
+            LabeledSwitchRow(
                 label = stringResource(R.string.settings_dynamic_increase),
                 checked = dynamicIncreaseEnabled,
                 onCheckedChange = onDynamicIncreaseEnabledChange,
@@ -245,10 +265,12 @@ fun SettingsScreen(
             Text(
                 text = stringResource(R.string.settings_work_schedule),
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 8.dp),
+                modifier = Modifier
+                    .padding(bottom = 8.dp)
+                    .semantics { heading() },
             )
 
-            SettingsToggleRow(
+            LabeledSwitchRow(
                 label = stringResource(R.string.settings_work_schedule_enabled),
                 checked = workScheduleEnabled,
                 onCheckedChange = onWorkScheduleEnabledChange,
@@ -272,7 +294,7 @@ fun SettingsScreen(
                     stringResource(R.string.day_sun),
                 )
 
-                SettingsToggleRow(
+                LabeledSwitchRow(
                     label = stringResource(R.string.settings_auto_mode_by_day),
                     checked = autoModeByDayEnabled,
                     onCheckedChange = onAutoModeByDayEnabledChange,
@@ -307,7 +329,9 @@ fun SettingsScreen(
             Text(
                 text = stringResource(R.string.settings_notifications),
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 8.dp),
+                modifier = Modifier
+                    .padding(bottom = 8.dp)
+                    .semantics { heading() },
             )
 
             VolumeBar(
@@ -319,7 +343,7 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            SettingsToggleRow(
+            LabeledSwitchRow(
                 label = stringResource(R.string.settings_vibration),
                 checked = vibrationEnabled,
                 onCheckedChange = onVibrationEnabledChange,
@@ -331,7 +355,7 @@ fun SettingsScreen(
                 onBeepCountChange = onBeepCountChange,
             )
 
-            SettingsToggleRow(
+            LabeledSwitchRow(
                 label = stringResource(R.string.settings_tts_enabled),
                 checked = ttsEnabled,
                 onCheckedChange = onTtsEnabledChange,
@@ -437,10 +461,12 @@ fun SettingsScreen(
             Text(
                 text = stringResource(R.string.settings_statistics),
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 8.dp),
+                modifier = Modifier
+                    .padding(bottom = 8.dp)
+                    .semantics { heading() },
             )
 
-            SettingsToggleRow(
+            LabeledSwitchRow(
                 label = stringResource(R.string.settings_tracking_enabled),
                 checked = trackingEnabled,
                 onCheckedChange = onTrackingEnabledChange,
@@ -470,7 +496,9 @@ fun SettingsScreen(
             Text(
                 text = stringResource(R.string.settings_data),
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 8.dp),
+                modifier = Modifier
+                    .padding(bottom = 8.dp)
+                    .semantics { heading() },
             )
 
             OutlinedButton(
@@ -521,6 +549,7 @@ private fun LanguageDropdown(
             value = selectedLabel,
             onValueChange = {},
             readOnly = true,
+            label = { Text(stringResource(R.string.settings_language)) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier
                 .fillMaxWidth()
@@ -617,13 +646,16 @@ private fun BeepCountSlider(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth(),
         ) {
+            val beepCountLabel = stringResource(R.string.settings_beep_count)
             Slider(
                 value = beepCount.toFloat(),
                 onValueChange = { onBeepCountChange(it.roundToInt()) },
                 valueRange = 1f..5f,
                 steps = 3,
                 enabled = enabled,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .semantics { contentDescription = beepCountLabel },
             )
             Text(
                 text = beepCount.toString(),
@@ -688,7 +720,7 @@ internal fun DayScheduleRow(
                         onDayChange(day.copy(linked = newLinked))
                         if (!newLinked) expanded = true
                     },
-                    modifier = Modifier.size(36.dp),
+                    modifier = Modifier.size(48.dp),
                 ) {
                     Icon(
                         imageVector = if (day.linked) Icons.Outlined.Link else Icons.Outlined.LinkOff,
@@ -899,30 +931,6 @@ internal fun TimePickerRow(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun SettingsToggleRow(
-    label: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.weight(1f),
-        )
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-        )
     }
 }
 

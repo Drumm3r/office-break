@@ -35,7 +35,7 @@ class BackupManagerTest {
 
     @Test
     fun `valid BackupData JSON can be deserialized`() {
-        val original = createSampleBackupData()
+        val original = BackupDataFixtures.minimal()
         val encoded = json.encodeToString(original)
         val decoded = json.decodeFromString<BackupData>(encoded)
         assertEquals(original, decoded)
@@ -92,19 +92,19 @@ class BackupManagerTest {
 
     @Test
     fun `future format version is detectable`() {
-        val data = createSampleBackupData().copy(formatVersion = 99)
+        val data = BackupDataFixtures.minimal().copy(formatVersion = 99)
         assertTrue(data.formatVersion > BackupData.CURRENT_FORMAT_VERSION)
     }
 
     @Test
     fun `current format version is accepted`() {
-        val data = createSampleBackupData()
+        val data = BackupDataFixtures.minimal()
         assertTrue(data.formatVersion <= BackupData.CURRENT_FORMAT_VERSION)
     }
 
     @Test
     fun `roundtrip preserves all settings fields`() {
-        val data = createSampleBackupData().copy(
+        val data = BackupDataFixtures.minimal().copy(
             timerHours = 1,
             timerMinutes = 45,
             repsMin = 5,
@@ -161,7 +161,7 @@ class BackupManagerTest {
 
     @Test
     fun `restoreFromJson with future formatVersion returns error`() = runTest {
-        val futureData = createSampleBackupData().copy(formatVersion = 999)
+        val futureData = BackupDataFixtures.minimal().copy(formatVersion = 999)
         val encoded = json.encodeToString(futureData)
         val result = backupManager.restoreFromJson(encoded)
         assertTrue(result is ImportResult.Error)
@@ -169,7 +169,7 @@ class BackupManagerTest {
 
     @Test
     fun `restoreFromJson with valid data returns success`() = runTest {
-        val validData = createSampleBackupData()
+        val validData = BackupDataFixtures.minimal()
         val encoded = json.encodeToString(validData)
         val result = backupManager.restoreFromJson(encoded)
         assertTrue(result is ImportResult.Success)
@@ -293,7 +293,7 @@ class BackupManagerTest {
 
     @Test
     fun `restoreFromJson with valid data restores settings to repository`() = runTest {
-        val data = createSampleBackupData().copy(
+        val data = BackupDataFixtures.minimal().copy(
             timerHours = 2,
             timerMinutes = 30,
             language = "en",
@@ -314,7 +314,7 @@ class BackupManagerTest {
             totalBreaksAllTime = 42,
             totalRepsAllTime = 420,
         )
-        val data = createSampleBackupData().copy(statsSnapshot = statsSnapshot)
+        val data = BackupDataFixtures.minimal().copy(statsSnapshot = statsSnapshot)
         val encoded = json.encodeToString(data)
 
         val result = backupManager.restoreFromJson(encoded)
@@ -325,30 +325,4 @@ class BackupManagerTest {
         assertEquals(420, restored.totalRepsAllTime)
     }
 
-    private fun createSampleBackupData() = BackupData(
-        formatVersion = 1,
-        exportTimestamp = 1000L,
-        appVersionCode = 5,
-        timerHours = 0,
-        timerMinutes = 30,
-        repsMin = 10,
-        repsMax = 10,
-        repsLinked = true,
-        exercises = emptyList(),
-        language = "system",
-        themeMode = "system",
-        beepVolume = 80,
-        vibrationEnabled = true,
-        beepCount = 3,
-        keepScreenOn = false,
-        autoRestart = true,
-        dynamicIncreaseEnabled = true,
-        breaksSinceLastIncrease = 0,
-        trackingEnabled = true,
-        breakRecords = emptyList(),
-        dailyAggregates = emptyList(),
-        yearlyAggregates = emptyList(),
-        statsSnapshot = StatsSnapshot(),
-        achievementState = AchievementState(),
-    )
 }

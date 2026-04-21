@@ -3,7 +3,6 @@ package de.mysportsmate.officebreak.locale
 import android.content.Context
 import android.content.res.Configuration
 import android.content.res.Resources
-import androidx.datastore.preferences.core.stringPreferencesKey
 import de.mysportsmate.officebreak.data.SettingsRepository
 import de.mysportsmate.officebreak.data.dataStore
 import kotlinx.coroutines.flow.first
@@ -42,7 +41,7 @@ object LocaleHelper {
             runBlocking {
                 withTimeout(1000L) {
                     context.dataStore.data.map { prefs ->
-                        prefs[stringPreferencesKey("language")] ?: SettingsRepository.LANGUAGE_SYSTEM
+                        prefs[SettingsRepository.KEY_LANGUAGE] ?: SettingsRepository.LANGUAGE_SYSTEM
                     }.first()
                 }
             }

@@ -34,6 +34,7 @@ fun ExerciseDialog(
     exerciseName: String,
     reps: Int,
     onDone: () -> Unit,
+    modifier: Modifier = Modifier,
     showMusicToggle: Boolean = false,
     isMusicPlaying: Boolean = false,
     onToggleMusic: () -> Unit = {},
@@ -46,7 +47,7 @@ fun ExerciseDialog(
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface,
             ),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = modifier.fillMaxWidth(),
         ) {
             Column(
                 modifier = Modifier

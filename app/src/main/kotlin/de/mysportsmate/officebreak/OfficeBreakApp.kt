@@ -7,6 +7,7 @@ import androidx.core.content.getSystemService
 import de.mysportsmate.officebreak.data.AppJson
 import de.mysportsmate.officebreak.data.DEFAULT_WEEK_SCHEDULE
 import de.mysportsmate.officebreak.data.DaySchedule
+import de.mysportsmate.officebreak.data.SettingsRepository
 import de.mysportsmate.officebreak.data.dataStore
 import de.mysportsmate.officebreak.service.WorkScheduleManager
 import kotlinx.coroutines.CoroutineScope
@@ -49,9 +50,9 @@ class OfficeBreakApp : Application() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val prefs = dataStore.data.first()
-                val enabled = prefs[androidx.datastore.preferences.core.booleanPreferencesKey("work_schedule_enabled")] ?: false
+                val enabled = prefs[SettingsRepository.KEY_WORK_SCHEDULE_ENABLED] ?: false
                 if (enabled) {
-                    val scheduleJson = prefs[androidx.datastore.preferences.core.stringPreferencesKey("week_schedule")]
+                    val scheduleJson = prefs[SettingsRepository.KEY_WEEK_SCHEDULE]
                     val schedule = if (scheduleJson != null) {
                         try {
                             AppJson.decodeFromString<List<DaySchedule>>(scheduleJson)

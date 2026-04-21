@@ -3,13 +3,13 @@ package de.mysportsmate.officebreak.service
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
 import de.mysportsmate.officebreak.data.AppJson
 import de.mysportsmate.officebreak.data.DEFAULT_WEEK_SCHEDULE
 import de.mysportsmate.officebreak.data.DaySchedule
+import de.mysportsmate.officebreak.data.SettingsRepository
 import de.mysportsmate.officebreak.data.dataStore
+import de.mysportsmate.officebreak.widget.WidgetTimerState
 import de.mysportsmate.officebreak.widget.WidgetUpdater
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,17 +27,17 @@ class BootReceiver : BroadcastReceiver() {
                 // Reset widget timer state — elapsedRealtime() resets on reboot and
                 // TimerService (START_NOT_STICKY) does not survive reboot
                 context.dataStore.edit {
-                    it[TimerService.KEY_WIDGET_TIMER_STATUS] = "idle"
+                    it[TimerService.KEY_WIDGET_TIMER_STATUS] = WidgetTimerState.STATUS_IDLE
                     it[TimerService.KEY_WIDGET_TIMER_END_REALTIME] = 0L
                     it[TimerService.KEY_WIDGET_TIMER_TOTAL_SECONDS] = 0L
                     it[TimerService.KEY_WIDGET_TIMER_REMAINING_SECONDS] = 0L
                 }
-                WidgetUpdater.requestUpdate(context, "idle")
+                WidgetUpdater.requestUpdate(context, WidgetTimerState.STATUS_IDLE)
 
                 val prefs = context.dataStore.data.first()
-                val enabled = prefs[booleanPreferencesKey("work_schedule_enabled")] ?: false
+                val enabled = prefs[SettingsRepository.KEY_WORK_SCHEDULE_ENABLED] ?: false
                 if (enabled) {
-                    val scheduleJson = prefs[stringPreferencesKey("week_schedule")]
+                    val scheduleJson = prefs[SettingsRepository.KEY_WEEK_SCHEDULE]
                     val schedule = if (scheduleJson != null) {
                         try {
                             AppJson.decodeFromString<List<DaySchedule>>(scheduleJson)
