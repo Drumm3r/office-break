@@ -215,6 +215,10 @@ class SettingsRepository(
         prefs[KEY_LAST_PICKED_NAME]
     }
 
+    val activeBreakState: Flow<String?> = dataStore.data.map { prefs ->
+        prefs[KEY_ACTIVE_BREAK_STATE]
+    }
+
     suspend fun setTimerHours(hours: Int) {
         dataStore.edit { it[KEY_TIMER_HOURS] = hours }
     }
@@ -346,6 +350,16 @@ class SettingsRepository(
                 it[KEY_LAST_PICKED_NAME] = name
             } else {
                 it.remove(KEY_LAST_PICKED_NAME)
+            }
+        }
+    }
+
+    suspend fun setActiveBreakState(payloadJson: String?) {
+        dataStore.edit {
+            if (payloadJson != null) {
+                it[KEY_ACTIVE_BREAK_STATE] = payloadJson
+            } else {
+                it.remove(KEY_ACTIVE_BREAK_STATE)
             }
         }
     }
@@ -515,6 +529,7 @@ class SettingsRepository(
         internal val KEY_BREAKS_SINCE_LAST_INCREASE = intPreferencesKey("breaks_since_last_increase")
         internal val KEY_USED_EXERCISE_NAMES = stringPreferencesKey("used_exercise_names")
         internal val KEY_LAST_PICKED_NAME = stringPreferencesKey("last_picked_name")
+        internal val KEY_ACTIVE_BREAK_STATE = stringPreferencesKey("active_break_state")
         internal val KEY_ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
 
         const val DEFAULT_HOURS = 0

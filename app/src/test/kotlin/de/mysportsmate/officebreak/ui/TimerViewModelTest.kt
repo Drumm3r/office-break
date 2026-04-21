@@ -735,6 +735,50 @@ class TimerViewModelTest {
         assertEquals(7, restoredVm.currentReps.value)
     }
 
+    @Test
+    fun `currentExercise restored from DataStore when SavedStateHandle empty`() = runTest {
+        repository.setActiveBreakState(
+            """{"exercise":{"name":"Push Ups","isEnabled":true},"reps":9}""",
+        )
+
+        val vm = TimerViewModel(
+            application = application,
+            savedStateHandle = SavedStateHandle(),
+            repository = repository,
+            statsRepository = statsRepository,
+            timerStateHolder = timerStateHolder,
+            serviceController = serviceController,
+        )
+        advanceUntilIdle()
+
+        assertEquals("Push Ups", vm.currentExercise.value?.name)
+        assertEquals(9, vm.currentReps.value)
+
+        vm.onTimerExpired()
+        advanceUntilIdle()
+
+        assertEquals("Push Ups", vm.currentExercise.value?.name)
+        assertEquals(9, vm.currentReps.value)
+    }
+
+    @Test
+    fun `onExerciseDone clears persisted active break state`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        val activeBreakCollector = launch { repository.activeBreakState.collect {} }
+        advanceUntilIdle()
+
+        viewModel.onTimerExpired()
+        advanceUntilIdle()
+        assertNotNull(repository.activeBreakState.first())
+
+        viewModel.onExerciseDone()
+        advanceUntilIdle()
+        assertNull(repository.activeBreakState.first())
+
+        activeBreakCollector.cancel()
+        collectors.forEach { it.cancel() }
+    }
+
     // --- Input coercion / clamping tests ---
 
     @Test

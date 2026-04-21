@@ -40,10 +40,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import de.mysportsmate.officebreak.data.AppJson
 import java.time.LocalDate
@@ -60,6 +62,12 @@ sealed interface DynamicIncreaseOffer {
     data class RepsOnly(val newReps: Int) : DynamicIncreaseOffer
     data class IntervalOnly(val newIntervalMinutes: Int) : DynamicIncreaseOffer
 }
+
+@kotlinx.serialization.Serializable
+internal data class ActiveBreakPayload(
+    val exercise: Exercise,
+    val reps: Int,
+)
 
 class TimerViewModel @JvmOverloads constructor(
     application: Application,
@@ -178,18 +186,41 @@ class TimerViewModel @JvmOverloads constructor(
     private val _newlyUnlockedAchievements = MutableStateFlow<List<AchievementDefinition>>(emptyList())
     val newlyUnlockedAchievements: StateFlow<List<AchievementDefinition>> = _newlyUnlockedAchievements.asStateFlow()
 
-    private val _currentExercise = MutableStateFlow(
-        savedStateHandle.get<String>(KEY_CURRENT_EXERCISE)?.let {
+    private val restoredExerciseFromHandle: Exercise? =
+        savedStateHandle.get<String>(KEY_CURRENT_EXERCISE)?.let { raw ->
             try {
-                json.decodeFromString<Exercise>(it)
+                json.decodeFromString<Exercise>(raw)
             } catch (_: Exception) {
                 null
             }
-        },
+        }
+
+    private val restoredFromDataStore: ActiveBreakPayload? =
+        if (restoredExerciseFromHandle == null) {
+            try {
+                runBlocking { repository.activeBreakState.first() }?.let { raw ->
+                    try {
+                        json.decodeFromString<ActiveBreakPayload>(raw)
+                    } catch (_: Exception) {
+                        null
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to read persisted active break state", e)
+                null
+            }
+        } else {
+            null
+        }
+
+    private val _currentExercise = MutableStateFlow(
+        restoredExerciseFromHandle ?: restoredFromDataStore?.exercise,
     )
     val currentExercise: StateFlow<Exercise?> = _currentExercise.asStateFlow()
 
-    private val _currentReps = MutableStateFlow(savedStateHandle.get<Int>(KEY_CURRENT_REPS))
+    private val _currentReps = MutableStateFlow(
+        savedStateHandle.get<Int>(KEY_CURRENT_REPS) ?: restoredFromDataStore?.reps,
+    )
     val currentReps: StateFlow<Int?> = _currentReps.asStateFlow()
 
     private var previewTrack: android.media.AudioTrack? = null
@@ -214,14 +245,21 @@ class TimerViewModel @JvmOverloads constructor(
 
     init {
         viewModelScope.launch {
-            _currentExercise.collect { exercise ->
-                savedStateHandle[KEY_CURRENT_EXERCISE] = exercise?.let { json.encodeToString(it) }
-            }
-        }
-        viewModelScope.launch {
-            _currentReps.collect { reps ->
-                savedStateHandle[KEY_CURRENT_REPS] = reps
-            }
+            combine(_currentExercise, _currentReps) { exercise, reps -> exercise to reps }
+                .collect { (exercise, reps) ->
+                    savedStateHandle[KEY_CURRENT_EXERCISE] = exercise?.let { json.encodeToString(it) }
+                    savedStateHandle[KEY_CURRENT_REPS] = reps
+                    val payload = if (exercise != null && reps != null) {
+                        json.encodeToString(ActiveBreakPayload(exercise, reps))
+                    } else {
+                        null
+                    }
+                    try {
+                        repository.setActiveBreakState(payload)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to persist active break state", e)
+                    }
+                }
         }
         viewModelScope.launch {
             shuffleBag = ShuffleBag(
