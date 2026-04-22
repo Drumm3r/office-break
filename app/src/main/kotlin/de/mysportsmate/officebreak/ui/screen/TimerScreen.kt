@@ -35,7 +35,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
@@ -325,56 +327,14 @@ fun TimerScreen(
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
-            if (timerState is TimerState.Running || timerState is TimerState.Paused || timerState is TimerState.Expired) {
-                VolumeBar(
-                    volume = beepVolume,
-                    onVolumeChange = viewModel::setBeepVolume,
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            }
-
-            if (timerState is TimerState.Idle) {
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp),
-                ) {
-                    IconButton(onClick = { showStats = true }) {
-                        Icon(
-                            imageVector = Icons.Default.BarChart,
-                            contentDescription = stringResource(R.string.stats_title),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                    IconButton(onClick = { showAchievements = true }) {
-                        Icon(
-                            imageVector = Icons.Default.EmojiEvents,
-                            contentDescription = stringResource(R.string.achievements_title),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                    IconButton(onClick = { showExerciseSettings = true }) {
-                        Icon(
-                            imageVector = Icons.Default.FitnessCenter,
-                            contentDescription = stringResource(R.string.exercises_title),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                    IconButton(onClick = { showSettings = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = stringResource(R.string.settings_title),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                }
-            }
+            var topBarHeightPx by remember { mutableStateOf(0) }
+            val density = LocalDensity.current
+            val topBarHeightDp = with(density) { topBarHeightPx.toDp() }
 
             Column(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = topBarHeightDp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
@@ -432,7 +392,7 @@ fun TimerScreen(
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+                            modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp),
                         ) {
                             Text(
                                 text = stringResource(R.string.break_pause_title),
@@ -455,6 +415,9 @@ fun TimerScreen(
                             CountdownDisplay(
                                 remainingSeconds = state.remainingSeconds,
                                 totalSeconds = state.totalSeconds,
+                                modifier = Modifier
+                                    .weight(1f, fill = false)
+                                    .fillMaxWidth(),
                             )
 
                             Spacer(modifier = Modifier.height(48.dp))
@@ -516,13 +479,16 @@ fun TimerScreen(
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxSize(),
                         ) {
                             val running = state as? TimerState.Running
 
                             CountdownDisplay(
                                 remainingSeconds = running?.remainingSeconds ?: 0L,
                                 totalSeconds = running?.totalSeconds ?: 1L,
+                                modifier = Modifier
+                                    .weight(1f, fill = false)
+                                    .fillMaxWidth(),
                             )
 
                             Spacer(modifier = Modifier.height(48.dp))
@@ -542,6 +508,61 @@ fun TimerScreen(
                                     style = MaterialTheme.typography.titleLarge,
                                 )
                             }
+                        }
+                    }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .onSizeChanged { topBarHeightPx = it.height },
+            ) {
+                if (timerState is TimerState.Running ||
+                    timerState is TimerState.Paused ||
+                    timerState is TimerState.Expired
+                ) {
+                    VolumeBar(
+                        volume = beepVolume,
+                        onVolumeChange = viewModel::setBeepVolume,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                } else if (timerState is TimerState.Idle) {
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp),
+                    ) {
+                        IconButton(onClick = { showStats = true }) {
+                            Icon(
+                                imageVector = Icons.Default.BarChart,
+                                contentDescription = stringResource(R.string.stats_title),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                        IconButton(onClick = { showAchievements = true }) {
+                            Icon(
+                                imageVector = Icons.Default.EmojiEvents,
+                                contentDescription = stringResource(R.string.achievements_title),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                        IconButton(onClick = { showExerciseSettings = true }) {
+                            Icon(
+                                imageVector = Icons.Default.FitnessCenter,
+                                contentDescription = stringResource(R.string.exercises_title),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                        IconButton(onClick = { showSettings = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = stringResource(R.string.settings_title),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
                         }
                     }
                 }

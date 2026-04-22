@@ -2,6 +2,7 @@ package de.mysportsmate.officebreak.ui.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -39,48 +40,53 @@ fun CountdownDisplay(
         remainingSecs,
     )
 
-    Box(
+    BoxWithConstraints(
+        modifier = modifier.semantics(mergeDescendants = true) {
+            contentDescription = description
+            progressBarRangeInfo = ProgressBarRangeInfo(progress, 0f..1f)
+        },
         contentAlignment = Alignment.Center,
-        modifier = modifier
-            .size(280.dp)
-            .semantics(mergeDescendants = true) {
-                contentDescription = description
-                progressBarRangeInfo = ProgressBarRangeInfo(progress, 0f..1f)
-            },
     ) {
-        Canvas(modifier = Modifier.size(280.dp)) {
-            val strokeWidth = 12.dp.toPx()
-            val arcSize = size.minDimension - strokeWidth
-            val topLeft = Offset(strokeWidth / 2, strokeWidth / 2)
+        val sizeDp = minOf(maxWidth, maxHeight, 280.dp)
 
-            // Track
-            drawArc(
-                color = trackColor,
-                startAngle = -90f,
-                sweepAngle = 360f,
-                useCenter = false,
-                topLeft = topLeft,
-                size = Size(arcSize, arcSize),
-                style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
-            )
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.size(sizeDp),
+        ) {
+            Canvas(modifier = Modifier.size(sizeDp)) {
+                val strokeWidth = 12.dp.toPx()
+                val arcSize = size.minDimension - strokeWidth
+                val topLeft = Offset(strokeWidth / 2, strokeWidth / 2)
 
-            // Progress
-            drawArc(
-                color = primaryColor,
-                startAngle = -90f,
-                sweepAngle = 360f * progress,
-                useCenter = false,
-                topLeft = topLeft,
-                size = Size(arcSize, arcSize),
-                style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
+                // Track
+                drawArc(
+                    color = trackColor,
+                    startAngle = -90f,
+                    sweepAngle = 360f,
+                    useCenter = false,
+                    topLeft = topLeft,
+                    size = Size(arcSize, arcSize),
+                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
+                )
+
+                // Progress
+                drawArc(
+                    color = primaryColor,
+                    startAngle = -90f,
+                    sweepAngle = 360f * progress,
+                    useCenter = false,
+                    topLeft = topLeft,
+                    size = Size(arcSize, arcSize),
+                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
+                )
+            }
+
+            Text(
+                text = timeText,
+                style = MaterialTheme.typography.displayLarge,
+                color = MaterialTheme.colorScheme.onSurface,
             )
         }
-
-        Text(
-            text = timeText,
-            style = MaterialTheme.typography.displayLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
     }
 }
 
