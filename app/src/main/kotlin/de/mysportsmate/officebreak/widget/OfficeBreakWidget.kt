@@ -2,9 +2,12 @@ package de.mysportsmate.officebreak.widget
 
 import android.content.Context
 import android.os.SystemClock
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
 import androidx.datastore.preferences.core.Preferences
 import androidx.glance.GlanceId
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.provideContent
 import androidx.glance.currentState
 import de.mysportsmate.officebreak.data.AppJson
@@ -19,6 +22,14 @@ import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 
 class OfficeBreakWidget : GlanceAppWidget() {
+
+    override val sizeMode: SizeMode = SizeMode.Responsive(
+        setOf(
+            DpSize(180.dp, 24.dp),
+            DpSize(180.dp, 60.dp),
+            DpSize(180.dp, 120.dp),
+        ),
+    )
 
     private val json = AppJson
 
