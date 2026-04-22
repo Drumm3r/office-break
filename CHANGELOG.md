@@ -29,7 +29,7 @@ All notable changes to Office Break are documented here. Newest on top.
 - **Developer mode (7× tap on "Statistics" header)** — Modeled after Android's "You are now a developer!" gesture. Revealing a new Developer section under "Data" with: reset donation popup (clears dismiss/snooze and rewinds install date so the popup reappears on next launch), reset onboarding, show DataStore dump with copy-to-clipboard for bug reports, wipe all app data (confirmation-gated), and disable dev mode. State persists in DataStore across launches. Hidden by default; counter resets after 3 seconds of tap inactivity.
 - **Build info embedded for bug reports** — `BuildConfig` now carries `GIT_SHA` (short commit hash, read from `git rev-parse` at configure time, falls back to `"unknown"`) and `BUILD_TIMESTAMP` (ISO-8601 UTC). Both are surfaced alongside `VERSION_NAME` / `VERSION_CODE` / build type in the developer-mode DataStore dump, so users can paste a complete build + state snapshot into GitHub issues with one tap.
 
-### Changes
+### Improvements
 
 - **Backup import hardened** — `BackupManager.restoreFromJson` now rejects files larger than 5 MB before reading, caps `breakRecords` at 100k entries, per-mode exercise lists at 500 entries, and truncates exercise names to 100 chars. `SettingsRepository.restoreFromBackup` clamps all numeric fields (timer hours/minutes, reps, beep volume/count, schedule hours/minutes) to valid ranges. Closes the primary DoS/OOM surface identified by the 2026-04-21 security audit.
 - **Foreground service subtype declared** — `AndroidManifest` now carries `PROPERTY_SPECIAL_USE_FGS_SUBTYPE=timer` on `TimerService` and `startForeground` passes `FOREGROUND_SERVICE_TYPE_SPECIAL_USE` on API 30+, required for Play Store review of `specialUse` foreground services on API 34+.
@@ -87,7 +87,7 @@ All notable changes to Office Break are documented here. Newest on top.
 - **119 new unit tests** — Added test coverage for `DaySchedule`, `SettingsRepository`, `BackupManager`, `StatsRepository`, `TimerViewModel`, and `TimerState`.
 - **Compose previews for every screen** — Every major screen now has `@Preview` entries to speed up UI iteration and design review.
 
-### Changes
+### Improvements
 
 - **"Reset" renamed to "Stop"** — Timer action button and its confirmation dialog now use "Stop", better reflecting the destructive intent.
 - **Break-interval hint clarified** — Copy now explains that the timer repeats until manually stopped, reducing confusion about continuous breaks.
@@ -122,7 +122,7 @@ All notable changes to Office Break are documented here. Newest on top.
 - **Redesigned timer icon** — A stretching-figure silhouette inside the clock ring, replacing the previous generic timer icon.
 - **GitHub Actions CI + community governance** — CI workflow builds APKs, runs unit tests (45+ test classes), and lints on every PR. Adds `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `SECURITY.md`, `CODEOWNERS`, and issue / PR templates.
 
-### Changes
+### Improvements
 
 - **"Sound" setting renamed to "Beep volume"** — Clearer naming for the beep audio control; beep count (1–5) remains adjustable.
 - **Kotlin upgraded to 2.2** — Toolchain bump reflected in README and Gradle configuration.
@@ -138,7 +138,7 @@ All notable changes to Office Break are documented here. Newest on top.
 
 ## [v0.5.0] - 2026-03-25
 
-### Changes
+### Improvements
 
 - **Package rebranded to `de.mysportsmate.officebreak`** — Renamed from `com.drumm3r.officebreak`, reflecting the new organization. All source files, tests, and build configs migrated accordingly.
 - **License switched to GPL v3** — Codebase now distributed under the GNU General Public License v3 (full text in `LICENSE.md`), introducing strong copyleft requirements for derivative works.
@@ -154,7 +154,7 @@ All notable changes to Office Break are documented here. Newest on top.
 - **Configurable beep count** — Number of alarm beeps on expiry is now selectable from 1 to 5.
 - **Toggle auto-restart timer** — Disabling auto-restart stops the timer from restarting after an exercise is confirmed, giving users manual control over break cadence.
 
-### Changes
+### Improvements
 
 - **Dedicated Settings screen** — All timer and notification preferences moved into a single Settings screen accessible from the timer UI, replacing the scattered inline controls.
 - **More reliable screen wake-up on expiry** — Activity launch on timer expiry now uses explicit intents with the correct flags, fixing cases where the screen stayed dim.
@@ -168,7 +168,7 @@ All notable changes to Office Break are documented here. Newest on top.
 - **Shuffle-bag exercise selection** — Instead of pure random picks, the app now cycles through every enabled exercise once before reshuffling, eliminating close-repeat duplicates inside a session.
 - **Min / max repetition range with link toggle** — Users can set a minimum and maximum rep count; each expiry draws a random value in the range. A link icon lets both sliders move together when users want a fixed rep count.
 
-### Changes
+### Improvements
 
 - **Persistent foreground notification** — Timer notification now stays visible across the entire break cycle and disappears only on manual reset, keeping the timer's state visible.
 - **README refreshed** — Feature descriptions updated to reflect shuffle-bag selection and the rep-range system.
