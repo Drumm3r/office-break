@@ -56,7 +56,7 @@ All notable changes to Office Break are documented here. Newest on top.
 - **Onboarding step 1 redesigned** — Individual exercise toggles replaced by three mode-selection cards (Workout / Mobility / Office) with icons and descriptions.
 - **Work-start notification copy clarified** — Updated to "Your work day has started" / "Do you want to start your break timer?" to align with the new inline Start action.
 - **More detailed alarm-scheduling logs** — `WorkScheduleManager` now logs the next scheduled alarm time, exact-alarm permission status, and fallback path to aid debugging on OEM-restricted devices.
-- **Android Gradle Plugin upgraded to 9.1.1** — Bumped from 9.1.0 for the latest stability and tooling fixes.
+- **Android Gradle Plugin upgraded to 9.2.0** — Bumped from 9.1.0 for the latest stability and tooling fixes.
 - **Typographic dashes replaced with plain hyphen in source** — All 29 em-dash (`—`) and en-dash (`–`) occurrences in user-facing strings, Kotlin code, and tests replaced with ASCII `-`. Simplifies grep / diff workflows and avoids invisible whitespace-looking characters in PRs. Markdown docs (`CHANGELOG.md`, `README.md`) keep typographic dashes for readability.
 
 ### Bug Fixes
