@@ -164,6 +164,9 @@ class TimerViewModel @JvmOverloads constructor(
     val autoModeByDayEnabled: StateFlow<Boolean> = repository.autoModeByDayEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_AUTO_MODE_BY_DAY)
 
+    val modeOverrideForToday: StateFlow<ExerciseMode?> = repository.modeOverrideForToday
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
     val dynamicIncreaseEnabled: StateFlow<Boolean> = repository.dynamicIncreaseEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_DYNAMIC_INCREASE_ENABLED)
 
@@ -334,10 +337,20 @@ class TimerViewModel @JvmOverloads constructor(
         try {
             val enabled = repository.autoModeByDayEnabled.first()
             if (!enabled) return
+            val currentMode = repository.exerciseMode.first()
+            val override = repository.modeOverrideForToday.first()
+            if (override != null) {
+                if (override != currentMode) {
+                    repository.setExerciseMode(override)
+                    shuffleBag.reset()
+                    repository.setUsedExerciseNames(emptySet())
+                    repository.setLastPickedName(null)
+                }
+                return
+            }
             val schedule = repository.weekSchedule.first()
             val dayIndex = LocalDate.now().dayOfWeek.ordinal
             val effective = resolveEffectiveSchedule(schedule, dayIndex) ?: return
-            val currentMode = repository.exerciseMode.first()
             if (effective.defaultMode != currentMode) {
                 repository.setExerciseMode(effective.defaultMode)
                 shuffleBag.reset()
@@ -635,6 +648,9 @@ class TimerViewModel @JvmOverloads constructor(
     fun setExerciseMode(mode: ExerciseMode) {
         launchSafely("Failed to set exercise mode") {
             repository.setExerciseMode(mode)
+            if (repository.autoModeByDayEnabled.first()) {
+                repository.setModeOverrideForToday(mode)
+            }
             shuffleBag.reset()
             repository.setUsedExerciseNames(emptySet())
             repository.setLastPickedName(null)
@@ -722,6 +738,7 @@ class TimerViewModel @JvmOverloads constructor(
         viewModelScope.launch {
             repository.setUsedExerciseNames(emptySet())
             repository.setLastPickedName(null)
+            repository.clearModeOverride()
         }
         serviceController.resetTimer()
     }
@@ -737,6 +754,13 @@ class TimerViewModel @JvmOverloads constructor(
     fun dismissWorkEnded() {
         _isFreestyle = false
         timerStateHolder.update(TimerState.Idle)
+        viewModelScope.launch {
+            try {
+                repository.clearModeOverride()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to clear mode override", e)
+            }
+        }
         serviceController.resetTimer()
     }
 

@@ -1627,6 +1627,115 @@ class TimerViewModelTest {
         (collectors + autoCollector + weekCollector).forEach { it.cancel() }
     }
 
+    // --- mode override for today (tages-override) ---
+
+    @Test
+    fun `setExerciseMode writes override when autoModeByDay is enabled`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        repository.setAutoModeByDayEnabled(enabled = true, seedMode = ExerciseMode.HOME_WORKOUT)
+        advanceUntilIdle()
+
+        viewModel.setExerciseMode(ExerciseMode.OFFICE)
+        advanceUntilIdle()
+
+        assertEquals(ExerciseMode.OFFICE, repository.modeOverrideForToday.first())
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `setExerciseMode does not write override when autoModeByDay is disabled`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        viewModel.setExerciseMode(ExerciseMode.OFFICE)
+        advanceUntilIdle()
+
+        assertNull(repository.modeOverrideForToday.first())
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `applyDayDefaultModeIfEnabled keeps override mode instead of day default`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        val todayIndex = java.time.LocalDate.now().dayOfWeek.ordinal
+        val schedule = DEFAULT_WEEK_SCHEDULE.toMutableList().apply {
+            for (i in indices) {
+                this[i] = this[i].copy(enabled = true, linked = false, defaultMode = ExerciseMode.HOME_WORKOUT)
+            }
+            this[todayIndex] = this[todayIndex].copy(defaultMode = ExerciseMode.HOME_WORKOUT)
+        }
+        repository.setWeekSchedule(schedule)
+        repository.setAutoModeByDayEnabled(enabled = true, seedMode = null)
+        repository.setExerciseMode(ExerciseMode.OFFICE)
+        repository.setModeOverrideForToday(ExerciseMode.OFFICE)
+        advanceUntilIdle()
+
+        viewModel.applyDayDefaultModeIfEnabled()
+        advanceUntilIdle()
+
+        assertEquals(ExerciseMode.OFFICE, repository.exerciseMode.first())
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `applyDayDefaultModeIfEnabled realigns mode to override when drifted`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        repository.setAutoModeByDayEnabled(enabled = true, seedMode = ExerciseMode.HOME_WORKOUT)
+        repository.setModeOverrideForToday(ExerciseMode.OFFICE)
+        repository.setExerciseMode(ExerciseMode.HOME_WORKOUT)
+        advanceUntilIdle()
+
+        viewModel.applyDayDefaultModeIfEnabled()
+        advanceUntilIdle()
+
+        assertEquals(ExerciseMode.OFFICE, repository.exerciseMode.first())
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `resetTimer clears mode override`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        repository.setAutoModeByDayEnabled(enabled = true, seedMode = ExerciseMode.HOME_WORKOUT)
+        repository.setModeOverrideForToday(ExerciseMode.OFFICE)
+        advanceUntilIdle()
+
+        viewModel.resetTimer()
+        advanceUntilIdle()
+
+        assertNull(repository.modeOverrideForToday.first())
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `dismissWorkEnded clears mode override`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        repository.setAutoModeByDayEnabled(enabled = true, seedMode = ExerciseMode.HOME_WORKOUT)
+        repository.setModeOverrideForToday(ExerciseMode.OFFICE)
+        advanceUntilIdle()
+
+        viewModel.dismissWorkEnded()
+        advanceUntilIdle()
+
+        assertNull(repository.modeOverrideForToday.first())
+
+        collectors.forEach { it.cancel() }
+    }
+
     @Test
     fun `completeOnboarding with autoMode seeded applies todays mode`() = runTest {
         val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }

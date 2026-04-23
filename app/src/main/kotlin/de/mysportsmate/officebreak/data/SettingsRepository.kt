@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
 import android.util.Log
+import java.time.LocalDate
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
@@ -149,6 +150,17 @@ class SettingsRepository(
 
     val autoModeByDayEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[KEY_AUTO_MODE_BY_DAY] ?: DEFAULT_AUTO_MODE_BY_DAY
+    }
+
+    val modeOverrideForToday: Flow<ExerciseMode?> = dataStore.data.map { prefs ->
+        val date = prefs[KEY_MODE_OVERRIDE_DATE] ?: return@map null
+        val modeName = prefs[KEY_MODE_OVERRIDE_MODE] ?: return@map null
+        if (date != LocalDate.now().toString()) return@map null
+        try {
+            ExerciseMode.valueOf(modeName)
+        } catch (_: IllegalArgumentException) {
+            null
+        }
     }
 
     val weekSchedule: Flow<List<DaySchedule>> = dataStore.data.map { prefs ->
@@ -315,6 +327,20 @@ class SettingsRepository(
 
     suspend fun setWeekSchedule(schedule: List<DaySchedule>) {
         dataStore.edit { it[KEY_WEEK_SCHEDULE] = json.encodeToString(schedule) }
+    }
+
+    suspend fun setModeOverrideForToday(mode: ExerciseMode) {
+        dataStore.edit {
+            it[KEY_MODE_OVERRIDE_DATE] = LocalDate.now().toString()
+            it[KEY_MODE_OVERRIDE_MODE] = mode.name
+        }
+    }
+
+    suspend fun clearModeOverride() {
+        dataStore.edit {
+            it.remove(KEY_MODE_OVERRIDE_DATE)
+            it.remove(KEY_MODE_OVERRIDE_MODE)
+        }
     }
 
     suspend fun setAutoModeByDayEnabled(enabled: Boolean, seedMode: ExerciseMode? = null) {
@@ -572,6 +598,8 @@ class SettingsRepository(
         internal val KEY_WORK_SCHEDULE_ENABLED = booleanPreferencesKey("work_schedule_enabled")
         internal val KEY_WEEK_SCHEDULE = stringPreferencesKey("week_schedule")
         internal val KEY_AUTO_MODE_BY_DAY = booleanPreferencesKey("auto_mode_by_day_enabled")
+        internal val KEY_MODE_OVERRIDE_DATE = stringPreferencesKey("mode_override_date")
+        internal val KEY_MODE_OVERRIDE_MODE = stringPreferencesKey("mode_override_mode")
         // Legacy keys for migration from old flat format
         internal val KEY_WORK_START_HOUR = intPreferencesKey("work_start_hour")
         internal val KEY_WORK_START_MINUTE = intPreferencesKey("work_start_minute")

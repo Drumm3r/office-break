@@ -61,6 +61,7 @@ fun ExerciseSettingsScreen(
     onAdd: (String) -> Unit,
     onRemove: (Int) -> Unit,
     onBack: () -> Unit,
+    showOverrideHint: Boolean = false,
 ) {
     var newExerciseName by rememberSaveable { mutableStateOf("") }
     val listState = remember(exerciseMode) { LazyListState() }
@@ -113,6 +114,19 @@ fun ExerciseSettingsScreen(
                         )
                     }
                 }
+            }
+
+            if (showOverrideHint) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = stringResource(R.string.exercise_mode_override_today_hint),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))

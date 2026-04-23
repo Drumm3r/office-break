@@ -1011,4 +1011,66 @@ class SettingsRepositoryTest {
         repository.setTimerHours(1)
         assertEquals(true, repository.onboardingCompleted.first())
     }
+
+    // --- modeOverrideForToday ---
+
+    @Test
+    fun `modeOverrideForToday emits null when unset`() = runTest {
+        assertNull(repository.modeOverrideForToday.first())
+    }
+
+    @Test
+    fun `setModeOverrideForToday persists and emits`() = runTest {
+        repository.modeOverrideForToday.test {
+            assertNull(awaitItem())
+
+            repository.setModeOverrideForToday(ExerciseMode.OFFICE)
+            assertEquals(ExerciseMode.OFFICE, awaitItem())
+
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `modeOverrideForToday emits null when stored date is stale`() = runTest {
+        dataStore.updateData { prefs ->
+            val mutable = prefs.toMutablePreferences()
+            mutable[SettingsRepository.KEY_MODE_OVERRIDE_DATE] = "1999-01-01"
+            mutable[SettingsRepository.KEY_MODE_OVERRIDE_MODE] = ExerciseMode.OFFICE.name
+            mutable
+        }
+
+        assertNull(repository.modeOverrideForToday.first())
+    }
+
+    @Test
+    fun `modeOverrideForToday emits null when mode name is invalid`() = runTest {
+        dataStore.updateData { prefs ->
+            val mutable = prefs.toMutablePreferences()
+            mutable[SettingsRepository.KEY_MODE_OVERRIDE_DATE] =
+                java.time.LocalDate.now().toString()
+            mutable[SettingsRepository.KEY_MODE_OVERRIDE_MODE] = "BOGUS_MODE"
+            mutable
+        }
+
+        assertNull(repository.modeOverrideForToday.first())
+    }
+
+    @Test
+    fun `clearModeOverride removes both keys`() = runTest {
+        repository.setModeOverrideForToday(ExerciseMode.OFFICE)
+        assertEquals(ExerciseMode.OFFICE, repository.modeOverrideForToday.first())
+
+        repository.clearModeOverride()
+        assertNull(repository.modeOverrideForToday.first())
+    }
+
+    @Test
+    fun `setModeOverrideForToday overwrites previous value`() = runTest {
+        repository.setModeOverrideForToday(ExerciseMode.OFFICE)
+        assertEquals(ExerciseMode.OFFICE, repository.modeOverrideForToday.first())
+
+        repository.setModeOverrideForToday(ExerciseMode.HOME_MOBILITY)
+        assertEquals(ExerciseMode.HOME_MOBILITY, repository.modeOverrideForToday.first())
+    }
 }

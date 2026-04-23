@@ -22,7 +22,7 @@
     <string name="reps_max_label">Max Wiederholungen</string>
     <string name="reps_link_description">Wiederholungen verknüpfen</string>
     <string name="timer_interval_label">Pausenintervall</string>
-    <string name="timer_interval_hint">Legt fest, wie oft du an eine aktive Pause erinnert wirst. Der Timer wiederholt sich bis du ihn beendest.</string>
+    <string name="timer_interval_hint">Legt fest, wie oft du an eine aktive Pause erinnert wirst. Der Timer wiederholt sich, bis du ihn beendest.</string>
     <string name="tap_to_enter">Antippen zum Eingeben</string>
     <string name="enter_time">Zeit eingeben</string>
     <string name="exercise_heading">Ab zur aktiven Pause!</string>
@@ -53,7 +53,7 @@
     <string name="volume_mute">Stummschalten</string>
     <string name="volume_unmute">Ton einschalten</string>
     <string name="settings_tts_enabled">Übung vorlesen</string>
-    <string name="settings_tts_hint">Nutzt Sprachausgabe um Übungen bei Pausenbeginn anzusagen</string>
+    <string name="settings_tts_hint">Nutzt Sprachausgabe, um Übungen bei Pausenbeginn anzusagen</string>
     <string name="settings_notification_sound">Benachrichtigungston</string>
     <string name="settings_notification_sound_hint">Eigene Töne werden bei Pausenbeginn abgespielt und stoppen, wenn du sie als erledigt markierst</string>
     <string name="settings_custom_sound_select">Eigenen Ton auswählen</string>
@@ -66,8 +66,8 @@
     <string name="settings_work_schedule_hint">Timer pausiert automatisch in der Pause und stoppt am Schichtende</string>
     <string name="settings_work_start">Arbeitsbeginn</string>
     <string name="settings_work_end">Arbeitsende</string>
-    <string name="settings_lunch_start">Pause Beginn</string>
-    <string name="settings_lunch_end">Pause Ende</string>
+    <string name="settings_lunch_start">Pausenbeginn</string>
+    <string name="settings_lunch_end">Pausenende</string>
     <string name="notification_text_lunch_pause">Pause - Timer pausiert</string>
     <string name="work_ended_title">Schönen Feierabend!</string>
     <string name="work_ended_message">Dein Arbeitstag ist vorbei. Der Timer wurde automatisch gestoppt.</string>
@@ -150,6 +150,7 @@
     <string name="exercise_mode_short_home_workout">Home Office\nWorkout</string>
     <string name="exercise_mode_short_home_mobility">Home Office\nMobilität</string>
     <string name="exercise_mode_short_office">Büro</string>
+    <string name="exercise_mode_override_today_hint">Beim Beenden und beim Arbeitstagende wird zum automatischen Moduswechsel zurückgekehrt.</string>
     <string name="onboarding_summary_mode">Modus: %1$s</string>
 
     <string name="dialog_confirm_ok">OK</string>
@@ -197,9 +198,9 @@
     <string name="stats_reps_average_per_day">Wiederholungen Ø/Tag</string>
     <string name="stats_last_week_format">%1$s (Vorwoche: %2$s)</string>
     <string name="stats_favorite_exercise">Häufigste Übung</string>
-    <string name="stats_times_format">%d mal</string>
+    <string name="stats_times_format">%d-mal</string>
     <string name="stats_exercise_distribution">Übungsverteilung</string>
-    <string name="stats_exercise_detail">%1$d mal / %2$d Wdh.</string>
+    <string name="stats_exercise_detail">%1$d-mal / %2$d Wdh.</string>
     <string name="stats_recent_activity">Letzte Aktivität</string>
     <string name="stats_breaks_count">%d Pausen</string>
     <string name="stats_no_data">Noch keine Daten. Schließe deine erste Pause ab!</string>
@@ -304,11 +305,11 @@
 
     <!-- Exercise Mastery -->
     <string name="achievement_mastery_10_title">Lehrling</string>
-    <string name="achievement_mastery_10_desc">Mache eine Übung 10 mal</string>
+    <string name="achievement_mastery_10_desc">Mache eine Übung 10-mal</string>
     <string name="achievement_mastery_50_title">Fortgeschritten</string>
-    <string name="achievement_mastery_50_desc">Mache eine Übung 50 mal</string>
+    <string name="achievement_mastery_50_desc">Mache eine Übung 50-mal</string>
     <string name="achievement_mastery_100_title">Meister</string>
-    <string name="achievement_mastery_100_desc">Mache eine Übung 100 mal</string>
+    <string name="achievement_mastery_100_desc">Mache eine Übung 100-mal</string>
 
     <!-- Daten Export/Import -->
     <string name="settings_data">Daten</string>
@@ -324,7 +325,7 @@
     <string name="import_error_too_large">Die ausgewählte Datei ist zu groß zum Importieren (maximal 5 MB)</string>
     <string name="backup_error">Etwas ist schiefgelaufen: %1$s</string>
     <string name="backup_error_generic">Etwas ist schiefgelaufen. Bitte versuche es erneut.</string>
-    <string name="share_error">Die Auszeichnung konnte nicht geteilt werden. Bitte versuche es erneut.</string>
+    <string name="share_error">Der Erfolg konnte nicht geteilt werden. Bitte versuche es erneut.</string>
 
     <!-- Widget -->
     <string name="widget_description">Pausen-Statistiken und Timer auf einen Blick</string>
@@ -361,7 +362,7 @@
     <string name="dev_show_dump">DataStore-Dump anzeigen</string>
     <string name="dev_show_dump_summary">Alle Einstellungswerte anzeigen (für Bug-Reports)</string>
     <string name="dev_clear_all">Alle App-Daten löschen</string>
-    <string name="dev_clear_all_summary">Setzt Einstellungen, Statistiken, Erfolge zurück - nicht umkehrbar</string>
+    <string name="dev_clear_all_summary">Setzt Einstellungen, Statistiken, Erfolge zurück - unwiderruflich</string>
     <string name="dev_clear_all_confirm_title">Alle Daten löschen?</string>
     <string name="dev_clear_all_confirm_message">Das löscht alle Einstellungen, Statistiken, Erfolge und eigenen Übungen. Kann nicht rückgängig gemacht werden.</string>
     <string name="dev_clear_all_confirm_yes">Löschen</string>

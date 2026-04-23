@@ -150,6 +150,7 @@
     <string name="exercise_mode_short_home_workout">Home Office\nWorkout</string>
     <string name="exercise_mode_short_home_mobility">Home Office\nMobility</string>
     <string name="exercise_mode_short_office">Office</string>
+    <string name="exercise_mode_override_today_hint">Reverts to your schedule when you stop the timer or at workday end</string>
     <string name="onboarding_summary_mode">Mode: %1$s</string>
 
     <string name="dialog_confirm_ok">OK</string>

@@ -64,6 +64,8 @@ import de.mysportsmate.officebreak.ui.components.TimerSetup
 import de.mysportsmate.officebreak.ui.components.VolumeBar
 import de.mysportsmate.officebreak.data.ExerciseMode
 import de.mysportsmate.officebreak.data.SettingsRepository
+import de.mysportsmate.officebreak.data.resolveEffectiveSchedule
+import java.time.LocalDate
 import de.mysportsmate.officebreak.locale.LocaleHelper
 import de.mysportsmate.officebreak.tts.BreakTtsManager
 import de.mysportsmate.officebreak.ui.theme.OfficeBreakTheme
@@ -100,6 +102,7 @@ fun TimerScreen(
     val workScheduleEnabled by viewModel.workScheduleEnabled.collectAsState()
     val weekSchedule by viewModel.weekSchedule.collectAsState()
     val autoModeByDayEnabled by viewModel.autoModeByDayEnabled.collectAsState()
+    val modeOverrideForToday by viewModel.modeOverrideForToday.collectAsState()
     val dynamicIncreaseOffer by viewModel.dynamicIncreaseOffer.collectAsState()
     val newlyUnlockedAchievements by viewModel.newlyUnlockedAchievements.collectAsState()
     val backupState by viewModel.backupState.collectAsState()
@@ -239,6 +242,11 @@ fun TimerScreen(
     }
 
     if (showExerciseSettings) {
+        val showOverrideHint = autoModeByDayEnabled && modeOverrideForToday != null && run {
+            val dayIndex = LocalDate.now().dayOfWeek.ordinal
+            val planMode = resolveEffectiveSchedule(weekSchedule, dayIndex)?.defaultMode
+            planMode != null && planMode != modeOverrideForToday
+        }
         ExerciseSettingsScreen(
             exercises = exercises,
             exerciseMode = exerciseMode,
@@ -247,6 +255,7 @@ fun TimerScreen(
             onAdd = viewModel::addExercise,
             onRemove = viewModel::removeExercise,
             onBack = { showExerciseSettings = false },
+            showOverrideHint = showOverrideHint,
         )
 
         return
