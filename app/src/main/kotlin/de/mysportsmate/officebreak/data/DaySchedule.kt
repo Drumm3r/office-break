@@ -1,7 +1,9 @@
 package de.mysportsmate.officebreak.data
 
+import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 
+@Immutable
 @Serializable
 data class DaySchedule(
     val enabled: Boolean = false,
@@ -14,6 +16,7 @@ data class DaySchedule(
     val lunchStartMinute: Int = 0,
     val lunchEndHour: Int = 13,
     val lunchEndMinute: Int = 0,
+    val defaultMode: ExerciseMode = ExerciseMode.HOME_WORKOUT,
 )
 
 val DEFAULT_WEEK_SCHEDULE: List<DaySchedule> = listOf(
@@ -24,6 +27,17 @@ val DEFAULT_WEEK_SCHEDULE: List<DaySchedule> = listOf(
     DaySchedule(enabled = true, linked = true),     // Friday
     DaySchedule(enabled = false, linked = false),   // Saturday
     DaySchedule(enabled = false, linked = false),   // Sunday
+)
+
+fun DaySchedule.clamp(): DaySchedule = copy(
+    workStartHour = workStartHour.coerceIn(0, 23),
+    workStartMinute = workStartMinute.coerceIn(0, 59),
+    workEndHour = workEndHour.coerceIn(0, 23),
+    workEndMinute = workEndMinute.coerceIn(0, 59),
+    lunchStartHour = lunchStartHour.coerceIn(0, 23),
+    lunchStartMinute = lunchStartMinute.coerceIn(0, 59),
+    lunchEndHour = lunchEndHour.coerceIn(0, 23),
+    lunchEndMinute = lunchEndMinute.coerceIn(0, 59),
 )
 
 fun DaySchedule.validated(): DaySchedule {
@@ -79,6 +93,7 @@ fun resolveEffectiveSchedule(schedule: List<DaySchedule>, dayIndex: Int): DaySch
                 lunchStartMinute = prev.lunchStartMinute,
                 lunchEndHour = prev.lunchEndHour,
                 lunchEndMinute = prev.lunchEndMinute,
+                defaultMode = prev.defaultMode,
             )
         }
     }

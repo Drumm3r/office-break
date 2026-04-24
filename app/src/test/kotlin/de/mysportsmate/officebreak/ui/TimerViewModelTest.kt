@@ -6,7 +6,9 @@ import app.cash.turbine.test
 import de.mysportsmate.officebreak.MainDispatcherRule
 import de.mysportsmate.officebreak.data.AchievementDefinition
 import de.mysportsmate.officebreak.data.Exercise
+import de.mysportsmate.officebreak.data.ExerciseMode
 import de.mysportsmate.officebreak.data.FakeDataStore
+import de.mysportsmate.officebreak.data.DEFAULT_WEEK_SCHEDULE
 import de.mysportsmate.officebreak.data.FitnessLevel
 import de.mysportsmate.officebreak.data.SettingsRepository
 import de.mysportsmate.officebreak.data.StatsRepository
@@ -18,6 +20,7 @@ import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -54,6 +57,12 @@ class TimerViewModelTest {
         Exercise(name = "Squats", nameResKey = "exercise_squats"),
     )
 
+    private val defaultExercisesByMode = mapOf(
+        ExerciseMode.HOME_WORKOUT to defaultExercises,
+        ExerciseMode.HOME_MOBILITY to listOf(Exercise(name = "Cat-Cow Stretch", nameResKey = "exercise_cat_cow")),
+        ExerciseMode.OFFICE to listOf(Exercise(name = "Neck Stretch", nameResKey = "exercise_neck_stretch")),
+    )
+
     @Before
     fun setUp() {
         mockkObject(WidgetUpdater)
@@ -64,7 +73,7 @@ class TimerViewModelTest {
         statsDataStore = FakeDataStore()
         repository = SettingsRepository(
             dataStore = dataStore,
-            defaultExercises = defaultExercises,
+            defaultExercisesByMode = defaultExercisesByMode,
         )
         statsRepository = StatsRepository(dataStore = statsDataStore)
         timerStateHolder = TimerStateHolder()
@@ -591,14 +600,10 @@ class TimerViewModelTest {
     fun `completeOnboarding applies fitness level presets`() = runTest {
         val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
         val onboardingCollector = launch { viewModel.onboardingCompleted.collect {} }
+        val modeCollector = launch { viewModel.exerciseMode.collect {} }
         advanceUntilIdle()
 
-        val selectedExercises = listOf(
-            Exercise(name = "Push Ups", isEnabled = true, nameResKey = "exercise_push_ups"),
-            Exercise(name = "Squats", isEnabled = false, nameResKey = "exercise_squats"),
-        )
-
-        viewModel.completeOnboarding(FitnessLevel.MODERATE, selectedExercises)
+        viewModel.completeOnboarding(FitnessLevel.MODERATE, ExerciseMode.HOME_WORKOUT)
         advanceUntilIdle()
 
         assertEquals(0, viewModel.hours.value)
@@ -606,9 +611,10 @@ class TimerViewModelTest {
         assertEquals(10, viewModel.repsMin.value)
         assertEquals(10, viewModel.repsMax.value)
         assertEquals(true, viewModel.repsLinked.value)
-        assertEquals(selectedExercises, viewModel.exercises.value)
+        assertEquals(ExerciseMode.HOME_WORKOUT, viewModel.exerciseMode.value)
         assertEquals(true, viewModel.onboardingCompleted.value)
 
+        modeCollector.cancel()
         onboardingCollector.cancel()
         collectors.forEach { it.cancel() }
     }
@@ -619,7 +625,7 @@ class TimerViewModelTest {
         val onboardingCollector = launch { viewModel.onboardingCompleted.collect {} }
         advanceUntilIdle()
 
-        viewModel.completeOnboarding(FitnessLevel.BEGINNER, defaultExercises)
+        viewModel.completeOnboarding(FitnessLevel.BEGINNER, ExerciseMode.HOME_WORKOUT)
         advanceUntilIdle()
 
         assertEquals(1, viewModel.hours.value)
@@ -637,7 +643,7 @@ class TimerViewModelTest {
         val onboardingCollector = launch { viewModel.onboardingCompleted.collect {} }
         advanceUntilIdle()
 
-        viewModel.completeOnboarding(FitnessLevel.ATHLETIC, defaultExercises)
+        viewModel.completeOnboarding(FitnessLevel.ATHLETIC, ExerciseMode.OFFICE)
         advanceUntilIdle()
 
         assertEquals(0, viewModel.hours.value)
@@ -646,6 +652,38 @@ class TimerViewModelTest {
         assertEquals(15, viewModel.repsMax.value)
 
         onboardingCollector.cancel()
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `setExerciseMode changes active mode`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        val modeCollector = launch { viewModel.exerciseMode.collect {} }
+        advanceUntilIdle()
+
+        viewModel.setExerciseMode(ExerciseMode.OFFICE)
+        advanceUntilIdle()
+
+        assertEquals(ExerciseMode.OFFICE, viewModel.exerciseMode.value)
+
+        modeCollector.cancel()
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `setExerciseMode updates exercises to new mode defaults`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        val modeCollector = launch { viewModel.exerciseMode.collect {} }
+        advanceUntilIdle()
+
+        assertEquals(defaultExercises, viewModel.exercises.value)
+
+        viewModel.setExerciseMode(ExerciseMode.OFFICE)
+        advanceUntilIdle()
+
+        assertEquals(defaultExercisesByMode[ExerciseMode.OFFICE], viewModel.exercises.value)
+
+        modeCollector.cancel()
         collectors.forEach { it.cancel() }
     }
 
@@ -666,6 +704,79 @@ class TimerViewModelTest {
         )
 
         assertEquals(exercise, restoredVm.currentExercise.value)
+    }
+
+    @Test
+    fun `onTimerExpired does not repick when currentExercise already set`() = runTest {
+        val exercise = Exercise(name = "Push Ups", isEnabled = true)
+        val json = Json { ignoreUnknownKeys = true }
+        val encoded = json.encodeToString(exercise)
+
+        val restoredHandle = SavedStateHandle(
+            mapOf(
+                "current_exercise" to encoded,
+                "current_reps" to 7,
+            ),
+        )
+        val restoredVm = TimerViewModel(
+            application = application,
+            savedStateHandle = restoredHandle,
+            repository = repository,
+            statsRepository = statsRepository,
+            timerStateHolder = timerStateHolder,
+            serviceController = serviceController,
+        )
+        advanceUntilIdle()
+
+        restoredVm.onTimerExpired()
+        advanceUntilIdle()
+
+        assertEquals(exercise, restoredVm.currentExercise.value)
+        assertEquals(7, restoredVm.currentReps.value)
+    }
+
+    @Test
+    fun `currentExercise restored from DataStore when SavedStateHandle empty`() = runTest {
+        repository.setActiveBreakState(
+            """{"exercise":{"name":"Push Ups","isEnabled":true},"reps":9}""",
+        )
+
+        val vm = TimerViewModel(
+            application = application,
+            savedStateHandle = SavedStateHandle(),
+            repository = repository,
+            statsRepository = statsRepository,
+            timerStateHolder = timerStateHolder,
+            serviceController = serviceController,
+        )
+        advanceUntilIdle()
+
+        assertEquals("Push Ups", vm.currentExercise.value?.name)
+        assertEquals(9, vm.currentReps.value)
+
+        vm.onTimerExpired()
+        advanceUntilIdle()
+
+        assertEquals("Push Ups", vm.currentExercise.value?.name)
+        assertEquals(9, vm.currentReps.value)
+    }
+
+    @Test
+    fun `onExerciseDone clears persisted active break state`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        val activeBreakCollector = launch { repository.activeBreakState.collect {} }
+        advanceUntilIdle()
+
+        viewModel.onTimerExpired()
+        advanceUntilIdle()
+        assertNotNull(repository.activeBreakState.first())
+
+        viewModel.onExerciseDone()
+        advanceUntilIdle()
+        assertNull(repository.activeBreakState.first())
+
+        activeBreakCollector.cancel()
+        collectors.forEach { it.cancel() }
     }
 
     // --- Input coercion / clamping tests ---
@@ -1347,6 +1458,304 @@ class TimerViewModelTest {
         advanceUntilIdle()
 
         assertEquals(0, viewModel.statsSnapshot.value.totalBreaksAllTime)
+
+        collectors.forEach { it.cancel() }
+    }
+
+    // --- auto mode by day ---
+
+    @Test
+    fun `autoModeByDayEnabled emits default false`() = runTest {
+        viewModel.autoModeByDayEnabled.test {
+            assertEquals(false, awaitItem())
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `setAutoModeByDayEnabled true seeds all days with current exercise mode`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        val autoCollector = launch { viewModel.autoModeByDayEnabled.collect {} }
+        val modeCollector = launch { viewModel.exerciseMode.collect {} }
+        advanceUntilIdle()
+
+        repository.setExerciseMode(ExerciseMode.OFFICE)
+        advanceUntilIdle()
+
+        viewModel.setAutoModeByDayEnabled(true)
+        advanceUntilIdle()
+
+        val schedule = repository.weekSchedule.first()
+        schedule.forEach { day ->
+            assertEquals(ExerciseMode.OFFICE, day.defaultMode)
+        }
+        assertTrue(repository.autoModeByDayEnabled.first())
+
+        (collectors + autoCollector + modeCollector).forEach { it.cancel() }
+    }
+
+    @Test
+    fun `applyDayDefaultModeIfEnabled is no-op when autoMode is disabled`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        repository.setExerciseMode(ExerciseMode.HOME_WORKOUT)
+        // Write schedule where today has OFFICE mode, but master toggle off
+        val todayIndex = java.time.LocalDate.now().dayOfWeek.ordinal
+        val schedule = DEFAULT_WEEK_SCHEDULE.toMutableList().apply {
+            this[todayIndex] = this[todayIndex].copy(
+                enabled = true,
+                linked = false,
+                defaultMode = ExerciseMode.OFFICE,
+            )
+        }
+        repository.setWeekSchedule(schedule)
+        advanceUntilIdle()
+
+        viewModel.applyDayDefaultModeIfEnabled()
+        advanceUntilIdle()
+
+        assertEquals(ExerciseMode.HOME_WORKOUT, repository.exerciseMode.first())
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `applyDayDefaultModeIfEnabled switches mode when todays mode differs`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        repository.setExerciseMode(ExerciseMode.HOME_WORKOUT)
+        val todayIndex = java.time.LocalDate.now().dayOfWeek.ordinal
+        val schedule = DEFAULT_WEEK_SCHEDULE.toMutableList().apply {
+            for (i in indices) {
+                this[i] = this[i].copy(enabled = true, linked = false)
+            }
+            this[todayIndex] = this[todayIndex].copy(defaultMode = ExerciseMode.OFFICE)
+        }
+        repository.setWeekSchedule(schedule)
+        repository.setAutoModeByDayEnabled(enabled = true, seedMode = null)
+        advanceUntilIdle()
+
+        viewModel.applyDayDefaultModeIfEnabled()
+        advanceUntilIdle()
+
+        assertEquals(ExerciseMode.OFFICE, repository.exerciseMode.first())
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `applyDayDefaultModeIfEnabled is no-op when today is disabled`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        repository.setExerciseMode(ExerciseMode.HOME_WORKOUT)
+        val todayIndex = java.time.LocalDate.now().dayOfWeek.ordinal
+        val schedule = DEFAULT_WEEK_SCHEDULE.toMutableList().apply {
+            this[todayIndex] = this[todayIndex].copy(
+                enabled = false,
+                linked = false,
+                defaultMode = ExerciseMode.OFFICE,
+            )
+        }
+        repository.setWeekSchedule(schedule)
+        repository.setAutoModeByDayEnabled(enabled = true, seedMode = null)
+        advanceUntilIdle()
+
+        viewModel.applyDayDefaultModeIfEnabled()
+        advanceUntilIdle()
+
+        // Mode stays what it was - today disabled, no switch
+        assertEquals(ExerciseMode.HOME_WORKOUT, repository.exerciseMode.first())
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `applyDayDefaultModeIfEnabled does nothing when current matches target mode`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        repository.setExerciseMode(ExerciseMode.OFFICE)
+        val todayIndex = java.time.LocalDate.now().dayOfWeek.ordinal
+        val schedule = DEFAULT_WEEK_SCHEDULE.toMutableList().apply {
+            this[todayIndex] = this[todayIndex].copy(
+                enabled = true,
+                linked = false,
+                defaultMode = ExerciseMode.OFFICE,
+            )
+        }
+        repository.setWeekSchedule(schedule)
+        repository.setAutoModeByDayEnabled(enabled = true, seedMode = null)
+        advanceUntilIdle()
+
+        viewModel.applyDayDefaultModeIfEnabled()
+        advanceUntilIdle()
+
+        assertEquals(ExerciseMode.OFFICE, repository.exerciseMode.first())
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `updateDaySchedule triggers mode switch when editing today`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        val autoCollector = launch { viewModel.autoModeByDayEnabled.collect {} }
+        val weekCollector = launch { viewModel.weekSchedule.collect {} }
+        advanceUntilIdle()
+
+        repository.setExerciseMode(ExerciseMode.HOME_WORKOUT)
+        repository.setAutoModeByDayEnabled(enabled = true, seedMode = ExerciseMode.HOME_WORKOUT)
+        val schedule = DEFAULT_WEEK_SCHEDULE.toMutableList().apply {
+            for (i in indices) {
+                this[i] = this[i].copy(enabled = true, linked = false)
+            }
+        }
+        repository.setWeekSchedule(schedule)
+        advanceUntilIdle()
+
+        val todayIndex = java.time.LocalDate.now().dayOfWeek.ordinal
+        viewModel.updateDaySchedule(
+            todayIndex,
+            schedule[todayIndex].copy(defaultMode = ExerciseMode.OFFICE),
+        )
+        advanceUntilIdle()
+
+        assertEquals(ExerciseMode.OFFICE, repository.exerciseMode.first())
+
+        (collectors + autoCollector + weekCollector).forEach { it.cancel() }
+    }
+
+    // --- mode override for today (tages-override) ---
+
+    @Test
+    fun `setExerciseMode writes override when autoModeByDay is enabled`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        repository.setAutoModeByDayEnabled(enabled = true, seedMode = ExerciseMode.HOME_WORKOUT)
+        advanceUntilIdle()
+
+        viewModel.setExerciseMode(ExerciseMode.OFFICE)
+        advanceUntilIdle()
+
+        assertEquals(ExerciseMode.OFFICE, repository.modeOverrideForToday.first())
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `setExerciseMode does not write override when autoModeByDay is disabled`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        viewModel.setExerciseMode(ExerciseMode.OFFICE)
+        advanceUntilIdle()
+
+        assertNull(repository.modeOverrideForToday.first())
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `applyDayDefaultModeIfEnabled keeps override mode instead of day default`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        val todayIndex = java.time.LocalDate.now().dayOfWeek.ordinal
+        val schedule = DEFAULT_WEEK_SCHEDULE.toMutableList().apply {
+            for (i in indices) {
+                this[i] = this[i].copy(enabled = true, linked = false, defaultMode = ExerciseMode.HOME_WORKOUT)
+            }
+            this[todayIndex] = this[todayIndex].copy(defaultMode = ExerciseMode.HOME_WORKOUT)
+        }
+        repository.setWeekSchedule(schedule)
+        repository.setAutoModeByDayEnabled(enabled = true, seedMode = null)
+        repository.setExerciseMode(ExerciseMode.OFFICE)
+        repository.setModeOverrideForToday(ExerciseMode.OFFICE)
+        advanceUntilIdle()
+
+        viewModel.applyDayDefaultModeIfEnabled()
+        advanceUntilIdle()
+
+        assertEquals(ExerciseMode.OFFICE, repository.exerciseMode.first())
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `applyDayDefaultModeIfEnabled realigns mode to override when drifted`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        repository.setAutoModeByDayEnabled(enabled = true, seedMode = ExerciseMode.HOME_WORKOUT)
+        repository.setModeOverrideForToday(ExerciseMode.OFFICE)
+        repository.setExerciseMode(ExerciseMode.HOME_WORKOUT)
+        advanceUntilIdle()
+
+        viewModel.applyDayDefaultModeIfEnabled()
+        advanceUntilIdle()
+
+        assertEquals(ExerciseMode.OFFICE, repository.exerciseMode.first())
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `resetTimer clears mode override`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        repository.setAutoModeByDayEnabled(enabled = true, seedMode = ExerciseMode.HOME_WORKOUT)
+        repository.setModeOverrideForToday(ExerciseMode.OFFICE)
+        advanceUntilIdle()
+
+        viewModel.resetTimer()
+        advanceUntilIdle()
+
+        assertNull(repository.modeOverrideForToday.first())
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `dismissWorkEnded clears mode override`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        repository.setAutoModeByDayEnabled(enabled = true, seedMode = ExerciseMode.HOME_WORKOUT)
+        repository.setModeOverrideForToday(ExerciseMode.OFFICE)
+        advanceUntilIdle()
+
+        viewModel.dismissWorkEnded()
+        advanceUntilIdle()
+
+        assertNull(repository.modeOverrideForToday.first())
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `completeOnboarding with autoMode seeded applies todays mode`() = runTest {
+        val collectors = collectAllFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        val todayIndex = java.time.LocalDate.now().dayOfWeek.ordinal
+        val schedule = DEFAULT_WEEK_SCHEDULE.toMutableList().apply {
+            for (i in indices) {
+                this[i] = this[i].copy(enabled = true, linked = false, defaultMode = ExerciseMode.OFFICE)
+            }
+        }
+        repository.setWeekSchedule(schedule)
+        repository.setAutoModeByDayEnabled(enabled = true, seedMode = null)
+        advanceUntilIdle()
+
+        viewModel.completeOnboarding(FitnessLevel.MODERATE, ExerciseMode.HOME_WORKOUT)
+        advanceUntilIdle()
+
+        // completeOnboarding sets mode = HOME_WORKOUT, then applyDayDefaultMode switches to today's OFFICE
+        assertEquals(ExerciseMode.OFFICE, repository.exerciseMode.first())
 
         collectors.forEach { it.cancel() }
     }

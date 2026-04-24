@@ -1,7 +1,9 @@
 package de.mysportsmate.officebreak.data
 
+import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 
+@Immutable
 @Serializable
 data class StatsSnapshot(
     val totalBreaksAllTime: Int = 0,

@@ -15,9 +15,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -51,7 +53,6 @@ class MainActivity : ComponentActivity() {
             val language by viewModel.language.collectAsState()
             val themeMode by viewModel.themeMode.collectAsState()
             val onboardingCompleted by viewModel.onboardingCompleted.collectAsState()
-            val exercises by viewModel.exercises.collectAsState()
 
             LaunchedEffect(language) {
                 if (currentLanguage != null && currentLanguage != language) {
@@ -68,13 +69,17 @@ class MainActivity : ComponentActivity() {
                 },
             ) {
                 when (onboardingCompleted) {
-                    null -> Box(Modifier.fillMaxSize())
+                    null -> Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator()
+                    }
                     true -> TimerScreen(viewModel = viewModel)
                     false -> OnboardingScreen(
-                        exercises = exercises,
                         onComplete = viewModel::completeOnboarding,
-                        onWorkScheduleConfigured = { enabled, schedule ->
-                            viewModel.applyWorkSchedule(enabled, schedule)
+                        onWorkScheduleConfigured = { enabled, autoMode, schedule ->
+                            viewModel.applyWorkSchedule(enabled, autoMode, schedule)
                         },
                     )
                 }

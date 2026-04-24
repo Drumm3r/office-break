@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -17,10 +19,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.activity.compose.LocalActivity
 import android.view.WindowManager
-import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -32,7 +35,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
@@ -45,17 +50,22 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import de.mysportsmate.officebreak.R
 import de.mysportsmate.officebreak.service.TimerState
+import de.mysportsmate.officebreak.widget.WidgetTimerState
 import de.mysportsmate.officebreak.data.AchievementRegistry
 import de.mysportsmate.officebreak.ui.BackupUiState
 import de.mysportsmate.officebreak.ui.TimerViewModel
 import de.mysportsmate.officebreak.ui.components.AchievementUnlockDialog
-import de.mysportsmate.officebreak.ui.components.ConfirmResetDialog
+import de.mysportsmate.officebreak.ui.components.ConfirmationDialog
 import de.mysportsmate.officebreak.ui.components.CountdownDisplay
+import de.mysportsmate.officebreak.ui.components.DonationPromptDialog
 import de.mysportsmate.officebreak.ui.components.DynamicIncreaseDialog
 import de.mysportsmate.officebreak.ui.components.ExerciseDialog
 import de.mysportsmate.officebreak.ui.components.TimerSetup
 import de.mysportsmate.officebreak.ui.components.VolumeBar
+import de.mysportsmate.officebreak.data.ExerciseMode
 import de.mysportsmate.officebreak.data.SettingsRepository
+import de.mysportsmate.officebreak.data.resolveEffectiveSchedule
+import java.time.LocalDate
 import de.mysportsmate.officebreak.locale.LocaleHelper
 import de.mysportsmate.officebreak.tts.BreakTtsManager
 import de.mysportsmate.officebreak.ui.theme.OfficeBreakTheme
@@ -87,11 +97,18 @@ fun TimerScreen(
     val dynamicIncreaseEnabled by viewModel.dynamicIncreaseEnabled.collectAsState()
     val ttsEnabled by viewModel.ttsEnabled.collectAsState()
     val customSoundUri by viewModel.customSoundUri.collectAsState()
+    val isMusicPlaying by viewModel.isMusicPlaying.collectAsState()
+    val exerciseMode by viewModel.exerciseMode.collectAsState()
     val workScheduleEnabled by viewModel.workScheduleEnabled.collectAsState()
     val weekSchedule by viewModel.weekSchedule.collectAsState()
+    val autoModeByDayEnabled by viewModel.autoModeByDayEnabled.collectAsState()
+    val modeOverrideForToday by viewModel.modeOverrideForToday.collectAsState()
     val dynamicIncreaseOffer by viewModel.dynamicIncreaseOffer.collectAsState()
     val newlyUnlockedAchievements by viewModel.newlyUnlockedAchievements.collectAsState()
     val backupState by viewModel.backupState.collectAsState()
+    val showDonationPrompt by viewModel.showDonationPrompt.collectAsState()
+    val devModeEnabled by viewModel.devModeEnabled.collectAsState()
+    val settingsDump by viewModel.settingsDump.collectAsState()
     val ttsContext = LocalContext.current
     val ttsManager = remember { BreakTtsManager(ttsContext) }
     DisposableEffect(Unit) {
@@ -119,16 +136,17 @@ fun TimerScreen(
         }
     }
 
-    val toastContext = LocalContext.current
+    val snackbarContext = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(backupState) {
         val message = when (backupState) {
-            is BackupUiState.ExportSuccess -> toastContext.getString(R.string.export_success)
-            is BackupUiState.ImportSuccess -> toastContext.getString(R.string.import_success)
+            is BackupUiState.ExportSuccess -> snackbarContext.getString(R.string.export_success)
+            is BackupUiState.ImportSuccess -> snackbarContext.getString(R.string.import_success)
             is BackupUiState.Error -> (backupState as BackupUiState.Error).message
             else -> null
         }
         if (message != null) {
-            Toast.makeText(toastContext, message, Toast.LENGTH_LONG).show()
+            snackbarHostState.showSnackbar(message)
             viewModel.clearBackupState()
         }
     }
@@ -149,6 +167,9 @@ fun TimerScreen(
             exerciseName = exerciseName,
             reps = reps,
             onDone = { viewModel.onExerciseDone() },
+            showMusicToggle = customSoundUri != null,
+            isMusicPlaying = isMusicPlaying,
+            onToggleMusic = { viewModel.toggleMusicPlayback() },
         )
     }
 
@@ -173,6 +194,35 @@ fun TimerScreen(
         )
     }
 
+    var donationDialogVisible by rememberSaveable { mutableStateOf(false) }
+    val donationDialogAllowed = showDonationPrompt &&
+        currentExercise == null &&
+        newlyUnlockedAchievements.isEmpty() &&
+        dynamicIncreaseOffer == null &&
+        !showResetDialog
+    LaunchedEffect(donationDialogAllowed) {
+        if (donationDialogAllowed && !donationDialogVisible) {
+            donationDialogVisible = true
+            viewModel.onDonationShown()
+        }
+    }
+    if (donationDialogVisible) {
+        DonationPromptDialog(
+            onSupport = {
+                donationDialogVisible = false
+                viewModel.onDonationSupport()
+            },
+            onLater = {
+                donationDialogVisible = false
+                viewModel.onDonationLater()
+            },
+            onDismiss = {
+                donationDialogVisible = false
+                viewModel.onDonationDismiss()
+            },
+        )
+    }
+
     if (showStats) {
         StatsScreen(
             snapshot = statsSnapshot,
@@ -192,12 +242,20 @@ fun TimerScreen(
     }
 
     if (showExerciseSettings) {
+        val showOverrideHint = autoModeByDayEnabled && modeOverrideForToday != null && run {
+            val dayIndex = LocalDate.now().dayOfWeek.ordinal
+            val planMode = resolveEffectiveSchedule(weekSchedule, dayIndex)?.defaultMode
+            planMode != null && planMode != modeOverrideForToday
+        }
         ExerciseSettingsScreen(
             exercises = exercises,
+            exerciseMode = exerciseMode,
+            onModeChange = viewModel::setExerciseMode,
             onToggle = viewModel::toggleExercise,
             onAdd = viewModel::addExercise,
             onRemove = viewModel::removeExercise,
             onBack = { showExerciseSettings = false },
+            showOverrideHint = showOverrideHint,
         )
 
         return
@@ -233,12 +291,23 @@ fun TimerScreen(
             onStopPreview = viewModel::stopPreview,
             workScheduleEnabled = workScheduleEnabled,
             weekSchedule = weekSchedule,
+            autoModeByDayEnabled = autoModeByDayEnabled,
             onWorkScheduleEnabledChange = viewModel::setWorkScheduleEnabled,
+            onAutoModeByDayEnabledChange = viewModel::setAutoModeByDayEnabled,
             onDayScheduleChange = viewModel::updateDaySchedule,
             onTrackingEnabledChange = viewModel::setTrackingEnabled,
             onResetStats = viewModel::resetStats,
             onExportToUri = viewModel::exportData,
             onImportFromUri = viewModel::importData,
+            onOpenKofi = viewModel::openKofiLink,
+            devModeEnabled = devModeEnabled,
+            settingsDump = settingsDump,
+            onDevModeEnabledChange = viewModel::setDevModeEnabled,
+            onResetDonationPrompt = viewModel::resetDonationPromptForTesting,
+            onResetOnboarding = viewModel::resetOnboarding,
+            onShowDataStoreDump = viewModel::loadSettingsDump,
+            onDismissSettingsDump = viewModel::clearSettingsDump,
+            onClearAllData = viewModel::clearAllData,
             onBack = { showSettings = false },
         )
 
@@ -246,7 +315,11 @@ fun TimerScreen(
     }
 
     if (showResetDialog) {
-        ConfirmResetDialog(
+        ConfirmationDialog(
+            titleRes = R.string.reset_confirm_title,
+            messageRes = R.string.reset_confirm_message,
+            confirmRes = R.string.reset_confirm_yes,
+            dismissRes = R.string.reset_confirm_no,
             onConfirm = {
                 showResetDialog = false
                 viewModel.resetTimer()
@@ -255,62 +328,22 @@ fun TimerScreen(
         )
     }
 
-    Scaffold { innerPadding ->
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+    ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
-            if (timerState is TimerState.Running || timerState is TimerState.Paused || timerState is TimerState.Expired) {
-                VolumeBar(
-                    volume = beepVolume,
-                    onVolumeChange = viewModel::setBeepVolume,
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            }
-
-            if (timerState is TimerState.Idle) {
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp),
-                ) {
-                    IconButton(onClick = { showStats = true }) {
-                        Icon(
-                            imageVector = Icons.Default.BarChart,
-                            contentDescription = stringResource(R.string.stats_title),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                    IconButton(onClick = { showAchievements = true }) {
-                        Icon(
-                            imageVector = Icons.Default.EmojiEvents,
-                            contentDescription = stringResource(R.string.achievements_title),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                    IconButton(onClick = { showExerciseSettings = true }) {
-                        Icon(
-                            imageVector = Icons.Default.FitnessCenter,
-                            contentDescription = stringResource(R.string.exercises_title),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                    IconButton(onClick = { showSettings = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = stringResource(R.string.settings_title),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                }
-            }
+            var topBarHeightPx by remember { mutableStateOf(0) }
+            val density = LocalDensity.current
+            val topBarHeightDp = with(density) { topBarHeightPx.toDp() }
 
             Column(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = topBarHeightDp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
@@ -318,11 +351,11 @@ fun TimerScreen(
                     targetState = timerState,
                     contentKey = { state ->
                         when (state) {
-                            is TimerState.Idle -> "idle"
-                            is TimerState.Running -> "running"
-                            is TimerState.Paused -> "paused"
-                            is TimerState.Expired -> "expired"
-                            is TimerState.WorkEnded -> "work_ended"
+                            is TimerState.Idle -> WidgetTimerState.STATUS_IDLE
+                            is TimerState.Running -> WidgetTimerState.STATUS_RUNNING
+                            is TimerState.Paused -> WidgetTimerState.STATUS_PAUSED
+                            is TimerState.Expired -> WidgetTimerState.STATUS_EXPIRED
+                            is TimerState.WorkEnded -> WidgetTimerState.STATUS_WORK_ENDED
                         }
                     },
                     label = "timer_content",
@@ -331,7 +364,9 @@ fun TimerScreen(
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(rememberScrollState()),
                         ) {
                             TimerSetup(
                                 hours = hours,
@@ -366,7 +401,7 @@ fun TimerScreen(
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+                            modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp),
                         ) {
                             Text(
                                 text = stringResource(R.string.break_pause_title),
@@ -389,6 +424,9 @@ fun TimerScreen(
                             CountdownDisplay(
                                 remainingSeconds = state.remainingSeconds,
                                 totalSeconds = state.totalSeconds,
+                                modifier = Modifier
+                                    .weight(1f, fill = false)
+                                    .fillMaxWidth(),
                             )
 
                             Spacer(modifier = Modifier.height(48.dp))
@@ -450,13 +488,16 @@ fun TimerScreen(
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxSize(),
                         ) {
                             val running = state as? TimerState.Running
 
                             CountdownDisplay(
                                 remainingSeconds = running?.remainingSeconds ?: 0L,
                                 totalSeconds = running?.totalSeconds ?: 1L,
+                                modifier = Modifier
+                                    .weight(1f, fill = false)
+                                    .fillMaxWidth(),
                             )
 
                             Spacer(modifier = Modifier.height(48.dp))
@@ -476,6 +517,61 @@ fun TimerScreen(
                                     style = MaterialTheme.typography.titleLarge,
                                 )
                             }
+                        }
+                    }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .onSizeChanged { topBarHeightPx = it.height },
+            ) {
+                if (timerState is TimerState.Running ||
+                    timerState is TimerState.Paused ||
+                    timerState is TimerState.Expired
+                ) {
+                    VolumeBar(
+                        volume = beepVolume,
+                        onVolumeChange = viewModel::setBeepVolume,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                } else if (timerState is TimerState.Idle) {
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp),
+                    ) {
+                        IconButton(onClick = { showStats = true }) {
+                            Icon(
+                                imageVector = Icons.Default.BarChart,
+                                contentDescription = stringResource(R.string.stats_title),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                        IconButton(onClick = { showAchievements = true }) {
+                            Icon(
+                                imageVector = Icons.Default.EmojiEvents,
+                                contentDescription = stringResource(R.string.achievements_title),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                        IconButton(onClick = { showExerciseSettings = true }) {
+                            Icon(
+                                imageVector = Icons.Default.FitnessCenter,
+                                contentDescription = stringResource(R.string.exercises_title),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                        IconButton(onClick = { showSettings = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = stringResource(R.string.settings_title),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
                         }
                     }
                 }

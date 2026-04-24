@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
@@ -17,9 +18,9 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.core.app.NotificationCompat
-import androidx.datastore.preferences.core.booleanPreferencesKey
+import android.os.SystemClock
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import de.mysportsmate.officebreak.MainActivity
 import de.mysportsmate.officebreak.OfficeBreakApp
@@ -31,6 +32,7 @@ import de.mysportsmate.officebreak.data.SettingsRepository
 import de.mysportsmate.officebreak.data.dataStore
 import de.mysportsmate.officebreak.data.resolveEffectiveSchedule
 import de.mysportsmate.officebreak.locale.LocaleHelper
+import de.mysportsmate.officebreak.widget.WidgetTimerState
 import de.mysportsmate.officebreak.widget.WidgetUpdater
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,6 +42,8 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalTime
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -53,7 +57,7 @@ sealed interface TimerState {
 
 class TimerService : Service() {
 
-    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var timerJob: Job? = null
     private var wakeLock: PowerManager.WakeLock? = null
     private var alarmTrack: AudioTrack? = null
@@ -84,6 +88,8 @@ class TimerService : Service() {
                     startTimer(totalSeconds, freestyle)
                 }
             }
+            ACTION_PAUSE_MUSIC -> pauseCustomSound()
+            ACTION_RESUME_MUSIC -> resumeCustomSound()
             else -> {
                 timerStateHolder.update(TimerState.Idle)
                 stopSelf()
@@ -101,7 +107,12 @@ class TimerService : Service() {
         manager.cancel(EXPIRED_NOTIFICATION_ID)
         acquireWakeLock(totalSeconds)
 
-        startForeground(NOTIFICATION_ID, buildNotification(localizedContext.getString(R.string.notification_text_running, formatTime(totalSeconds))))
+        val startNotification = buildNotification(localizedContext.getString(R.string.notification_text_running, formatTime(totalSeconds)))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            startForeground(NOTIFICATION_ID, startNotification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+        } else {
+            startForeground(NOTIFICATION_ID, startNotification)
+        }
         timerStateHolder.update(TimerState.Running(
             remainingSeconds = totalSeconds,
             totalSeconds = totalSeconds,
@@ -109,13 +120,13 @@ class TimerService : Service() {
 
         timerJob = scope.launch {
             try {
-                writeWidgetTimerStatus("running")
-                WidgetUpdater.requestUpdate(this@TimerService)
+                writeWidgetState(WidgetTimerState.STATUS_RUNNING, remainingSeconds = totalSeconds, totalSeconds = totalSeconds)
+                WidgetUpdater.requestUpdate(this@TimerService, WidgetTimerState.STATUS_RUNNING, totalSeconds, totalSeconds)
 
                 val schedulePrefs = dataStore.data.first()
-                val scheduleEnabled = schedulePrefs[booleanPreferencesKey("work_schedule_enabled")] ?: false
+                val scheduleEnabled = schedulePrefs[SettingsRepository.KEY_WORK_SCHEDULE_ENABLED] ?: false
                 val todaySchedule = if (scheduleEnabled) {
-                    val scheduleJson = schedulePrefs[stringPreferencesKey("week_schedule")]
+                    val scheduleJson = schedulePrefs[SettingsRepository.KEY_WEEK_SCHEDULE]
                     val week = if (scheduleJson != null) {
                         try {
                             AppJson.decodeFromString<List<DaySchedule>>(scheduleJson)
@@ -132,40 +143,39 @@ class TimerService : Service() {
                 }
 
                 var remaining = totalSeconds
+                val activeSchedule = if (freestyle) null else todaySchedule
                 while (remaining > 0) {
                     delay(1000L)
 
-                    if (todaySchedule != null && !freestyle) {
-                        val now = LocalTime.now()
-                        val workStart = LocalTime.of(todaySchedule.workStartHour, todaySchedule.workStartMinute)
-                        val workEnd = LocalTime.of(todaySchedule.workEndHour, todaySchedule.workEndMinute)
-                        val lunchStart = LocalTime.of(todaySchedule.lunchStartHour, todaySchedule.lunchStartMinute)
-                        val lunchEnd = LocalTime.of(todaySchedule.lunchEndHour, todaySchedule.lunchEndMinute)
-
-                        if (isTimeInRange(now, workEnd, workStart)) {
+                    when (val decision = TimerPauseResolver.decide(LocalTime.now(), activeSchedule)) {
+                        is TimerTickDecision.WorkEnded -> {
                             timerStateHolder.update(TimerState.WorkEnded)
-                            writeWidgetTimerStatus("work_ended")
-                            WidgetUpdater.requestUpdate(this@TimerService)
+                            writeWidgetState(WidgetTimerState.STATUS_WORK_ENDED)
+                            WidgetUpdater.requestUpdate(this@TimerService, WidgetTimerState.STATUS_WORK_ENDED)
                             releaseWakeLock()
                             stopForeground(STOP_FOREGROUND_REMOVE)
                             stopSelf()
                             return@launch
                         }
-
-                        if (isTimeInRange(now, lunchStart, lunchEnd)) {
+                        is TimerTickDecision.Pause -> {
                             timerStateHolder.update(TimerState.Paused(
                                 remainingSeconds = remaining,
                                 totalSeconds = totalSeconds,
                             ))
+                            writeWidgetState(WidgetTimerState.STATUS_PAUSED, remainingSeconds = remaining, totalSeconds = totalSeconds)
+                            WidgetUpdater.requestUpdate(this@TimerService, WidgetTimerState.STATUS_PAUSED, remaining, totalSeconds)
                             updateNotification(localizedContext.getString(R.string.notification_text_lunch_pause))
-                            while (isTimeInRange(LocalTime.now(), lunchStart, lunchEnd)) {
+                            while (TimerPauseResolver.decide(LocalTime.now(), activeSchedule) is TimerTickDecision.Pause) {
                                 delay(1000L)
                             }
                             timerStateHolder.update(TimerState.Running(
                                 remainingSeconds = remaining,
                                 totalSeconds = totalSeconds,
                             ))
+                            writeWidgetState(WidgetTimerState.STATUS_RUNNING, remainingSeconds = remaining, totalSeconds = totalSeconds)
+                            WidgetUpdater.requestUpdate(this@TimerService, WidgetTimerState.STATUS_RUNNING, remaining, totalSeconds)
                         }
+                        TimerTickDecision.Continue -> Unit
                     }
 
                     remaining--
@@ -174,18 +184,23 @@ class TimerService : Service() {
                         totalSeconds = totalSeconds,
                     ))
                     updateNotification(localizedContext.getString(R.string.notification_text_running, formatTime(remaining)))
+
+                    if (remaining > 0) {
+                        writeWidgetState(WidgetTimerState.STATUS_RUNNING, remainingSeconds = remaining, totalSeconds = totalSeconds)
+                        WidgetUpdater.requestUpdate(this@TimerService, WidgetTimerState.STATUS_RUNNING, remaining, totalSeconds)
+                    }
                 }
                 timerStateHolder.update(TimerState.Expired)
-                writeWidgetTimerStatus("expired")
-                WidgetUpdater.requestUpdate(this@TimerService)
+                writeWidgetState(WidgetTimerState.STATUS_EXPIRED)
+                WidgetUpdater.requestUpdate(this@TimerService, WidgetTimerState.STATUS_EXPIRED)
                 wakeScreen()
                 updateNotification(localizedContext.getString(R.string.notification_text_expired))
                 showExpiredNotification()
                 val soundPrefs = dataStore.data.first()
-                val beepVolume = soundPrefs[intPreferencesKey("beep_volume")] ?: SettingsRepository.DEFAULT_BEEP_VOLUME
-                val vibrationOn = soundPrefs[booleanPreferencesKey("vibration_enabled")] ?: true
-                val beepCount = soundPrefs[intPreferencesKey("beep_count")] ?: 3
-                val customSoundUri = soundPrefs[stringPreferencesKey("custom_sound_uri")]
+                val beepVolume = soundPrefs[SettingsRepository.KEY_BEEP_VOLUME] ?: SettingsRepository.DEFAULT_BEEP_VOLUME
+                val vibrationOn = soundPrefs[SettingsRepository.KEY_VIBRATION_ENABLED] ?: SettingsRepository.DEFAULT_VIBRATION_ENABLED
+                val beepCount = soundPrefs[SettingsRepository.KEY_BEEP_COUNT] ?: SettingsRepository.DEFAULT_BEEP_COUNT
+                val customSoundUri = soundPrefs[SettingsRepository.KEY_CUSTOM_SOUND_URI]
                 if (beepVolume > 0) {
                     if (customSoundUri != null) {
                         playCustomSound(customSoundUri, beepVolume / 100.0)
@@ -213,8 +228,8 @@ class TimerService : Service() {
         val manager = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
         manager.cancel(EXPIRED_NOTIFICATION_ID)
         scope.launch {
-            writeWidgetTimerStatus("idle")
-            WidgetUpdater.requestUpdate(this@TimerService)
+            writeWidgetState(WidgetTimerState.STATUS_IDLE)
+            WidgetUpdater.requestUpdate(this@TimerService, WidgetTimerState.STATUS_IDLE)
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         }
@@ -337,11 +352,11 @@ class TimerService : Service() {
                         .build(),
                 )
                 .setBufferSizeInBytes(bufferSize)
-                .setTransferMode(AudioTrack.MODE_STATIC)
+                .setTransferMode(AudioTrack.MODE_STREAM)
                 .build()
             alarmTrack = track
-            track.write(samples, 0, samples.size)
             track.play()
+            track.write(samples, 0, samples.size)
         } catch (e: Exception) {
             android.util.Log.e("TimerService", "Failed to play beep sound", e)
         }
@@ -388,14 +403,17 @@ class TimerService : Service() {
             }
             mediaPlayer = player
             player.setOnCompletionListener {
+                timerStateHolder.updateMusicPlaying(false)
                 it.release()
                 if (mediaPlayer === it) mediaPlayer = null
             }
             player.start()
+            timerStateHolder.updateMusicPlaying(true)
         } catch (e: Exception) {
             android.util.Log.e("TimerService", "Failed to play custom sound, falling back to beep", e)
             mediaPlayer?.release()
             mediaPlayer = null
+            timerStateHolder.updateMusicPlaying(false)
             playAlarmSound(volume = volume)
         }
     }
@@ -410,6 +428,40 @@ class TimerService : Service() {
             it.release()
         }
         mediaPlayer = null
+        timerStateHolder.updateMusicPlaying(false)
+    }
+
+    private fun pauseCustomSound() {
+        val player = mediaPlayer ?: return
+        try {
+            if (player.isPlaying) {
+                player.pause()
+            }
+        } catch (_: IllegalStateException) {
+            // Player in invalid state; ignore
+        }
+        timerStateHolder.updateMusicPlaying(false)
+    }
+
+    private fun resumeCustomSound() {
+        val player = mediaPlayer
+        if (player != null) {
+            try {
+                player.start()
+                timerStateHolder.updateMusicPlaying(true)
+                return
+            } catch (_: IllegalStateException) {
+                // Player invalid; fall through to restart from file
+            }
+        }
+        scope.launch {
+            val soundPrefs = dataStore.data.first()
+            val beepVolume = soundPrefs[SettingsRepository.KEY_BEEP_VOLUME] ?: SettingsRepository.DEFAULT_BEEP_VOLUME
+            val customSoundUri = soundPrefs[SettingsRepository.KEY_CUSTOM_SOUND_URI]
+            if (customSoundUri != null && beepVolume > 0) {
+                playCustomSound(customSoundUri, beepVolume / 100.0)
+            }
+        }
     }
 
     private fun stopAlarmSound() {
@@ -463,31 +515,48 @@ class TimerService : Service() {
         stopVibration()
         scope.cancel()
         releaseWakeLock()
+        runBlocking(Dispatchers.IO) {
+            withTimeoutOrNull(2000L) {
+                writeWidgetState(WidgetTimerState.STATUS_IDLE)
+                WidgetUpdater.requestUpdate(this@TimerService, WidgetTimerState.STATUS_IDLE)
+            }
+        }
         super.onDestroy()
     }
 
-    private suspend fun writeWidgetTimerStatus(status: String) {
+    private suspend fun writeWidgetState(
+        status: String,
+        remainingSeconds: Long = 0L,
+        totalSeconds: Long = 0L,
+    ) {
         try {
-            dataStore.edit { it[KEY_WIDGET_TIMER_STATUS] = status }
+            val endRealtime = if (status == WidgetTimerState.STATUS_RUNNING && remainingSeconds > 0) {
+                SystemClock.elapsedRealtime() + remainingSeconds * 1000L
+            } else {
+                0L
+            }
+            dataStore.edit {
+                it[KEY_WIDGET_TIMER_STATUS] = status
+                it[KEY_WIDGET_TIMER_END_REALTIME] = endRealtime
+                it[KEY_WIDGET_TIMER_TOTAL_SECONDS] = totalSeconds
+                it[KEY_WIDGET_TIMER_REMAINING_SECONDS] = remainingSeconds
+            }
         } catch (_: Exception) {
             // Non-critical
         }
     }
 
-    private fun isTimeInRange(time: LocalTime, start: LocalTime, end: LocalTime): Boolean {
-        return if (!start.isAfter(end)) {
-            !time.isBefore(start) && time.isBefore(end)
-        } else {
-            !time.isBefore(start) || time.isBefore(end)
-        }
-    }
-
     companion object {
-        private val KEY_WIDGET_TIMER_STATUS = stringPreferencesKey("widget_timer_status")
+        val KEY_WIDGET_TIMER_STATUS = stringPreferencesKey("widget_timer_status")
+        val KEY_WIDGET_TIMER_END_REALTIME = longPreferencesKey("widget_timer_end_realtime")
+        val KEY_WIDGET_TIMER_TOTAL_SECONDS = longPreferencesKey("widget_timer_total_seconds")
+        val KEY_WIDGET_TIMER_REMAINING_SECONDS = longPreferencesKey("widget_timer_remaining_seconds")
 
         const val ACTION_START = "de.mysportsmate.officebreak.ACTION_START"
         const val ACTION_RESET = "de.mysportsmate.officebreak.ACTION_RESET"
         const val ACTION_RESTART = "de.mysportsmate.officebreak.ACTION_RESTART"
+        const val ACTION_PAUSE_MUSIC = "de.mysportsmate.officebreak.ACTION_PAUSE_MUSIC"
+        const val ACTION_RESUME_MUSIC = "de.mysportsmate.officebreak.ACTION_RESUME_MUSIC"
         const val EXTRA_DURATION_SECONDS = "duration_seconds"
         const val EXTRA_LANGUAGE = "language"
         const val EXTRA_FREESTYLE = "freestyle"

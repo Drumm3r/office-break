@@ -33,4 +33,18 @@ class DefaultTimerServiceController(
         }
         context.startForegroundService(intent)
     }
+
+    override fun pauseMusic() {
+        val intent = Intent(context, TimerService::class.java).apply {
+            action = TimerService.ACTION_PAUSE_MUSIC
+        }
+        context.startService(intent)
+    }
+
+    override fun resumeMusic() {
+        val intent = Intent(context, TimerService::class.java).apply {
+            action = TimerService.ACTION_RESUME_MUSIC
+        }
+        context.startService(intent)
+    }
 }

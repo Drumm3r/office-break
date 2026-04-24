@@ -4,12 +4,23 @@ import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import androidx.core.content.getSystemService
+import de.mysportsmate.officebreak.data.AppJson
+import de.mysportsmate.officebreak.data.DEFAULT_WEEK_SCHEDULE
+import de.mysportsmate.officebreak.data.DaySchedule
+import de.mysportsmate.officebreak.data.SettingsRepository
+import de.mysportsmate.officebreak.data.dataStore
+import de.mysportsmate.officebreak.service.WorkScheduleManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 class OfficeBreakApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+        rescheduleWorkStartAlarm()
     }
 
     private fun createNotificationChannel() {
@@ -33,6 +44,30 @@ class OfficeBreakApp : Application() {
         getSystemService<NotificationManager>()?.createNotificationChannels(
             listOf(timerChannel, alertChannel),
         )
+    }
+
+    private fun rescheduleWorkStartAlarm() {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val prefs = dataStore.data.first()
+                val enabled = prefs[SettingsRepository.KEY_WORK_SCHEDULE_ENABLED] ?: false
+                if (enabled) {
+                    val scheduleJson = prefs[SettingsRepository.KEY_WEEK_SCHEDULE]
+                    val schedule = if (scheduleJson != null) {
+                        try {
+                            AppJson.decodeFromString<List<DaySchedule>>(scheduleJson)
+                        } catch (_: Exception) {
+                            DEFAULT_WEEK_SCHEDULE
+                        }
+                    } else {
+                        DEFAULT_WEEK_SCHEDULE
+                    }
+                    WorkScheduleManager.scheduleNextWorkStartReminder(this@OfficeBreakApp, schedule)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("OfficeBreakApp", "Failed to reschedule work start alarm", e)
+            }
+        }
     }
 
     companion object {

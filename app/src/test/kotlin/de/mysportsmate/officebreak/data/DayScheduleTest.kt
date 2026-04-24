@@ -394,4 +394,67 @@ class DayScheduleTest {
         assertEquals(13, monday.lunchEndHour)
         assertEquals(0, monday.lunchEndMinute)
     }
+
+    // --- defaultMode ---
+
+    @Test
+    fun `DaySchedule defaultMode is HOME_WORKOUT by default`() {
+        val day = DaySchedule()
+        assertEquals(ExerciseMode.HOME_WORKOUT, day.defaultMode)
+    }
+
+    @Test
+    fun `DEFAULT_WEEK_SCHEDULE entries default to HOME_WORKOUT mode`() {
+        DEFAULT_WEEK_SCHEDULE.forEachIndexed { index, day ->
+            assertEquals("Day $index should default to HOME_WORKOUT", ExerciseMode.HOME_WORKOUT, day.defaultMode)
+        }
+    }
+
+    @Test
+    fun `resolveEffectiveSchedule inherits defaultMode from previous unlinked day`() {
+        val schedule = listOf(
+            DaySchedule(enabled = true, linked = false, defaultMode = ExerciseMode.OFFICE),
+            DaySchedule(enabled = true, linked = true, defaultMode = ExerciseMode.HOME_WORKOUT),
+            DaySchedule(enabled = true, linked = true, defaultMode = ExerciseMode.HOME_MOBILITY),
+            DaySchedule(enabled = false, linked = false),
+            DaySchedule(enabled = false, linked = false),
+            DaySchedule(enabled = false, linked = false),
+            DaySchedule(enabled = false, linked = false),
+        )
+        val tue = resolveEffectiveSchedule(schedule, 1)
+        val wed = resolveEffectiveSchedule(schedule, 2)
+        assertEquals(ExerciseMode.OFFICE, tue!!.defaultMode)
+        assertEquals(ExerciseMode.OFFICE, wed!!.defaultMode)
+    }
+
+    @Test
+    fun `resolveEffectiveSchedule unlinked day keeps own defaultMode`() {
+        val schedule = listOf(
+            DaySchedule(enabled = true, linked = false, defaultMode = ExerciseMode.OFFICE),
+            DaySchedule(enabled = true, linked = false, defaultMode = ExerciseMode.HOME_MOBILITY),
+            DaySchedule(enabled = false, linked = false),
+            DaySchedule(enabled = false, linked = false),
+            DaySchedule(enabled = false, linked = false),
+            DaySchedule(enabled = false, linked = false),
+            DaySchedule(enabled = false, linked = false),
+        )
+        val tue = resolveEffectiveSchedule(schedule, 1)
+        assertEquals(ExerciseMode.HOME_MOBILITY, tue!!.defaultMode)
+    }
+
+    @Test
+    fun `resolveEffectiveSchedule inherits mode across week boundary`() {
+        val schedule = listOf(
+            DaySchedule(enabled = true, linked = true),   // Mon linked
+            DaySchedule(enabled = true, linked = true),   // Tue linked
+            DaySchedule(enabled = true, linked = true),   // Wed linked
+            DaySchedule(enabled = true, linked = true),   // Thu linked
+            DaySchedule(enabled = true, linked = false, defaultMode = ExerciseMode.OFFICE), // Fri source
+            DaySchedule(enabled = false, linked = false),
+            DaySchedule(enabled = false, linked = false),
+        )
+        // Monday walks back through Sun/Sat (disabled) to Friday
+        val mon = resolveEffectiveSchedule(schedule, 0)
+        assertEquals(ExerciseMode.OFFICE, mon!!.defaultMode)
+    }
 }

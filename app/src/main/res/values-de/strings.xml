@@ -22,7 +22,7 @@
     <string name="reps_max_label">Max Wiederholungen</string>
     <string name="reps_link_description">Wiederholungen verknüpfen</string>
     <string name="timer_interval_label">Pausenintervall</string>
-    <string name="timer_interval_hint">Legt fest, wie oft du an eine aktive Pause erinnert wirst. Der Timer wiederholt sich bis du ihn beendest.</string>
+    <string name="timer_interval_hint">Legt fest, wie oft du an eine aktive Pause erinnert wirst. Der Timer wiederholt sich, bis du ihn beendest.</string>
     <string name="tap_to_enter">Antippen zum Eingeben</string>
     <string name="enter_time">Zeit eingeben</string>
     <string name="exercise_heading">Ab zur aktiven Pause!</string>
@@ -48,10 +48,12 @@
     <string name="settings_beep_volume">Signalton-Lautstärke</string>
     <string name="settings_vibration">Vibration</string>
     <string name="settings_beep_count">Anzahl der Signaltöne</string>
+    <string name="settings_volume">Lautstärke</string>
+    <string name="countdown_remaining_description">Noch %1$d Minuten %2$d Sekunden</string>
     <string name="volume_mute">Stummschalten</string>
     <string name="volume_unmute">Ton einschalten</string>
     <string name="settings_tts_enabled">Übung vorlesen</string>
-    <string name="settings_tts_hint">Nutzt Sprachausgabe um Übungen bei Pausenbeginn anzusagen</string>
+    <string name="settings_tts_hint">Nutzt Sprachausgabe, um Übungen bei Pausenbeginn anzusagen</string>
     <string name="settings_notification_sound">Benachrichtigungston</string>
     <string name="settings_notification_sound_hint">Eigene Töne werden bei Pausenbeginn abgespielt und stoppen, wenn du sie als erledigt markierst</string>
     <string name="settings_custom_sound_select">Eigenen Ton auswählen</string>
@@ -64,19 +66,22 @@
     <string name="settings_work_schedule_hint">Timer pausiert automatisch in der Pause und stoppt am Schichtende</string>
     <string name="settings_work_start">Arbeitsbeginn</string>
     <string name="settings_work_end">Arbeitsende</string>
-    <string name="settings_lunch_start">Pause Beginn</string>
-    <string name="settings_lunch_end">Pause Ende</string>
-    <string name="notification_text_lunch_pause">Pause — Timer pausiert</string>
+    <string name="settings_lunch_start">Pausenbeginn</string>
+    <string name="settings_lunch_end">Pausenende</string>
+    <string name="notification_text_lunch_pause">Pause - Timer pausiert</string>
     <string name="work_ended_title">Schönen Feierabend!</string>
     <string name="work_ended_message">Dein Arbeitstag ist vorbei. Der Timer wurde automatisch gestoppt.</string>
     <string name="work_ended_dismiss">OK</string>
     <string name="break_pause_title">Schöne Pause!</string>
     <string name="break_pause_message">Der Timer ist pausiert und wird automatisch fortgesetzt, wenn deine Pause vorbei ist.</string>
-    <string name="notification_work_start_title">Arbeitstag beginnt!</string>
-    <string name="notification_work_start_text">Starte deinen Pausen-Timer für den Tag</string>
+    <string name="break_pause_music">Musik pausieren</string>
+    <string name="break_resume_music">Musik fortsetzen</string>
+    <string name="notification_work_start_title">Dein Arbeitstag hat begonnen</string>
+    <string name="notification_work_start_text">Möchtest du deinen Pausen-Timer starten?</string>
+    <string name="notification_work_start_action">Starten</string>
     <string name="timer_paused_lunch">Pause</string>
     <string name="onboarding_schedule_title">Deine Arbeitszeiten</string>
-    <string name="onboarding_schedule_subtitle">Optional — du kannst das später in den Einstellungen ändern</string>
+    <string name="onboarding_schedule_subtitle">Optional - du kannst das später in den Einstellungen ändern</string>
     <string name="onboarding_schedule_select_days">Wähle deine Arbeitstage</string>
     <string name="day_mon">Mo</string>
     <string name="day_tue">Di</string>
@@ -86,6 +91,10 @@
     <string name="day_sat">Sa</string>
     <string name="day_sun">So</string>
     <string name="settings_work_schedule_day_linked">Zeiten vom Vortag übernehmen</string>
+    <string name="settings_auto_mode_by_day">Modus automatisch pro Tag</string>
+    <string name="settings_auto_mode_by_day_hint">Wechselt den Übungsmodus automatisch passend zum Wochentag</string>
+    <string name="settings_day_mode_label">Modus</string>
+    <string name="settings_day_mode_inherited">Übernommen von %1$s</string>
 
     <!-- Dynamische Steigerung -->
     <string name="dynamic_increase_title">Du wirst stärker!</string>
@@ -99,12 +108,50 @@
     <string name="add_exercise">Hinzufügen</string>
     <string name="remove_exercise">Entfernen</string>
 
+    <!-- Home Workout Übungen -->
     <string name="exercise_push_ups">Liegestütze</string>
-    <string name="exercise_squats">Kniebeuge</string>
+    <string name="exercise_squats">Kniebeugen</string>
     <string name="exercise_deadlifts">Kreuzheben</string>
-    <string name="exercise_lunges">Ausfallschritt</string>
+    <string name="exercise_lunges">Ausfallschritte</string>
     <string name="exercise_sit_ups">Sit Ups</string>
     <string name="exercise_superman_angels">Superman Angels</string>
+    <string name="exercise_plank">Plank</string>
+    <string name="exercise_glute_bridge">Hüftheben</string>
+    <!-- Home Mobility Übungen -->
+    <string name="exercise_cat_cow">Katze-Kuh</string>
+    <string name="exercise_childs_pose">Kindhaltung</string>
+    <string name="exercise_downward_dog">Herabschauender Hund</string>
+    <string name="exercise_seated_twist">Rumpfdrehung</string>
+    <string name="exercise_hip_circles">Hüftkreise</string>
+    <string name="exercise_standing_forward_fold">Stehende Vorbeuge</string>
+    <string name="exercise_thread_the_needle">Thread the Needle</string>
+    <string name="exercise_pigeon_stretch">Pigeon Stretch</string>
+    <!-- Büro Übungen -->
+    <string name="exercise_shoulder_blade_squeeze">Schulterblätter zusammenziehen</string>
+    <string name="exercise_chest_opener">Brustöffner</string>
+    <string name="exercise_neck_stretch">Nacken dehnen</string>
+    <string name="exercise_calf_raises">Wadenheben</string>
+    <string name="exercise_seated_leg_extension">Sitzende Beinstreckung</string>
+    <string name="exercise_wrist_circles">Handgelenke kreisen</string>
+    <string name="exercise_ankle_circles">Fußgelenke kreisen</string>
+    <string name="exercise_seated_cat_cow">Katze-Kuh im Sitzen</string>
+    <string name="exercise_seated_core_bracing">Bauchspannung halten</string>
+
+    <!-- Übungsmodi -->
+    <string name="exercise_mode_home_workout">Home-Office Workout</string>
+    <string name="exercise_mode_home_workout_desc">Bodyweight-Übungen für Kraft und Fitness</string>
+    <string name="exercise_mode_home_mobility">Home-Office Mobilität</string>
+    <string name="exercise_mode_home_mobility_desc">Yoga-inspirierte Dehnübungen für Beweglichkeit</string>
+    <string name="exercise_mode_office">Büro</string>
+    <string name="exercise_mode_office_desc">Dezente Übungen für den Schreibtisch</string>
+    <string name="onboarding_mode_title">Wähle deinen Übungsstil</string>
+    <string name="onboarding_mode_subtitle">Du kannst den Modus jederzeit in den Einstellungen wechseln</string>
+    <string name="exercise_mode_label">Übungsmodus</string>
+    <string name="exercise_mode_short_home_workout">Home Office\nWorkout</string>
+    <string name="exercise_mode_short_home_mobility">Home Office\nMobilität</string>
+    <string name="exercise_mode_short_office">Büro</string>
+    <string name="exercise_mode_override_today_hint">Beim Beenden und beim Arbeitstagende wird zum automatischen Moduswechsel zurückgekehrt.</string>
+    <string name="onboarding_summary_mode">Modus: %1$s</string>
 
     <string name="dialog_confirm_ok">OK</string>
 
@@ -129,8 +176,8 @@
     <string name="onboarding_summary_interval">Pause alle %1$s</string>
     <string name="onboarding_summary_reps">%d Wiederholungen pro Übung</string>
     <string name="onboarding_summary_exercises">%d Übungen ausgewählt</string>
-    <string name="onboarding_summary_work_schedule">Arbeitszeiten: %1$s – %2$s</string>
-    <string name="onboarding_summary_lunch">Pause: %1$s – %2$s</string>
+    <string name="onboarding_summary_work_schedule">Arbeitszeiten: %1$s - %2$s</string>
+    <string name="onboarding_summary_lunch">Pause: %1$s - %2$s</string>
     <string name="onboarding_summary_work_schedule_off">Arbeitszeiten: aus</string>
     <string name="onboarding_next">Weiter</string>
     <string name="onboarding_back">Zurück</string>
@@ -151,9 +198,9 @@
     <string name="stats_reps_average_per_day">Wiederholungen Ø/Tag</string>
     <string name="stats_last_week_format">%1$s (Vorwoche: %2$s)</string>
     <string name="stats_favorite_exercise">Häufigste Übung</string>
-    <string name="stats_times_format">%d mal</string>
+    <string name="stats_times_format">%d-mal</string>
     <string name="stats_exercise_distribution">Übungsverteilung</string>
-    <string name="stats_exercise_detail">%1$d mal / %2$d Wdh.</string>
+    <string name="stats_exercise_detail">%1$d-mal / %2$d Wdh.</string>
     <string name="stats_recent_activity">Letzte Aktivität</string>
     <string name="stats_breaks_count">%d Pausen</string>
     <string name="stats_no_data">Noch keine Daten. Schließe deine erste Pause ab!</string>
@@ -258,11 +305,11 @@
 
     <!-- Exercise Mastery -->
     <string name="achievement_mastery_10_title">Lehrling</string>
-    <string name="achievement_mastery_10_desc">Mache eine Übung 10 mal</string>
+    <string name="achievement_mastery_10_desc">Mache eine Übung 10-mal</string>
     <string name="achievement_mastery_50_title">Fortgeschritten</string>
-    <string name="achievement_mastery_50_desc">Mache eine Übung 50 mal</string>
+    <string name="achievement_mastery_50_desc">Mache eine Übung 50-mal</string>
     <string name="achievement_mastery_100_title">Meister</string>
-    <string name="achievement_mastery_100_desc">Mache eine Übung 100 mal</string>
+    <string name="achievement_mastery_100_desc">Mache eine Übung 100-mal</string>
 
     <!-- Daten Export/Import -->
     <string name="settings_data">Daten</string>
@@ -275,7 +322,10 @@
     <string name="import_success">Daten erfolgreich importiert</string>
     <string name="import_error_invalid_format">Die ausgewählte Datei ist keine gültige Office Break Sicherung</string>
     <string name="import_error_newer_version">Diese Sicherung wurde mit einer neueren Version von Office Break erstellt. Bitte aktualisiere die App.</string>
+    <string name="import_error_too_large">Die ausgewählte Datei ist zu groß zum Importieren (maximal 5 MB)</string>
     <string name="backup_error">Etwas ist schiefgelaufen: %1$s</string>
+    <string name="backup_error_generic">Etwas ist schiefgelaufen. Bitte versuche es erneut.</string>
+    <string name="share_error">Der Erfolg konnte nicht geteilt werden. Bitte versuche es erneut.</string>
 
     <!-- Widget -->
     <string name="widget_description">Pausen-Statistiken und Timer auf einen Blick</string>
@@ -285,8 +335,49 @@
     <string name="widget_no_streak">Keine Serie</string>
     <string name="widget_timer_idle">Timer nicht aktiv</string>
     <string name="widget_timer_running">Timer läuft</string>
+    <string name="widget_timer_remaining">Nächste Pause in %s</string>
+    <string name="widget_timer_paused">Pausiert · %s</string>
     <string name="widget_timer_expired">Pausenzeit!</string>
     <string name="widget_start">Start</string>
     <string name="widget_open">Öffnen</string>
     <string name="navigate_back">Zurück</string>
+
+    <!-- Donation prompt -->
+    <string name="donation_prompt_title">Danke, dass du Office Break nutzt</string>
+    <string name="donation_prompt_message">Die App ist und bleibt kostenlos. Wenn sie dir im Alltag hilft, freue ich mich über einen kleinen Beitrag auf Ko-fi - rein freiwillig, hilft aber bei der Weiterentwicklung.</string>
+    <string name="donation_prompt_support">Unterstützen</string>
+    <string name="donation_prompt_later">Später</string>
+    <string name="donation_prompt_dismiss">Nein danke</string>
+    <string name="settings_support_project">Projekt unterstützen</string>
+    <string name="settings_support_project_summary">Spendier mir einen Kaffee auf Ko-fi</string>
+
+    <!-- Developer mode -->
+    <string name="dev_mode_enabled_toast">Entwicklermodus aktiviert</string>
+    <string name="dev_mode_disabled_toast">Entwicklermodus deaktiviert</string>
+    <string name="dev_section_title">Entwickler</string>
+    <string name="dev_reset_donation">Spenden-Popup zurücksetzen</string>
+    <string name="dev_reset_donation_summary">Löscht Dismiss/Snooze und setzt das Installationsdatum zurück</string>
+    <string name="dev_reset_onboarding">Onboarding zurücksetzen</string>
+    <string name="dev_reset_onboarding_summary">Onboarding beim nächsten Start erneut anzeigen</string>
+    <string name="dev_show_dump">DataStore-Dump anzeigen</string>
+    <string name="dev_show_dump_summary">Alle Einstellungswerte anzeigen (für Bug-Reports)</string>
+    <string name="dev_clear_all">Alle App-Daten löschen</string>
+    <string name="dev_clear_all_summary">Setzt Einstellungen, Statistiken, Erfolge zurück - unwiderruflich</string>
+    <string name="dev_clear_all_confirm_title">Alle Daten löschen?</string>
+    <string name="dev_clear_all_confirm_message">Das löscht alle Einstellungen, Statistiken, Erfolge und eigenen Übungen. Kann nicht rückgängig gemacht werden.</string>
+    <string name="dev_clear_all_confirm_yes">Löschen</string>
+    <string name="dev_disable">Entwicklermodus deaktivieren</string>
+    <string name="dev_disable_summary">Diesen Bereich ausblenden</string>
+    <string name="dev_dump_title">App- und DataStore-Status</string>
+    <string name="dev_dump_copy">Kopieren</string>
+    <string name="dev_dump_close">Schließen</string>
+    <string name="dev_dump_copied">In Zwischenablage kopiert</string>
+    <string name="dev_reset_done">Erledigt</string>
+
+    <!-- Share Achievement -->
+    <string name="share_achievement">Teilen</string>
+    <string name="share_chooser_title">Erfolg teilen</string>
+    <string name="share_text">Ich habe \"%1$s\" in Office Break freigeschaltet! 🏆</string>
+    <string name="share_card_unlocked">Erfolg freigeschaltet!</string>
+    <string name="share_card_app_name">Office Break</string>
 </resources>

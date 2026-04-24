@@ -34,6 +34,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -97,7 +101,7 @@ fun TimerSetup(
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier
                 .clip(RoundedCornerShape(12.dp))
-                .clickable { showTimeInputDialog = true }
+                .clickable(role = Role.Button) { showTimeInputDialog = true }
                 .padding(horizontal = 16.dp, vertical = 8.dp),
         )
 
@@ -145,12 +149,13 @@ fun TimerSetup(
             trailingLabelContent = {
                 IconButton(
                     onClick = { onRepsLinkedChange(!repsLinked) },
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(48.dp),
                 ) {
                     Icon(
                         imageVector = if (repsLinked) Icons.Outlined.Link else Icons.Outlined.LinkOff,
                         contentDescription = stringResource(R.string.reps_link_description),
                         tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp),
                     )
                 }
             },
@@ -185,7 +190,10 @@ private fun TimeInputDialog(
                         }
                     },
                     label = { Text(stringResource(R.string.hours_label)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Next,
+                    ),
                     singleLine = true,
                     textStyle = MaterialTheme.typography.headlineLarge.copy(
                         textAlign = TextAlign.Center,
@@ -207,7 +215,10 @@ private fun TimeInputDialog(
                         }
                     },
                     label = { Text(stringResource(R.string.minutes_label)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Done,
+                    ),
                     singleLine = true,
                     textStyle = MaterialTheme.typography.headlineLarge.copy(
                         textAlign = TextAlign.Center,
@@ -275,7 +286,9 @@ private fun SliderRow(
             valueRange = range,
             steps = (range.endInclusive - range.start).toInt() - 1,
             enabled = enabled,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics { contentDescription = label },
         )
     }
 }

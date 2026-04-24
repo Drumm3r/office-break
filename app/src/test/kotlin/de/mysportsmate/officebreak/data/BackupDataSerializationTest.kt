@@ -126,8 +126,159 @@ class BackupDataSerializationTest {
         assertEquals(yearlyAggregates, decoded.yearlyAggregates)
     }
 
+    @Test
+    fun `v2 BackupData roundtrip with exercise modes`() {
+        val data = createSampleBackupData().copy(
+            formatVersion = 2,
+            exerciseMode = ExerciseMode.OFFICE.name,
+            exercisesHomeWorkout = listOf(Exercise(name = "Push Ups")),
+            exercisesHomeMobility = listOf(Exercise(name = "Cat-Cow Stretch")),
+            exercisesOffice = listOf(Exercise(name = "Neck Stretch")),
+        )
+        val encoded = json.encodeToString(data)
+        val decoded = json.decodeFromString<BackupData>(encoded)
+        assertEquals(ExerciseMode.OFFICE.name, decoded.exerciseMode)
+        assertEquals(1, decoded.exercisesHomeWorkout.size)
+        assertEquals(1, decoded.exercisesHomeMobility.size)
+        assertEquals(1, decoded.exercisesOffice.size)
+    }
+
+    @Test
+    fun `v1 BackupData without mode fields deserializes with defaults`() {
+        val rawJson = """
+        {
+            "formatVersion": 1,
+            "exportTimestamp": 1000,
+            "appVersionCode": 5,
+            "timerHours": 0,
+            "timerMinutes": 30,
+            "repsMin": 10,
+            "repsMax": 10,
+            "repsLinked": true,
+            "exercises": [{"name":"Push Ups","isEnabled":true}],
+            "language": "system",
+            "themeMode": "system",
+            "beepVolume": 80,
+            "vibrationEnabled": true,
+            "beepCount": 3,
+            "keepScreenOn": false,
+            "autoRestart": true,
+            "dynamicIncreaseEnabled": true,
+            "breaksSinceLastIncrease": 0,
+            "trackingEnabled": true,
+            "breakRecords": [],
+            "dailyAggregates": [],
+            "yearlyAggregates": [],
+            "statsSnapshot": {},
+            "achievementState": {}
+        }
+        """.trimIndent()
+
+        val decoded = json.decodeFromString<BackupData>(rawJson)
+        assertEquals(ExerciseMode.HOME_WORKOUT.name, decoded.exerciseMode)
+        assertTrue(decoded.exercisesHomeWorkout.isEmpty())
+        assertTrue(decoded.exercisesHomeMobility.isEmpty())
+        assertTrue(decoded.exercisesOffice.isEmpty())
+        assertEquals(1, decoded.exercises.size)
+    }
+
+    @Test
+    fun `v2 backup without autoModeByDayEnabled decodes to false`() {
+        val rawJson = """
+        {
+            "formatVersion": 2,
+            "exportTimestamp": 1000,
+            "appVersionCode": 5,
+            "timerHours": 0,
+            "timerMinutes": 30,
+            "repsMin": 10,
+            "repsMax": 10,
+            "repsLinked": true,
+            "exercises": [],
+            "language": "system",
+            "themeMode": "system",
+            "beepVolume": 80,
+            "vibrationEnabled": true,
+            "beepCount": 3,
+            "keepScreenOn": false,
+            "autoRestart": true,
+            "dynamicIncreaseEnabled": true,
+            "breaksSinceLastIncrease": 0,
+            "trackingEnabled": true,
+            "breakRecords": [],
+            "dailyAggregates": [],
+            "yearlyAggregates": [],
+            "statsSnapshot": {},
+            "achievementState": {}
+        }
+        """.trimIndent()
+
+        val decoded = json.decodeFromString<BackupData>(rawJson)
+        assertEquals(false, decoded.autoModeByDayEnabled)
+    }
+
+    @Test
+    fun `v2 backup with DaySchedule without defaultMode decodes to HOME_WORKOUT`() {
+        val rawJson = """
+        {
+            "formatVersion": 2,
+            "exportTimestamp": 1000,
+            "appVersionCode": 5,
+            "timerHours": 0,
+            "timerMinutes": 30,
+            "repsMin": 10,
+            "repsMax": 10,
+            "repsLinked": true,
+            "exercises": [],
+            "language": "system",
+            "themeMode": "system",
+            "beepVolume": 80,
+            "vibrationEnabled": true,
+            "beepCount": 3,
+            "keepScreenOn": false,
+            "autoRestart": true,
+            "dynamicIncreaseEnabled": true,
+            "breaksSinceLastIncrease": 0,
+            "weekSchedule": [
+                {"enabled": true, "linked": false, "workStartHour": 8, "workStartMinute": 0, "workEndHour": 17, "workEndMinute": 0, "lunchStartHour": 12, "lunchStartMinute": 0, "lunchEndHour": 13, "lunchEndMinute": 0}
+            ],
+            "trackingEnabled": true,
+            "breakRecords": [],
+            "dailyAggregates": [],
+            "yearlyAggregates": [],
+            "statsSnapshot": {},
+            "achievementState": {}
+        }
+        """.trimIndent()
+
+        val decoded = json.decodeFromString<BackupData>(rawJson)
+        assertEquals(1, decoded.weekSchedule.size)
+        assertEquals(ExerciseMode.HOME_WORKOUT, decoded.weekSchedule[0].defaultMode)
+    }
+
+    @Test
+    fun `CURRENT_FORMAT_VERSION is 3`() {
+        assertEquals(3, BackupData.CURRENT_FORMAT_VERSION)
+    }
+
+    @Test
+    fun `v3 backup preserves autoModeByDayEnabled and per-day defaultMode`() {
+        val data = createSampleBackupData().copy(
+            autoModeByDayEnabled = true,
+            weekSchedule = listOf(
+                DaySchedule(enabled = true, linked = false, defaultMode = ExerciseMode.OFFICE),
+                DaySchedule(enabled = true, linked = true, defaultMode = ExerciseMode.OFFICE),
+            ),
+        )
+        val encoded = json.encodeToString(data)
+        val decoded = json.decodeFromString<BackupData>(encoded)
+        assertEquals(true, decoded.autoModeByDayEnabled)
+        assertEquals(ExerciseMode.OFFICE, decoded.weekSchedule[0].defaultMode)
+        assertEquals(ExerciseMode.OFFICE, decoded.weekSchedule[1].defaultMode)
+    }
+
     private fun createSampleBackupData() = BackupData(
-        formatVersion = 1,
+        formatVersion = 3,
         exportTimestamp = 1000L,
         appVersionCode = 5,
         timerHours = 0,

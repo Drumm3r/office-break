@@ -18,9 +18,19 @@ class FakeTimerServiceController : TimerServiceController {
         calls.add(Call.Restart(durationSeconds, language, freestyle))
     }
 
+    override fun pauseMusic() {
+        calls.add(Call.PauseMusic)
+    }
+
+    override fun resumeMusic() {
+        calls.add(Call.ResumeMusic)
+    }
+
     sealed interface Call {
         data class Start(val durationSeconds: Long, val language: String = "system", val freestyle: Boolean = false) : Call
         data object Reset : Call
         data class Restart(val durationSeconds: Long, val language: String = "system", val freestyle: Boolean = false) : Call
+        data object PauseMusic : Call
+        data object ResumeMusic : Call
     }
 }

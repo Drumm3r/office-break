@@ -1,9 +1,14 @@
 package de.mysportsmate.officebreak.ui
 
 import android.app.Application
+import android.content.ActivityNotFoundException
 import android.net.Uri
+import android.provider.OpenableColumns
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import de.mysportsmate.officebreak.R
@@ -17,9 +22,13 @@ import de.mysportsmate.officebreak.data.AchievementState
 import de.mysportsmate.officebreak.data.BackupManager
 import de.mysportsmate.officebreak.data.BreakRecord
 import de.mysportsmate.officebreak.data.Exercise
+import de.mysportsmate.officebreak.data.ExerciseMode
 import de.mysportsmate.officebreak.data.FitnessLevel
 import de.mysportsmate.officebreak.data.ImportResult
+import de.mysportsmate.officebreak.data.MAX_BACKUP_SIZE_BYTES
+import de.mysportsmate.officebreak.data.MAX_EXERCISE_NAME_LENGTH
 import de.mysportsmate.officebreak.data.SettingsRepository
+import de.mysportsmate.officebreak.data.ShuffleBag
 import de.mysportsmate.officebreak.data.StatsRepository
 import de.mysportsmate.officebreak.data.StatsSnapshot
 import de.mysportsmate.officebreak.service.DefaultTimerServiceController
@@ -32,10 +41,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import de.mysportsmate.officebreak.data.AppJson
 import java.time.LocalDate
@@ -53,6 +64,12 @@ sealed interface DynamicIncreaseOffer {
     data class IntervalOnly(val newIntervalMinutes: Int) : DynamicIncreaseOffer
 }
 
+@kotlinx.serialization.Serializable
+internal data class ActiveBreakPayload(
+    val exercise: Exercise,
+    val reps: Int,
+)
+
 class TimerViewModel @JvmOverloads constructor(
     application: Application,
     private val savedStateHandle: SavedStateHandle,
@@ -63,7 +80,6 @@ class TimerViewModel @JvmOverloads constructor(
 ) : AndroidViewModel(application) {
 
     companion object {
-        const val MAX_EXERCISE_NAME_LENGTH = 100
         const val REPS_INCREASE = 2
         const val INTERVAL_DECREASE_MINUTES = 5
         const val MAX_REPS = 50
@@ -74,6 +90,7 @@ class TimerViewModel @JvmOverloads constructor(
         private const val WORK_DAY_MINUTES = 480
         private const val WORK_DAYS_FOR_INCREASE = 3
         private const val MIN_THRESHOLD = 5
+        const val KOFI_URL = "https://ko-fi.com/drumm3r"
     }
 
     private val json = AppJson
@@ -102,6 +119,9 @@ class TimerViewModel @JvmOverloads constructor(
 
     val repsLinked: StateFlow<Boolean> = repository.repsLinked
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_REPS_LINKED)
+
+    val exerciseMode: StateFlow<ExerciseMode> = repository.exerciseMode
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ExerciseMode.HOME_WORKOUT)
 
     val exercises: StateFlow<List<Exercise>> = repository.exercises
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
@@ -133,11 +153,19 @@ class TimerViewModel @JvmOverloads constructor(
     val customSoundUri: StateFlow<String?> = repository.customSoundUri
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    val isMusicPlaying: StateFlow<Boolean> = timerStateHolder.isMusicPlaying
+
     val workScheduleEnabled: StateFlow<Boolean> = repository.workScheduleEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_WORK_SCHEDULE_ENABLED)
 
     val weekSchedule: StateFlow<List<DaySchedule>> = repository.weekSchedule
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DEFAULT_WEEK_SCHEDULE)
+
+    val autoModeByDayEnabled: StateFlow<Boolean> = repository.autoModeByDayEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_AUTO_MODE_BY_DAY)
+
+    val modeOverrideForToday: StateFlow<ExerciseMode?> = repository.modeOverrideForToday
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val dynamicIncreaseEnabled: StateFlow<Boolean> = repository.dynamicIncreaseEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_DYNAMIC_INCREASE_ENABLED)
@@ -163,19 +191,74 @@ class TimerViewModel @JvmOverloads constructor(
     private val _newlyUnlockedAchievements = MutableStateFlow<List<AchievementDefinition>>(emptyList())
     val newlyUnlockedAchievements: StateFlow<List<AchievementDefinition>> = _newlyUnlockedAchievements.asStateFlow()
 
-    private val _currentExercise = MutableStateFlow(
-        savedStateHandle.get<String>(KEY_CURRENT_EXERCISE)?.let {
+    private val installTimestamp: StateFlow<Long> = repository.installTimestamp
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 0L)
+
+    private val donationPromptLastShown: StateFlow<Long> = repository.donationPromptLastShown
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 0L)
+
+    private val donationPromptDismissed: StateFlow<Boolean> = repository.donationPromptDismissed
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    val devModeEnabled: StateFlow<Boolean> = repository.devModeEnabled
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    private val _settingsDump = MutableStateFlow<String?>(null)
+    val settingsDump: StateFlow<String?> = _settingsDump.asStateFlow()
+
+    private val restoredExerciseFromHandle: Exercise? =
+        savedStateHandle.get<String>(KEY_CURRENT_EXERCISE)?.let { raw ->
             try {
-                json.decodeFromString<Exercise>(it)
+                json.decodeFromString<Exercise>(raw)
             } catch (_: Exception) {
                 null
             }
-        },
+        }
+
+    private val restoredFromDataStore: ActiveBreakPayload? =
+        if (restoredExerciseFromHandle == null) {
+            try {
+                runBlocking { repository.activeBreakState.first() }?.let { raw ->
+                    try {
+                        json.decodeFromString<ActiveBreakPayload>(raw)
+                    } catch (_: Exception) {
+                        null
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to read persisted active break state", e)
+                null
+            }
+        } else {
+            null
+        }
+
+    private val _currentExercise = MutableStateFlow(
+        restoredExerciseFromHandle ?: restoredFromDataStore?.exercise,
     )
     val currentExercise: StateFlow<Exercise?> = _currentExercise.asStateFlow()
 
-    private val _currentReps = MutableStateFlow(savedStateHandle.get<Int>(KEY_CURRENT_REPS))
+    private val _currentReps = MutableStateFlow(
+        savedStateHandle.get<Int>(KEY_CURRENT_REPS) ?: restoredFromDataStore?.reps,
+    )
     val currentReps: StateFlow<Int?> = _currentReps.asStateFlow()
+
+    val showDonationPrompt: StateFlow<Boolean> = combine(
+        installTimestamp,
+        donationPromptLastShown,
+        donationPromptDismissed,
+        timerState,
+        _currentExercise,
+    ) { installedAt, lastShown, dismissed, state, activeExercise ->
+        val busy = state !is TimerState.Idle || activeExercise != null
+        DonationPromptResolver.shouldShow(
+            installTimestamp = installedAt,
+            lastShown = lastShown,
+            dismissed = dismissed,
+            timerActive = busy,
+            nowMillis = System.currentTimeMillis(),
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     private var previewTrack: android.media.AudioTrack? = null
     private var previewPlayer: android.media.MediaPlayer? = null
@@ -184,23 +267,42 @@ class TimerViewModel @JvmOverloads constructor(
     val isPreviewPlaying: StateFlow<Boolean> = _isPreviewPlaying.asStateFlow()
 
     private var _isFreestyle = false
-    private val usedExerciseNames: MutableSet<String> = mutableSetOf()
-    private var lastPickedName: String? = null
+    private var shuffleBag = ShuffleBag()
+
+    private inline fun launchSafely(
+        errorMessage: String,
+        crossinline block: suspend () -> Unit,
+    ): kotlinx.coroutines.Job = viewModelScope.launch {
+        try {
+            block()
+        } catch (e: Exception) {
+            Log.e(TAG, errorMessage, e)
+        }
+    }
 
     init {
         viewModelScope.launch {
-            _currentExercise.collect { exercise ->
-                savedStateHandle[KEY_CURRENT_EXERCISE] = exercise?.let { json.encodeToString(it) }
-            }
+            combine(_currentExercise, _currentReps) { exercise, reps -> exercise to reps }
+                .collect { (exercise, reps) ->
+                    savedStateHandle[KEY_CURRENT_EXERCISE] = exercise?.let { json.encodeToString(it) }
+                    savedStateHandle[KEY_CURRENT_REPS] = reps
+                    val payload = if (exercise != null && reps != null) {
+                        json.encodeToString(ActiveBreakPayload(exercise, reps))
+                    } else {
+                        null
+                    }
+                    try {
+                        repository.setActiveBreakState(payload)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to persist active break state", e)
+                    }
+                }
         }
         viewModelScope.launch {
-            _currentReps.collect { reps ->
-                savedStateHandle[KEY_CURRENT_REPS] = reps
-            }
-        }
-        viewModelScope.launch {
-            usedExerciseNames.addAll(repository.usedExerciseNames.first())
-            lastPickedName = repository.lastPickedName.first()
+            shuffleBag = ShuffleBag(
+                initialUsed = repository.usedExerciseNames.first(),
+                initialLast = repository.lastPickedName.first(),
+            )
         }
         viewModelScope.launch {
             try {
@@ -209,84 +311,113 @@ class TimerViewModel @JvmOverloads constructor(
                 Log.e(TAG, "Failed to run yearly compaction", e)
             }
         }
+        launchSafely("Failed to ensure install timestamp") {
+            repository.ensureInstallTimestamp(System.currentTimeMillis())
+        }
+
+        try {
+            val lifecycleObserver = object : DefaultLifecycleObserver {
+                override fun onStart(owner: LifecycleOwner) {
+                    applyDayDefaultModeIfEnabled()
+                }
+            }
+            ProcessLifecycleOwner.get().lifecycle.addObserver(lifecycleObserver)
+        } catch (e: Exception) {
+            Log.w(TAG, "ProcessLifecycleOwner unavailable (likely unit test)", e)
+        }
+    }
+
+    fun applyDayDefaultModeIfEnabled() {
+        viewModelScope.launch {
+            applyDayDefaultModeNow()
+        }
+    }
+
+    private suspend fun applyDayDefaultModeNow() {
+        try {
+            val enabled = repository.autoModeByDayEnabled.first()
+            if (!enabled) return
+            val currentMode = repository.exerciseMode.first()
+            val override = repository.modeOverrideForToday.first()
+            if (override != null) {
+                if (override != currentMode) {
+                    repository.setExerciseMode(override)
+                    shuffleBag.reset()
+                    repository.setUsedExerciseNames(emptySet())
+                    repository.setLastPickedName(null)
+                }
+                return
+            }
+            val schedule = repository.weekSchedule.first()
+            val dayIndex = LocalDate.now().dayOfWeek.ordinal
+            val effective = resolveEffectiveSchedule(schedule, dayIndex) ?: return
+            if (effective.defaultMode != currentMode) {
+                repository.setExerciseMode(effective.defaultMode)
+                shuffleBag.reset()
+                repository.setUsedExerciseNames(emptySet())
+                repository.setLastPickedName(null)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to apply day default mode", e)
+        }
+    }
+
+    fun setAutoModeByDayEnabled(enabled: Boolean) {
+        launchSafely("Failed to set auto mode by day enabled") {
+            val seed = if (enabled) exerciseMode.value else null
+            repository.setAutoModeByDayEnabled(enabled, seed)
+            if (enabled) applyDayDefaultModeNow()
+        }
     }
 
     fun setHours(value: Int) {
-        viewModelScope.launch {
-            try {
-                repository.setTimerHours(value.coerceIn(0, 23))
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to set hours", e)
-            }
+        launchSafely("Failed to set hours") {
+            repository.setTimerHours(value.coerceIn(0, 23))
         }
     }
 
     fun setMinutes(value: Int) {
-        viewModelScope.launch {
-            try {
-                repository.setTimerMinutes(value.coerceIn(0, 59))
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to set minutes", e)
-            }
+        launchSafely("Failed to set minutes") {
+            repository.setTimerMinutes(value.coerceIn(0, 59))
         }
     }
 
     fun setRepsMin(value: Int) {
-        viewModelScope.launch {
-            try {
-                val coerced = value.coerceIn(1, 50)
-                repository.setRepsMin(coerced)
-                if (repsLinked.value) {
-                    repository.setRepsMax(coerced)
-                } else if (coerced > repsMax.value) {
-                    repository.setRepsMax(coerced)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to set reps min", e)
+        launchSafely("Failed to set reps min") {
+            val coerced = value.coerceIn(1, 50)
+            repository.setRepsMin(coerced)
+            if (repsLinked.value) {
+                repository.setRepsMax(coerced)
+            } else if (coerced > repsMax.value) {
+                repository.setRepsMax(coerced)
             }
         }
     }
 
     fun setRepsMax(value: Int) {
-        viewModelScope.launch {
-            try {
-                repository.setRepsMax(value.coerceIn(repsMin.value, 50))
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to set reps max", e)
-            }
+        launchSafely("Failed to set reps max") {
+            repository.setRepsMax(value.coerceIn(repsMin.value, 50))
         }
     }
 
     fun setRepsLinked(value: Boolean) {
-        viewModelScope.launch {
-            try {
-                repository.setRepsLinked(value)
-                if (value) {
-                    repository.setRepsMax(repsMin.value)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to set reps linked", e)
+        launchSafely("Failed to set reps linked") {
+            repository.setRepsLinked(value)
+            if (value) {
+                repository.setRepsMax(repsMin.value)
             }
         }
     }
 
     fun setLanguage(value: String) {
-        viewModelScope.launch {
-            try {
-                repository.setLanguage(value)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to set language", e)
-            }
+        launchSafely("Failed to set language") {
+            repository.setLanguage(value)
         }
     }
 
     fun setBeepVolume(value: Int) {
-        viewModelScope.launch {
-            try {
-                repository.setBeepVolume(value.coerceIn(0, 100))
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to set beep volume", e)
-            }
+        launchSafely("Failed to set beep volume") {
+            repository.setBeepVolume(value.coerceIn(0, 100))
         }
     }
 
@@ -304,6 +435,11 @@ class TimerViewModel @JvmOverloads constructor(
         } catch (_: Exception) { }
         previewPlayer = null
         _isPreviewPlaying.value = false
+    }
+
+    override fun onCleared() {
+        stopPreview()
+        super.onCleared()
     }
 
     fun playPreviewBeep(volume: Int) {
@@ -339,12 +475,12 @@ class TimerViewModel @JvmOverloads constructor(
                             .build(),
                     )
                     .setBufferSizeInBytes(samples.size * 2)
-                    .setTransferMode(android.media.AudioTrack.MODE_STATIC)
+                    .setTransferMode(android.media.AudioTrack.MODE_STREAM)
                     .build()
                 previewTrack = track
                 try {
-                    track.write(samples, 0, samples.size)
                     track.play()
+                    track.write(samples, 0, samples.size)
                     kotlinx.coroutines.delay(beepDurationMs.toLong() + 50)
                 } finally {
                     try {
@@ -418,12 +554,8 @@ class TimerViewModel @JvmOverloads constructor(
 
     fun clearCustomSound() {
         stopPreview()
-        viewModelScope.launch {
-            try {
-                repository.setCustomSoundUri(null)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to clear custom sound", e)
-            }
+        launchSafely("Failed to clear custom sound") {
+            repository.setCustomSoundUri(null)
         }
     }
 
@@ -467,81 +599,70 @@ class TimerViewModel @JvmOverloads constructor(
     }
 
     fun setTtsEnabled(value: Boolean) {
-        viewModelScope.launch {
-            try {
-                repository.setTtsEnabled(value)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to set TTS enabled", e)
-            }
+        launchSafely("Failed to set TTS enabled") {
+            repository.setTtsEnabled(value)
         }
     }
 
     fun setWorkScheduleEnabled(value: Boolean) {
-        viewModelScope.launch {
-            try {
-                repository.setWorkScheduleEnabled(value)
-                val app = getApplication<Application>()
-                if (value) {
-                    val schedule = weekSchedule.value
-                    WorkScheduleManager.scheduleNextWorkStartReminder(app, schedule)
-                } else {
-                    WorkScheduleManager.cancelWorkStartReminder(app)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to set work schedule enabled", e)
+        launchSafely("Failed to set work schedule enabled") {
+            repository.setWorkScheduleEnabled(value)
+            val app = getApplication<Application>()
+            if (value) {
+                val schedule = weekSchedule.value
+                WorkScheduleManager.scheduleNextWorkStartReminder(app, schedule)
+            } else {
+                WorkScheduleManager.cancelWorkStartReminder(app)
             }
         }
     }
 
     fun updateDaySchedule(dayIndex: Int, day: DaySchedule) {
-        viewModelScope.launch {
-            try {
-                val current = weekSchedule.value.toMutableList()
-                if (dayIndex in current.indices) {
-                    current[dayIndex] = day.validated()
-                    repository.setWeekSchedule(current)
-                    if (workScheduleEnabled.value) {
-                        WorkScheduleManager.scheduleNextWorkStartReminder(
-                            getApplication(), current,
-                        )
-                    }
+        launchSafely("Failed to update day schedule") {
+            val current = weekSchedule.value.toMutableList()
+            if (dayIndex in current.indices) {
+                current[dayIndex] = day.validated()
+                repository.setWeekSchedule(current)
+                if (workScheduleEnabled.value) {
+                    WorkScheduleManager.scheduleNextWorkStartReminder(
+                        getApplication(), current,
+                    )
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to update day schedule", e)
+                applyDayDefaultModeNow()
             }
         }
     }
 
     fun setDynamicIncreaseEnabled(value: Boolean) {
-        viewModelScope.launch {
-            try {
-                repository.setDynamicIncreaseEnabled(value)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to set dynamic increase enabled", e)
-            }
+        launchSafely("Failed to set dynamic increase enabled") {
+            repository.setDynamicIncreaseEnabled(value)
         }
     }
 
     fun setBeepCount(value: Int) {
-        viewModelScope.launch {
-            try {
-                repository.setBeepCount(value.coerceIn(1, 5))
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to set beep count", e)
+        launchSafely("Failed to set beep count") {
+            repository.setBeepCount(value.coerceIn(1, 5))
+        }
+    }
+
+    fun setExerciseMode(mode: ExerciseMode) {
+        launchSafely("Failed to set exercise mode") {
+            repository.setExerciseMode(mode)
+            if (repository.autoModeByDayEnabled.first()) {
+                repository.setModeOverrideForToday(mode)
             }
+            shuffleBag.reset()
+            repository.setUsedExerciseNames(emptySet())
+            repository.setLastPickedName(null)
         }
     }
 
     fun toggleExercise(index: Int) {
-        viewModelScope.launch {
-            try {
-                val current = exercises.value.toMutableList()
-                if (index in current.indices) {
-                    current[index] = current[index].copy(isEnabled = !current[index].isEnabled)
-                    repository.setExercises(current)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to toggle exercise", e)
+        launchSafely("Failed to toggle exercise") {
+            val current = exercises.value.toMutableList()
+            if (index in current.indices) {
+                current[index] = current[index].copy(isEnabled = !current[index].isEnabled)
+                repository.setExercises(current)
             }
         }
     }
@@ -550,15 +671,15 @@ class TimerViewModel @JvmOverloads constructor(
         val trimmed = name.trim().take(MAX_EXERCISE_NAME_LENGTH)
         if (trimmed.isEmpty()) return
 
-        viewModelScope.launch {
-            try {
-                val current = exercises.value.toMutableList()
-                current.add(Exercise(name = trimmed))
-                repository.setExercises(current)
-                statsRepository.markCustomExerciseCreated()
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to add exercise", e)
+        launchSafely("Failed to add exercise") {
+            // Add enabled to active mode, disabled to other modes
+            val activeMode = exerciseMode.value
+            for (mode in ExerciseMode.entries) {
+                val modeExercises = repository.exercisesForMode(mode).first().toMutableList()
+                modeExercises.add(Exercise(name = trimmed, isEnabled = mode == activeMode))
+                repository.setExercisesForMode(mode, modeExercises)
             }
+            statsRepository.markCustomExerciseCreated()
         }
     }
 
@@ -567,8 +688,19 @@ class TimerViewModel @JvmOverloads constructor(
             try {
                 val current = exercises.value.toMutableList()
                 if (current.size > 1 && index in current.indices) {
+                    val removedName = current[index].name
                     current.removeAt(index)
                     repository.setExercises(current)
+
+                    // Remove from other modes too
+                    val activeMode = exerciseMode.value
+                    for (mode in ExerciseMode.entries) {
+                        if (mode != activeMode) {
+                            val modeExercises = repository.exercisesForMode(mode).first().toMutableList()
+                            modeExercises.removeAll { it.name == removedName }
+                            repository.setExercisesForMode(mode, modeExercises)
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to remove exercise", e)
@@ -584,10 +716,6 @@ class TimerViewModel @JvmOverloads constructor(
         _isFreestyle = freestyle
 
         serviceController.startTimer(totalSeconds, language.value, freestyle)
-        viewModelScope.launch {
-            repository.setWidgetTimerStatus("running")
-            WidgetUpdater.requestUpdate(getApplication())
-        }
     }
 
     private fun shouldStartAsFreestyle(): Boolean {
@@ -606,52 +734,48 @@ class TimerViewModel @JvmOverloads constructor(
         _isFreestyle = false
         _currentExercise.value = null
         _currentReps.value = null
-        usedExerciseNames.clear()
-        lastPickedName = null
+        shuffleBag.reset()
         viewModelScope.launch {
             repository.setUsedExerciseNames(emptySet())
             repository.setLastPickedName(null)
+            repository.clearModeOverride()
         }
         serviceController.resetTimer()
+    }
+
+    fun toggleMusicPlayback() {
+        if (timerStateHolder.isMusicPlaying.value) {
+            serviceController.pauseMusic()
+        } else {
+            serviceController.resumeMusic()
+        }
     }
 
     fun dismissWorkEnded() {
         _isFreestyle = false
         timerStateHolder.update(TimerState.Idle)
         viewModelScope.launch {
-            repository.setWidgetTimerStatus("idle")
-            WidgetUpdater.requestUpdate(getApplication())
+            try {
+                repository.clearModeOverride()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to clear mode override", e)
+            }
         }
+        serviceController.resetTimer()
     }
 
     fun onTimerExpired() {
+        if (_currentExercise.value != null) return
         viewModelScope.launch {
-            val allExercises = repository.exercises.first()
-            val enabledExercises = allExercises.filter { it.isEnabled }
-            if (enabledExercises.isNotEmpty()) {
-                if (lastPickedName != null && lastPickedName !in usedExerciseNames) {
-                    usedExerciseNames.add(lastPickedName!!)
-                }
+            val enabledExercises = repository.exercises.first().filter { it.isEnabled }
+            val picked = shuffleBag.pick(enabledExercises) ?: return@launch
+            repository.setUsedExerciseNames(shuffleBag.usedNames)
+            repository.setLastPickedName(picked.name)
 
-                var available = enabledExercises.filter { it.name !in usedExerciseNames }
-                if (available.isEmpty()) {
-                    usedExerciseNames.clear()
-                    if (lastPickedName != null && enabledExercises.size > 1) {
-                        usedExerciseNames.add(lastPickedName!!)
-                    }
-                    available = enabledExercises.filter { it.name !in usedExerciseNames }
-                }
-                val picked = available.random()
-                usedExerciseNames.add(picked.name)
-                lastPickedName = picked.name
-                repository.setUsedExerciseNames(usedExerciseNames)
-                repository.setLastPickedName(picked.name)
-
-                _currentExercise.value = picked
-                val min = repsMin.value
-                val max = repsMax.value
-                _currentReps.value = (min..max).random()
-            }
+            _currentExercise.value = picked
+            val min = repsMin.value
+            val max = repsMax.value
+            _currentReps.value = (min..max).random()
         }
     }
 
@@ -782,16 +906,13 @@ class TimerViewModel @JvmOverloads constructor(
         if (!autoRestart.value) {
             _isFreestyle = false
             serviceController.resetTimer()
-            repository.setWidgetTimerStatus("idle")
-            WidgetUpdater.requestUpdate(getApplication())
+
             return
         }
         val totalSeconds = (hours.value * 3600L) + (minutes.value * 60L)
         if (totalSeconds <= 0) return
 
         serviceController.restartTimer(totalSeconds, language.value, _isFreestyle)
-        repository.setWidgetTimerStatus("running")
-        WidgetUpdater.requestUpdate(getApplication())
     }
 
     fun dismissAchievementCelebration() {
@@ -813,9 +934,7 @@ class TimerViewModel @JvmOverloads constructor(
                 _backupState.value = BackupUiState.ExportSuccess
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to export data", e)
-                _backupState.value = BackupUiState.Error(
-                    app.getString(R.string.backup_error, e.message ?: "Unknown error"),
-                )
+                _backupState.value = BackupUiState.Error(app.getString(R.string.backup_error_generic))
             }
         }
     }
@@ -824,9 +943,32 @@ class TimerViewModel @JvmOverloads constructor(
         val app = getApplication<Application>()
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
+                val size = app.contentResolver.query(
+                    uri,
+                    arrayOf(OpenableColumns.SIZE),
+                    null,
+                    null,
+                    null,
+                )?.use { cursor ->
+                    if (cursor.moveToFirst() && !cursor.isNull(0)) cursor.getLong(0) else -1L
+                } ?: -1L
+
+                if (size in 1..MAX_BACKUP_SIZE_BYTES) {
+                    // size known and within bounds - proceed
+                } else if (size > MAX_BACKUP_SIZE_BYTES) {
+                    _backupState.value = BackupUiState.Error(app.getString(R.string.import_error_too_large))
+                    return@launch
+                }
+                // size == -1 (unknown): fall through; readText below is still bounded by free heap.
+
                 val jsonString = app.contentResolver.openInputStream(uri)?.use { stream ->
                     stream.bufferedReader(Charsets.UTF_8).readText()
                 } ?: throw Exception("Could not open file for reading")
+
+                if (jsonString.length.toLong() > MAX_BACKUP_SIZE_BYTES) {
+                    _backupState.value = BackupUiState.Error(app.getString(R.string.import_error_too_large))
+                    return@launch
+                }
 
                 when (val result = backupManager.restoreFromJson(jsonString)) {
                     is ImportResult.Success -> {
@@ -839,9 +981,7 @@ class TimerViewModel @JvmOverloads constructor(
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to import data", e)
-                _backupState.value = BackupUiState.Error(
-                    app.getString(R.string.backup_error, e.message ?: "Unknown error"),
-                )
+                _backupState.value = BackupUiState.Error(app.getString(R.string.backup_error_generic))
             }
         }
     }
@@ -850,11 +990,12 @@ class TimerViewModel @JvmOverloads constructor(
         _backupState.value = BackupUiState.Idle
     }
 
-    fun applyWorkSchedule(enabled: Boolean, schedule: List<DaySchedule>) {
+    fun applyWorkSchedule(enabled: Boolean, autoModeByDay: Boolean, schedule: List<DaySchedule>) {
         viewModelScope.launch {
             try {
                 repository.setWorkScheduleEnabled(enabled)
                 repository.setWeekSchedule(schedule)
+                repository.setAutoModeByDayEnabled(autoModeByDay)
                 if (enabled) {
                     WorkScheduleManager.scheduleNextWorkStartReminder(
                         getApplication(), schedule,
@@ -866,7 +1007,112 @@ class TimerViewModel @JvmOverloads constructor(
         }
     }
 
-    fun completeOnboarding(level: FitnessLevel, selectedExercises: List<Exercise>) {
+    fun onDonationShown() {
+        launchSafely("Failed to mark donation prompt shown") {
+            repository.markDonationPromptShown(System.currentTimeMillis())
+        }
+    }
+
+    fun onDonationSupport() {
+        launchSafely("Failed to mark donation prompt supported") {
+            repository.markDonationPromptDismissed()
+        }
+        openKofiLink()
+    }
+
+    fun onDonationLater() {
+        launchSafely("Failed to snooze donation prompt") {
+            repository.markDonationPromptShown(System.currentTimeMillis())
+        }
+    }
+
+    fun onDonationDismiss() {
+        launchSafely("Failed to dismiss donation prompt") {
+            repository.markDonationPromptDismissed()
+        }
+    }
+
+    fun setDevModeEnabled(enabled: Boolean) {
+        launchSafely("Failed to toggle dev mode") {
+            repository.setDevModeEnabled(enabled)
+        }
+    }
+
+    fun resetDonationPromptForTesting() {
+        launchSafely("Failed to reset donation prompt") {
+            repository.resetDonationPrompt(System.currentTimeMillis())
+        }
+    }
+
+    fun resetOnboarding() {
+        launchSafely("Failed to reset onboarding") {
+            repository.setOnboardingCompleted(false)
+        }
+    }
+
+    fun clearAllData() {
+        viewModelScope.launch {
+            try {
+                repository.clearAll()
+                statsRepository.resetAllStats()
+                WidgetUpdater.requestUpdate(getApplication())
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to clear all data", e)
+            }
+        }
+    }
+
+    fun loadSettingsDump() {
+        viewModelScope.launch {
+            try {
+                val prefs = repository.dumpPreferences()
+                val formatted = buildString {
+                    append("App: ")
+                    append(getApplication<Application>().packageName)
+                    append('\n')
+                    append("Version: ")
+                    append(de.mysportsmate.officebreak.BuildConfig.VERSION_NAME)
+                    append(" (")
+                    append(de.mysportsmate.officebreak.BuildConfig.VERSION_CODE)
+                    append(")\n")
+                    append("Build: ")
+                    append(if (de.mysportsmate.officebreak.BuildConfig.DEBUG) "debug" else "release")
+                    append('\n')
+                    append("Git: ")
+                    append(de.mysportsmate.officebreak.BuildConfig.GIT_SHA)
+                    append('\n')
+                    append("Built: ")
+                    append(de.mysportsmate.officebreak.BuildConfig.BUILD_TIMESTAMP)
+                    append("\n\n=== DataStore ===\n")
+                    prefs.toSortedMap().forEach { (key, value) ->
+                        append(key).append(" = ").append(value).append('\n')
+                    }
+                }
+                _settingsDump.value = formatted
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to dump settings", e)
+                _settingsDump.value = "Error: ${e.message}"
+            }
+        }
+    }
+
+    fun clearSettingsDump() {
+        _settingsDump.value = null
+    }
+
+    fun openKofiLink() {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(KOFI_URL))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        try {
+            getApplication<Application>().startActivity(intent)
+        } catch (e: ActivityNotFoundException) {
+            Log.w(TAG, "No activity available to open Ko-fi link", e)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to open Ko-fi link", e)
+        }
+    }
+
+    fun completeOnboarding(level: FitnessLevel, mode: ExerciseMode) {
         viewModelScope.launch {
             try {
                 repository.setTimerHours(level.hours)
@@ -874,8 +1120,9 @@ class TimerViewModel @JvmOverloads constructor(
                 repository.setRepsMin(level.reps)
                 repository.setRepsMax(level.reps)
                 repository.setRepsLinked(true)
-                repository.setExercises(selectedExercises)
+                repository.setExerciseMode(mode)
                 repository.setOnboardingCompleted(true)
+                applyDayDefaultModeNow()
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to complete onboarding", e)
             }

@@ -7,31 +7,38 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import android.provider.Settings
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -39,8 +46,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import de.mysportsmate.officebreak.R
+import de.mysportsmate.officebreak.ui.share.shareAchievement
+import de.mysportsmate.officebreak.ui.theme.ConfettiColors
 import de.mysportsmate.officebreak.ui.theme.OfficeBreakTheme
 import kotlinx.coroutines.android.awaitFrame
+import kotlinx.coroutines.launch
 import kotlin.random.Random
 
 private const val PARTICLE_COUNT = 25
@@ -59,7 +69,10 @@ fun AchievementUnlockDialog(
     title: String,
     description: String,
     onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val scale = remember { Animatable(0f) }
 
     LaunchedEffect(Unit) {
@@ -72,22 +85,13 @@ fun AchievementUnlockDialog(
         )
     }
 
-    val confettiColors = listOf(
-        Color(0xFFFF6B6B),
-        Color(0xFF4ECDC4),
-        Color(0xFFFFE66D),
-        Color(0xFF95E1D3),
-        Color(0xFFF38181),
-        Color(0xFF6C5CE7),
-    )
-
     val particles = remember {
         List(PARTICLE_COUNT) {
             Particle(
                 x = Random.nextFloat(),
                 speed = 0.3f + Random.nextFloat() * 0.7f,
                 size = 4f + Random.nextFloat() * 8f,
-                color = confettiColors[Random.nextInt(confettiColors.size)],
+                color = ConfettiColors[Random.nextInt(ConfettiColors.size)],
                 startDelay = Random.nextFloat() * 0.3f,
             )
         }
@@ -96,7 +100,16 @@ fun AchievementUnlockDialog(
     var frameTime by remember { mutableLongStateOf(0L) }
     var startTime by remember { mutableLongStateOf(0L) }
 
-    LaunchedEffect(Unit) {
+    val reduceMotion = remember(context) {
+        Settings.Global.getFloat(
+            context.contentResolver,
+            Settings.Global.ANIMATOR_DURATION_SCALE,
+            1f,
+        ) == 0f
+    }
+
+    LaunchedEffect(reduceMotion) {
+        if (reduceMotion) return@LaunchedEffect
         startTime = System.currentTimeMillis()
         while (System.currentTimeMillis() - startTime < CONFETTI_DURATION_MS) {
             awaitFrame()
@@ -135,7 +148,7 @@ fun AchievementUnlockDialog(
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                 ),
-                modifier = Modifier
+                modifier = modifier
                     .fillMaxWidth()
                     .align(Alignment.Center),
             ) {
@@ -189,6 +202,32 @@ fun AchievementUnlockDialog(
                     ) {
                         Text(
                             text = stringResource(R.string.achievement_awesome),
+                            style = MaterialTheme.typography.titleLarge,
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedButton(
+                        onClick = {
+                            scope.launch {
+                                shareAchievement(
+                                    context = context,
+                                    title = title,
+                                    description = description,
+                                )
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = null,
+                            modifier = Modifier.size(22.dp),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.share_achievement),
                             style = MaterialTheme.typography.titleLarge,
                         )
                     }

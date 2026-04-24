@@ -48,6 +48,8 @@
     <string name="settings_beep_volume">Beep volume</string>
     <string name="settings_vibration">Vibration</string>
     <string name="settings_beep_count">Number of beeps</string>
+    <string name="settings_volume">Volume</string>
+    <string name="countdown_remaining_description">%1$d minutes %2$d seconds remaining</string>
     <string name="volume_mute">Mute</string>
     <string name="volume_unmute">Unmute</string>
     <string name="settings_tts_enabled">Read exercise aloud</string>
@@ -66,17 +68,20 @@
     <string name="settings_work_end">Work end</string>
     <string name="settings_lunch_start">Break start</string>
     <string name="settings_lunch_end">Break end</string>
-    <string name="notification_text_lunch_pause">Break — timer paused</string>
+    <string name="notification_text_lunch_pause">Break - timer paused</string>
     <string name="work_ended_title">Enjoy your time off!</string>
     <string name="work_ended_message">Your shift has ended. The timer was stopped automatically.</string>
     <string name="work_ended_dismiss">OK</string>
     <string name="break_pause_title">Enjoy your break!</string>
     <string name="break_pause_message">The timer is paused and will resume automatically when your break ends.</string>
-    <string name="notification_work_start_title">Time to start working!</string>
-    <string name="notification_work_start_text">Start your break timer for the day</string>
+    <string name="break_pause_music">Pause music</string>
+    <string name="break_resume_music">Resume music</string>
+    <string name="notification_work_start_title">Your work day has started</string>
+    <string name="notification_work_start_text">Do you want to start your break timer?</string>
+    <string name="notification_work_start_action">Start</string>
     <string name="timer_paused_lunch">Break</string>
     <string name="onboarding_schedule_title">Set your work schedule</string>
-    <string name="onboarding_schedule_subtitle">Optional — you can set this up later in settings</string>
+    <string name="onboarding_schedule_subtitle">Optional - you can set this up later in settings</string>
     <string name="onboarding_schedule_select_days">Select your work days</string>
     <string name="day_mon">Mon</string>
     <string name="day_tue">Tue</string>
@@ -86,6 +91,10 @@
     <string name="day_sat">Sat</string>
     <string name="day_sun">Sun</string>
     <string name="settings_work_schedule_day_linked">Inherit times from previous day</string>
+    <string name="settings_auto_mode_by_day">Auto mode by weekday</string>
+    <string name="settings_auto_mode_by_day_hint">Automatically switches exercise mode based on the weekday</string>
+    <string name="settings_day_mode_label">Mode</string>
+    <string name="settings_day_mode_inherited">Inherited from %1$s</string>
 
     <!-- Dynamic Increase -->
     <string name="dynamic_increase_title">You\'re getting stronger!</string>
@@ -99,12 +108,50 @@
     <string name="add_exercise">Add</string>
     <string name="remove_exercise">Remove</string>
 
+    <!-- Home Workout exercises -->
     <string name="exercise_push_ups">Push Ups</string>
     <string name="exercise_squats">Squats</string>
     <string name="exercise_deadlifts">Deadlifts</string>
     <string name="exercise_lunges">Lunges</string>
     <string name="exercise_sit_ups">Sit Ups</string>
     <string name="exercise_superman_angels">Superman Angels</string>
+    <string name="exercise_plank">Plank</string>
+    <string name="exercise_glute_bridge">Glute Bridge</string>
+    <!-- Home Mobility exercises -->
+    <string name="exercise_cat_cow">Cat-Cow Stretch</string>
+    <string name="exercise_childs_pose">Child\'s Pose</string>
+    <string name="exercise_downward_dog">Downward Dog</string>
+    <string name="exercise_seated_twist">Seated Spinal Twist</string>
+    <string name="exercise_hip_circles">Hip Circles</string>
+    <string name="exercise_standing_forward_fold">Standing Forward Fold</string>
+    <string name="exercise_thread_the_needle">Thread the Needle</string>
+    <string name="exercise_pigeon_stretch">Pigeon Stretch</string>
+    <!-- Office exercises -->
+    <string name="exercise_shoulder_blade_squeeze">Shoulder Blade Squeeze</string>
+    <string name="exercise_chest_opener">Chest Opener</string>
+    <string name="exercise_neck_stretch">Neck Stretch</string>
+    <string name="exercise_calf_raises">Calf Raises</string>
+    <string name="exercise_seated_leg_extension">Seated Leg Extension</string>
+    <string name="exercise_wrist_circles">Wrist Circles</string>
+    <string name="exercise_ankle_circles">Ankle Circles</string>
+    <string name="exercise_seated_cat_cow">Seated Cat-Cow</string>
+    <string name="exercise_seated_core_bracing">Seated Core Bracing</string>
+
+    <!-- Exercise Modes -->
+    <string name="exercise_mode_home_workout">Home Office Workout</string>
+    <string name="exercise_mode_home_workout_desc">Bodyweight exercises for strength and fitness</string>
+    <string name="exercise_mode_home_mobility">Home Office Mobility</string>
+    <string name="exercise_mode_home_mobility_desc">Yoga-inspired stretches for flexibility and range of motion</string>
+    <string name="exercise_mode_office">Office</string>
+    <string name="exercise_mode_office_desc">Subtle exercises you can do at your desk</string>
+    <string name="onboarding_mode_title">Choose your exercise style</string>
+    <string name="onboarding_mode_subtitle">You can switch between modes anytime in settings</string>
+    <string name="exercise_mode_label">Exercise mode</string>
+    <string name="exercise_mode_short_home_workout">Home Office\nWorkout</string>
+    <string name="exercise_mode_short_home_mobility">Home Office\nMobility</string>
+    <string name="exercise_mode_short_office">Office</string>
+    <string name="exercise_mode_override_today_hint">Reverts to your schedule when you stop the timer or at workday end</string>
+    <string name="onboarding_summary_mode">Mode: %1$s</string>
 
     <string name="dialog_confirm_ok">OK</string>
 
@@ -129,8 +176,8 @@
     <string name="onboarding_summary_interval">Break every %1$s</string>
     <string name="onboarding_summary_reps">%d reps per exercise</string>
     <string name="onboarding_summary_exercises">%d exercises selected</string>
-    <string name="onboarding_summary_work_schedule">Work schedule: %1$s – %2$s</string>
-    <string name="onboarding_summary_lunch">Break: %1$s – %2$s</string>
+    <string name="onboarding_summary_work_schedule">Work schedule: %1$s - %2$s</string>
+    <string name="onboarding_summary_lunch">Break: %1$s - %2$s</string>
     <string name="onboarding_summary_work_schedule_off">Work schedule: off</string>
     <string name="onboarding_next">Next</string>
     <string name="onboarding_back">Back</string>
@@ -275,7 +322,10 @@
     <string name="import_success">Data imported successfully</string>
     <string name="import_error_invalid_format">The selected file is not a valid Office Break backup</string>
     <string name="import_error_newer_version">This backup was created by a newer version of Office Break. Please update the app.</string>
+    <string name="import_error_too_large">The selected file is too large to import (maximum 5 MB)</string>
     <string name="backup_error">Something went wrong: %1$s</string>
+    <string name="backup_error_generic">Something went wrong. Please try again.</string>
+    <string name="share_error">Could not share achievement. Please try again.</string>
 
     <!-- Widget -->
     <string name="widget_description">Shows your break stats and timer at a glance</string>
@@ -285,8 +335,49 @@
     <string name="widget_no_streak">No streak</string>
     <string name="widget_timer_idle">Timer not running</string>
     <string name="widget_timer_running">Timer is running</string>
+    <string name="widget_timer_remaining">Next break in %s</string>
+    <string name="widget_timer_paused">Paused · %s</string>
     <string name="widget_timer_expired">Break time!</string>
     <string name="widget_start">Start</string>
     <string name="widget_open">Open</string>
     <string name="navigate_back">Navigate back</string>
+
+    <!-- Donation prompt -->
+    <string name="donation_prompt_title">Thanks for using Office Break</string>
+    <string name="donation_prompt_message">This app is free and always will be. If it helps your daily routine, a small tip on Ko-fi keeps development going - totally optional.</string>
+    <string name="donation_prompt_support">Support</string>
+    <string name="donation_prompt_later">Maybe later</string>
+    <string name="donation_prompt_dismiss">No thanks</string>
+    <string name="settings_support_project">Support the project</string>
+    <string name="settings_support_project_summary">Buy me a coffee on Ko-fi</string>
+
+    <!-- Developer mode -->
+    <string name="dev_mode_enabled_toast">Developer mode enabled</string>
+    <string name="dev_mode_disabled_toast">Developer mode disabled</string>
+    <string name="dev_section_title">Developer</string>
+    <string name="dev_reset_donation">Reset donation popup</string>
+    <string name="dev_reset_donation_summary">Clears dismissed/snoozed state and rewinds install date</string>
+    <string name="dev_reset_onboarding">Reset onboarding</string>
+    <string name="dev_reset_onboarding_summary">Show onboarding flow on next launch</string>
+    <string name="dev_show_dump">Show DataStore dump</string>
+    <string name="dev_show_dump_summary">View all settings values (for bug reports)</string>
+    <string name="dev_clear_all">Wipe all app data</string>
+    <string name="dev_clear_all_summary">Resets settings, stats, achievements - cannot be undone</string>
+    <string name="dev_clear_all_confirm_title">Wipe all app data?</string>
+    <string name="dev_clear_all_confirm_message">This deletes all settings, statistics, achievements, and custom exercises. Cannot be undone.</string>
+    <string name="dev_clear_all_confirm_yes">Wipe</string>
+    <string name="dev_disable">Disable developer mode</string>
+    <string name="dev_disable_summary">Hide this section</string>
+    <string name="dev_dump_title">App &amp; DataStore state</string>
+    <string name="dev_dump_copy">Copy</string>
+    <string name="dev_dump_close">Close</string>
+    <string name="dev_dump_copied">Copied to clipboard</string>
+    <string name="dev_reset_done">Done</string>
+
+    <!-- Share Achievement -->
+    <string name="share_achievement">Share</string>
+    <string name="share_chooser_title">Share achievement</string>
+    <string name="share_text">I just unlocked \"%1$s\" in Office Break! 🏆</string>
+    <string name="share_card_unlocked">Achievement Unlocked!</string>
+    <string name="share_card_app_name">Office Break</string>
 </resources>

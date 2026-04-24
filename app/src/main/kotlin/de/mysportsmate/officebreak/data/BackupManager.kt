@@ -40,6 +40,13 @@ class BackupManager(
             workScheduleEnabled = settings.workScheduleEnabled,
             weekSchedule = settings.weekSchedule,
 
+            exerciseMode = settings.exerciseMode.name,
+            exercisesHomeWorkout = settings.exercisesHomeWorkout,
+            exercisesHomeMobility = settings.exercisesHomeMobility,
+            exercisesOffice = settings.exercisesOffice,
+
+            autoModeByDayEnabled = settings.autoModeByDayEnabled,
+
             trackingEnabled = stats.trackingEnabled,
             breakRecords = stats.breakRecords,
             dailyAggregates = stats.dailyAggregates,
@@ -64,9 +71,24 @@ class BackupManager(
             return ImportResult.Error(R.string.import_error_newer_version)
         }
 
-        settingsRepository.restoreFromBackup(data)
-        statsRepository.restoreFromBackup(data)
+        val sanitized = data.copy(
+            breakRecords = data.breakRecords.take(MAX_BREAK_RECORDS),
+            dailyAggregates = data.dailyAggregates.take(MAX_DAILY_AGGREGATES),
+            yearlyAggregates = data.yearlyAggregates.take(MAX_YEARLY_AGGREGATES),
+            exercises = data.exercises.clampForImport(),
+            exercisesHomeWorkout = data.exercisesHomeWorkout.clampForImport(),
+            exercisesHomeMobility = data.exercisesHomeMobility.clampForImport(),
+            exercisesOffice = data.exercisesOffice.clampForImport(),
+        )
+
+        settingsRepository.restoreFromBackup(sanitized)
+        statsRepository.restoreFromBackup(sanitized)
 
         return ImportResult.Success
     }
+
+    private fun List<Exercise>.clampForImport(): List<Exercise> =
+        take(MAX_EXERCISES_PER_MODE).map { exercise ->
+            exercise.copy(name = exercise.name.take(MAX_EXERCISE_NAME_LENGTH))
+        }
 }

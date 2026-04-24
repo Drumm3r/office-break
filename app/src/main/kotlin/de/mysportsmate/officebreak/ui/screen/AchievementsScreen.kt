@@ -14,21 +14,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Autorenew
-import androidx.compose.material.icons.filled.Celebration
-import androidx.compose.material.icons.filled.Create
-import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.FitnessCenter
-import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.NightsStay
-import androidx.compose.material.icons.filled.Replay
-import androidx.compose.material.icons.filled.Shuffle
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Today
-import androidx.compose.material.icons.filled.WbSunny
-import androidx.compose.material.icons.filled.Weekend
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -39,10 +26,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.mysportsmate.officebreak.R
@@ -51,7 +41,10 @@ import de.mysportsmate.officebreak.data.AchievementDefinition
 import de.mysportsmate.officebreak.data.AchievementRegistry
 import de.mysportsmate.officebreak.data.AchievementState
 import de.mysportsmate.officebreak.data.StatsSnapshot
+import de.mysportsmate.officebreak.ui.components.iconForName
+import de.mysportsmate.officebreak.ui.share.shareAchievement
 import de.mysportsmate.officebreak.ui.theme.OfficeBreakTheme
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -100,11 +93,13 @@ fun AchievementsScreen(
                     Text(
                         text = categoryTitle(category),
                         style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(bottom = 8.dp),
+                        modifier = Modifier
+                            .padding(bottom = 8.dp)
+                            .semantics { heading() },
                     )
                 }
 
-                items(achievements) { achievement ->
+                items(achievements, key = { it.id }) { achievement ->
                     AchievementItem(
                         achievement = achievement,
                         isUnlocked = achievement.id in achievementState.unlockedIds,
@@ -208,6 +203,28 @@ private fun AchievementItem(
                     }
                 }
             }
+
+            if (isUnlocked) {
+                val context = LocalContext.current
+                val scope = rememberCoroutineScope()
+                IconButton(
+                    onClick = {
+                        scope.launch {
+                            shareAchievement(
+                                context = context,
+                                title = title,
+                                description = description,
+                            )
+                        }
+                    },
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = stringResource(R.string.share_achievement),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
         }
     }
 }
@@ -225,27 +242,6 @@ private fun categoryTitle(category: AchievementCategory): String {
             AchievementCategory.EXERCISE_MASTERY -> R.string.achievement_category_mastery
         },
     )
-}
-
-private fun iconForName(name: String): ImageVector {
-    return when (name) {
-        "EmojiEvents" -> Icons.Default.EmojiEvents
-        "LocalFireDepartment" -> Icons.Default.LocalFireDepartment
-        "FitnessCenter" -> Icons.Default.FitnessCenter
-        "Diversity3" -> Icons.Default.AutoAwesome
-        "Shuffle" -> Icons.Default.Shuffle
-        "Autorenew" -> Icons.Default.Autorenew
-        "Create" -> Icons.Default.Create
-        "Today" -> Icons.Default.Today
-        "WbSunny" -> Icons.Default.WbSunny
-        "NightsStay" -> Icons.Default.NightsStay
-        "LunchDining" -> Icons.Default.Today
-        "Celebration" -> Icons.Default.Celebration
-        "Weekend" -> Icons.Default.Weekend
-        "Replay" -> Icons.Default.Replay
-        "Star" -> Icons.Default.Star
-        else -> Icons.Default.EmojiEvents
-    }
 }
 
 

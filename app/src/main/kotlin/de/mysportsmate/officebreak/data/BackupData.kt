@@ -37,6 +37,15 @@ data class BackupData(
     val lunchEndMinute: Int = 0,
     val weekSchedule: List<DaySchedule> = emptyList(),
 
+    // Exercise modes (v2)
+    val exerciseMode: String = ExerciseMode.HOME_WORKOUT.name,
+    val exercisesHomeWorkout: List<Exercise> = emptyList(),
+    val exercisesHomeMobility: List<Exercise> = emptyList(),
+    val exercisesOffice: List<Exercise> = emptyList(),
+
+    // Per-day default mode (v3)
+    val autoModeByDayEnabled: Boolean = false,
+
     // Stats
     val trackingEnabled: Boolean,
     val breakRecords: List<BreakRecord>,
@@ -46,7 +55,7 @@ data class BackupData(
     val achievementState: AchievementState,
 ) {
     companion object {
-        const val CURRENT_FORMAT_VERSION = 1
+        const val CURRENT_FORMAT_VERSION = 3
     }
 }
 
