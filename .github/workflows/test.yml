@@ -47,9 +47,12 @@ jobs:
             echo "::error::No release APK found"
             exit 1
           fi
-          if unzip -l "$release_apk" | grep -Eiq '(ui-tooling|ui-test-manifest)'; then
+          leaks=$(unzip -l "$release_apk" \
+            | grep -Ei '(ui-tooling|ui-test-manifest)' \
+            | grep -v 'ui-tooling-preview' || true)
+          if [ -n "$leaks" ]; then
             echo "::error::Release APK contains debug tooling artifacts"
-            unzip -l "$release_apk" | grep -Ei '(ui-tooling|ui-test-manifest)' || true
+            echo "$leaks"
             exit 1
           fi
 
