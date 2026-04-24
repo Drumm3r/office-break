@@ -89,15 +89,13 @@ object WorkScheduleManager {
         }
     }
 
-    private fun buildPendingIntent(context: Context): PendingIntent {
-        val intent = Intent(context, WorkScheduleReceiver::class.java).apply {
-            setPackage(context.packageName)
-        }
-        return PendingIntent.getBroadcast(
+    private fun buildPendingIntent(context: Context): PendingIntent =
+        PendingIntent.getBroadcast(
             context,
             REQUEST_CODE,
-            intent,
+            Intent(context, WorkScheduleReceiver::class.java).apply {
+                setPackage(context.packageName)
+            },
             PendingIntent.FLAG_CANCEL_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-    }
 }

@@ -66,8 +66,7 @@ class WorkScheduleReceiver : BroadcastReceiver() {
         val startTimerIntent = PendingIntent.getBroadcast(
             context,
             START_ACTION_REQUEST_CODE,
-            Intent().apply {
-                setClass(context, WorkScheduleReceiver::class.java)
+            Intent(context, WorkScheduleReceiver::class.java).apply {
                 setPackage(context.packageName)
                 action = ACTION_START_TIMER
             },
