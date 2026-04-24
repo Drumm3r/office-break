@@ -2,6 +2,7 @@ package de.mysportsmate.officebreak.service
 
 import android.app.AlarmManager
 import android.app.PendingIntent
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -93,9 +94,9 @@ object WorkScheduleManager {
         PendingIntent.getBroadcast(
             context,
             REQUEST_CODE,
-            Intent(context, WorkScheduleReceiver::class.java).apply {
-                setPackage(context.packageName)
-            },
+            Intent()
+                .setComponent(ComponentName(context, WorkScheduleReceiver::class.java))
+                .setPackage(context.packageName),
             PendingIntent.FLAG_CANCEL_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 }

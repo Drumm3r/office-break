@@ -2,6 +2,7 @@ package de.mysportsmate.officebreak.service
 
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.util.Log
@@ -56,20 +57,19 @@ class WorkScheduleReceiver : BroadcastReceiver() {
         val contentIntent = PendingIntent.getActivity(
             context,
             0,
-            Intent(context, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                setPackage(context.packageName)
-            },
+            Intent()
+                .setComponent(ComponentName(context, MainActivity::class.java))
+                .setPackage(context.packageName)
+                .setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT),
             PendingIntent.FLAG_CANCEL_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
         val startTimerIntent = PendingIntent.getBroadcast(
             context,
             START_ACTION_REQUEST_CODE,
-            Intent(context, WorkScheduleReceiver::class.java).apply {
-                setPackage(context.packageName)
-                action = ACTION_START_TIMER
-            },
+            Intent(ACTION_START_TIMER)
+                .setComponent(ComponentName(context, WorkScheduleReceiver::class.java))
+                .setPackage(context.packageName),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
