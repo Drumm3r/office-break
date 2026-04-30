@@ -1,0 +1,26 @@
+Office Break is a simple, privacy-respecting timer that reminds you to take active movement breaks during your workday. Set an interval, hit start, and when the timer expires the app suggests a random exercise. Confirm "Done!" and the timer restarts automatically - over and over, until you stop it.
+
+Stay fit while working from home or at the office, without ads, tracking, or accounts.
+
+Features:
+
+* Adjustable break interval (hours + minutes) with sliders or manual input
+* Configurable repetitions, fixed or randomized in a min/max range
+* Three context-aware exercise modes: Home Office Workout (bodyweight strength), Home Office Mobility (yoga-inspired stretches), Office (subtle desk-friendly moves)
+* 25 built-in exercises across all modes - add your own or disable the ones you don't like
+* Optional auto-mode by weekday: bind a different mode to each day of the week (e.g. Office on Mon/Tue, Home Workout on Wed-Fri)
+* Work schedule with per-day start/end and lunch break: timer auto-pauses during lunch and stops at end-of-shift; full night-shift support
+* Freestyle mode after work hours for free-running breaks without exercise prompts
+* Foreground service with persistent notification, screen wake-up, and full-screen lock-screen alert when the timer expires
+* Configurable beep, vibration, and custom notification sounds (pick any audio file)
+* Text-to-speech: exercise names spoken aloud in your language
+* Home screen widget (Glance) with live second-by-second countdown, today's break count, current streak, and a one-tap Start button
+* Achievements system with shareable cards (over 35 milestones)
+* Local statistics: total breaks, reps, weekly trends, most frequent exercise - all data stays on your device
+* JSON backup export and import via Storage Access Framework
+* Material 3 theming, light/dark/system modes, accessibility-tuned (TalkBack, reduce-motion, large fonts)
+* English and German UI
+
+Privacy:
+
+No analytics, no telemetry, no ads, no third-party SDKs. All data is stored locally on your device. The app never connects to a server. Source code is published under GPL-3.0.
