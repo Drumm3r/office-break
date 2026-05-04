@@ -4,9 +4,16 @@ All notable changes to Office Break are documented here. Newest on top.
 
 ## [v0.8.1] - 2026-05-04
 
+### Distribution
+
+- **F-Droid submission** — Office Break is now in review at F-Droid (https://gitlab.com/fdroid/fdroiddata/-/merge_requests/37672) and will appear in the F-Droid catalog once the maintainers merge the request.
+- **Fastlane store metadata** — `fastlane/metadata/android/{en-US,de-DE}/` shipped with title, short and full description, per-version changelogs, app icon (512×512), and seven phone screenshots per locale. The same files feed both F-Droid and (later) Google Play, so future releases stay in sync via one source-of-truth tree.
+
 ### Build
 
-- **Removed `org.gradle.toolchains.foojay-resolver-convention` plugin** from `settings.gradle.kts` — F-Droid's source scanner blocks it because the plugin auto-downloads JDK distributions from an external service, conflicting with the F-Droid reproducible-build / FOSS-only build pipeline. Local and CI builds continue to work with the system / wrapper-provided JDK.
+- **Reproducible-build settings** — `dependenciesInfo` blob (the encrypted dependency manifest AGP 7+ embeds in every APK with a build-time payload) is now disabled in `app/build.gradle.kts` so binary diffs against F-Droid's rebuild stay clean.
+- **Conditional release signing** — release builds now sign automatically when a root-level `keystore.properties` is present and produce an unsigned APK otherwise, so CI and the F-Droid build server can both run `assembleRelease` without a keystore.
+- **Removed `org.gradle.toolchains.foojay-resolver-convention` plugin** from `settings.gradle.kts` — F-Droid's source scanner blocks it because the plugin auto-downloads JDK distributions from an external service, conflicting with the FOSS-only build pipeline. Local and CI builds continue to work with the system / wrapper-provided JDK.
 
 ## [v0.8.0] - 2026-04-24
 

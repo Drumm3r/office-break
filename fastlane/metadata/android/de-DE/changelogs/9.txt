@@ -1,3 +1,5 @@
 v0.8.1
 
-* Build-Fix: Foojay-Resolver Gradle-Plugin entfernt, damit Source-Scanner / Reproducible-Build-Pipeline nicht mehr blockiert. Keine sichtbaren Änderungen.
+* Office Break wurde bei F-Droid eingereicht.
+* Build-Pipeline auf Reproducible-Builds umgestellt (Dependencies-Info-Block deaktiviert, Foojay-Resolver-Plugin entfernt).
+* Keine sichtbaren Änderungen.
