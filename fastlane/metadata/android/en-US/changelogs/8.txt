@@ -1,0 +1,11 @@
+v0.8.0
+
+* Per-day exercise mode: bind Workout / Mobility / Office to each weekday, with a "Today only" override that resets at end-of-shift
+* 19 new built-in exercises across all three modes (Plank, Cat-Cow, Neck Stretch, ...)
+* Home screen widget re-enabled with live countdown, streak, and one-tap Start
+* Boot-time alarm re-registration so reminders survive reboots and updates
+* Work-start notification fires 10 minutes early and now has a direct Start action
+* Pause/resume custom break music during a break
+* Share unlocked achievements as branded image cards via the share sheet
+* Accessibility overhaul: TalkBack headings, slider labels, larger touch targets, reduce-motion support
+* Landscape layout fixes, hardened backup import, supply-chain CI hardening

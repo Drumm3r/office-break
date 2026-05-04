@@ -86,6 +86,18 @@ In Android Studio: **Build > Generate Signed Bundle / APK > APK > Release**
 
 ## Install
 
+### F-Droid
+
+[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
+     alt="Get it on F-Droid"
+     height="80">](https://f-droid.org/packages/de.mysportsmate.officebreak/)
+
+### GitHub Releases
+
+Pre-built signed APKs are attached to each [release](https://github.com/Drumm3r/office-break/releases).
+
+### Local debug build
+
 ```bash
 adb install app/build/outputs/apk/debug/app-debug.apk
 ```

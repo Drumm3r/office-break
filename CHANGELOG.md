@@ -2,7 +2,7 @@
 
 All notable changes to Office Break are documented here. Newest on top.
 
-## [v0.8.0] -
+## [v0.8.0] - 2026-04-24
 
 ### New Features
 
