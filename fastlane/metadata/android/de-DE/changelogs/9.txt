@@ -1,0 +1,3 @@
+v0.8.1
+
+* Build-Fix: Foojay-Resolver Gradle-Plugin entfernt, damit Source-Scanner / Reproducible-Build-Pipeline nicht mehr blockiert. Keine sichtbaren Änderungen.

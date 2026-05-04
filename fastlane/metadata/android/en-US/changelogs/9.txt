@@ -1,0 +1,3 @@
+v0.8.1
+
+* Build fix: removed foojay-resolver Gradle plugin so the source scanner / reproducible-build pipeline no longer blocks. No user-facing changes.
