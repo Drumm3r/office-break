@@ -32,8 +32,8 @@ android {
         applicationId = "de.mysportsmate.officebreak"
         minSdk = 28
         targetSdk = 36
-        versionCode = 8
-        versionName = "0.8.0"
+        versionCode = 9
+        versionName = "0.8.1"
 
         buildConfigField("String", "GIT_SHA", "\"${readGitSha()}\"")
         buildConfigField("String", "BUILD_TIMESTAMP", "\"${Instant.now()}\"")
