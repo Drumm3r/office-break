@@ -1,0 +1,10 @@
+v0.8.0
+
+* Per-day exercise mode (Workout / Mobility / Office) with "Today only" override
+* 19 new built-in exercises across all three modes
+* Home-screen widget with live countdown, streak, and one-tap Start
+* Boot-time alarm re-registration so reminders survive reboots
+* Work-start notification fires 10 min early with Start action
+* Pause/resume custom break music during a break
+* Share unlocked achievements as branded image cards
+* Accessibility overhaul + landscape-layout fixes

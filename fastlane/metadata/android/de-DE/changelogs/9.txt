@@ -1,0 +1,5 @@
+v0.8.1
+
+* Office Break wurde bei F-Droid eingereicht.
+* Build-Pipeline auf Reproducible-Builds umgestellt (Dependencies-Info-Block deaktiviert, Foojay-Resolver-Plugin entfernt).
+* Keine sichtbaren Änderungen.

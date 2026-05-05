@@ -2,7 +2,47 @@
 
 All notable changes to Office Break are documented here. Newest on top.
 
-## [v0.8.0] -
+## [v0.8.2] - 2026-05-05
+
+### Distribution
+
+- **F-Droid scanner blockers cleared** — Removed the `org.gradle.toolchains.foojay-resolver-convention` reference from `settings.gradle.kts` (the SUSS scanner does substring matching and triggered on the literal in a comment) and deleted the auto-generated `gradle/gradle-daemon-jvm.properties`, which carried `api.foojay.io` JDK-toolchain URLs. JDK 17 is now sourced from `JAVA_HOME` / IDE Gradle JDK setting; the file is added to `.gitignore` so future Gradle syncs cannot re-introduce it.
+- **Fastlane changelogs trimmed under 500 chars** — `fastlane/metadata/android/{en-US,de-DE}/changelogs/8.txt` shortened to satisfy F-Droid's per-locale `whatsNew` length limit.
+
+### Build
+
+- **`gradle-wrapper.jar` regenerated to 9.4.1** — The committed wrapper jar was a stale Gradle 2.10 artifact while `gradle-wrapper.properties` declared 9.4.1. Refreshed via `./gradlew wrapper --gradle-version 9.4.1 --gradle-distribution-sha256-sum 2ab2958f2a1e51120c326cad6f385153bb11ee93b3c216c5fccebfdfbb7ec6cb` so the wrapper bootstrap matches the resolved distribution.
+- **`io.opencensus` tracker dependency excluded** — Added `configurations.all { exclude(group = "io.opencensus") }` to `app/build.gradle.kts` and removed the `opencensus-api` / `opencensus-proto` entries from `gradle/verification-metadata.xml`. The library was pulled transitively by `com.google.testing.platform:android-device-provider-local` (UTP / instrumentation test infra) and never reached the runtime/compile classpaths; this drops the F-Droid Tracker anti-feature flag at the source.
+- **Transitive `ACCESS_NETWORK_STATE` permission removed** — `AndroidManifest.xml` now declares `<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />` so the AndroidX-bundled permission is stripped from the merged manifest. The app never reads network state.
+- **`gradle/verification-metadata.xml` tightened** — Dropped the broad `<trust group="^androidx\..*">`-style regex entries for `androidx.*`, `com.android.*`, `com.google.*`, `gradle`, `org.gradle.*`, `org.jetbrains.*`, and `org.junit.*`. Every artifact (824 components, up from ~533) now verifies against an explicit pinned SHA-256, closing audit finding M-1. `<verify-signatures>` intentionally left `false`; PGP signature verification is deferred until Play Store review surfaces a need. Regenerated via `./gradlew --write-verification-metadata sha256 help assembleDebug assembleRelease testDebugUnitTest`.
+- **Release-APK debug-tooling guard hardened** — `.github/workflows/test.yml` now iterates every APK in `app/build/outputs/apk/release/`, adds a DEX-class scan via `unzip -p classes*.dex | strings | grep` to catch tooling / test / LeakCanary classes that survive R8 minification, broadens the entry-name block-list to include `leakcanary` and `androidx/test`, uses `grep -vF` for the fixed-string `ui-tooling-preview` exclusion, and fails explicit when no APK is produced. Closes audit M-2.
+- **CI workflow public-log warning** — Header comment added to `.github/workflows/test.yml` reminding maintainers that all workflow output is world-readable and any future `secrets.*` use must include GitHub Actions secret-masking plus minimal `permissions:`. Closes audit I-2.
+- **AGP 9.2.0 confirmed stable** — Verified against the official Android Gradle Plugin 9.2.0 release notes (https://developer.android.com/build/releases/agp-9-2-0-release-notes); no toolchain change required. Closes audit I-1.
+- **Dependency bumps** — `androidx.compose:compose-bom` 2025.03.00 → 2026.04.01, `androidx.datastore:datastore-preferences` 1.1.4 → 1.2.1, `io.mockk:mockk` 1.13.16 → 1.14.9, `app.cash.turbine:turbine` 1.2.0 → 1.2.1.
+- **Deprecation cleanup** — Replaced `MenuAnchorType` (deprecated typealias in Compose Material3 shipped via compose-bom 2026.04.01) with the canonical `ExposedDropdownMenuAnchorType` in `SettingsScreen.kt` (one import + two `menuAnchor` call sites).
+
+### Security
+
+- **Internal security audit (2026-05-05) closed** — All five findings from `audit-security-report-2026-05-05.md` resolved: 0 Critical / 0 High / 2 Medium (M-1 verification-metadata, M-2 leak guard) / 1 Low (L-1 backup import) / 2 Informational (I-1 AGP, I-2 public logs). See the per-bullet entries under Build and Bug Fixes for the concrete remediation work.
+
+### Bug Fixes
+
+- **Backup import OOM on size-omitting SAF providers** — `TimerViewModel.importData` now reads SAF backup streams via a length-capped `CharArray(8 KiB)` loop into `StringBuilder`, aborting with `BackupUiState.Error(import_error_too_large)` once the running total exceeds `MAX_BACKUP_SIZE_BYTES` (5 MiB). Previously, when a SAF provider returned `OpenableColumns.SIZE = -1` (unknown), the code fell through to an unbounded `bufferedReader().readText()` and the post-read length check fired too late — a malicious SAF provider could have streamed gigabytes into the heap and crashed the app on import. Closes audit L-1.
+
+## [v0.8.1] - 2026-05-04
+
+### Distribution
+
+- **F-Droid submission** — Office Break is now in review at F-Droid (https://gitlab.com/fdroid/fdroiddata/-/merge_requests/37672) and will appear in the F-Droid catalog once the maintainers merge the request.
+- **Fastlane store metadata** — `fastlane/metadata/android/{en-US,de-DE}/` shipped with title, short and full description, per-version changelogs, app icon (512×512), and seven phone screenshots per locale. The same files feed both F-Droid and (later) Google Play, so future releases stay in sync via one source-of-truth tree.
+
+### Build
+
+- **Reproducible-build settings** — `dependenciesInfo` blob (the encrypted dependency manifest AGP 7+ embeds in every APK with a build-time payload) is now disabled in `app/build.gradle.kts` so binary diffs against F-Droid's rebuild stay clean.
+- **Conditional release signing** — release builds now sign automatically when a root-level `keystore.properties` is present and produce an unsigned APK otherwise, so CI and the F-Droid build server can both run `assembleRelease` without a keystore.
+- **Removed `org.gradle.toolchains.foojay-resolver-convention` plugin** from `settings.gradle.kts` — F-Droid's source scanner blocks it because the plugin auto-downloads JDK distributions from an external service, conflicting with the FOSS-only build pipeline. Local and CI builds continue to work with the system / wrapper-provided JDK.
+
+## [v0.8.0] - 2026-04-24
 
 ### New Features
 

@@ -1,0 +1,26 @@
+Office Break ist ein einfacher, datenschutzfreundlicher Timer, der dich an aktive Bewegungspausen während deines Arbeitstages erinnert. Stelle ein Intervall ein, drücke Start und wenn der Timer abläuft, schlägt die App eine zufällige Übung vor. Bestätige mit "Geschafft!" und der Timer startet automatisch von vorne - immer weiter, bis du ihn beendest.
+
+Bleib fit beim Arbeiten - im Home Office oder im Büro - ohne Werbung, ohne Tracking, ohne Konto.
+
+Funktionen:
+
+* Frei einstellbares Pausenintervall (Stunden + Minuten) per Slider oder manueller Eingabe
+* Konfigurierbare Wiederholungen, fest oder zufällig aus einem Min/Max-Bereich
+* Drei kontextbezogene Übungsmodi: Home Office Workout (Bodyweight-Kraft), Home Office Mobilität (Yoga-Stretches), Büro (dezente Übungen für den Schreibtisch)
+* 25 mitgelieferte Übungen über alle Modi - eigene hinzufügen oder ungeliebte deaktivieren
+* Optional automatischer Modus pro Wochentag: binde z.B. Büro an Mo/Di und Home Workout an Mi-Fr
+* Arbeitszeiten mit pro-Tag-Konfiguration und Mittagspause: Timer pausiert automatisch in der Pause und stoppt zum Feierabend; Nachtschicht-fähig
+* Freestyle-Modus nach Feierabend für freie Pausen ohne Übungsabfrage
+* Foreground-Service mit persistenter Benachrichtigung, Bildschirm-Aufwachen und Vollbild-Lockscreen-Alarm bei Pausenstart
+* Einstellbarer Signalton, Vibration und eigene Benachrichtigungstöne (beliebige Audiodatei wählbar)
+* Sprachausgabe: Übungsnamen werden in deiner Sprache vorgelesen
+* Homescreen-Widget (Glance) mit sekundengenauem Live-Countdown, heutiger Pausenzahl, aktueller Serie und Ein-Klick-Start
+* Erfolge-System mit teilbaren Bild-Karten (über 35 Meilensteine)
+* Lokale Statistiken: Pausen, Wiederholungen, Wochentrends, häufigste Übung - alle Daten bleiben auf deinem Gerät
+* JSON-Backup Export und Import über das Storage Access Framework
+* Material-3-Design, Hell-/Dunkel-/System-Modus, Barrierefreiheit (TalkBack, Reduce-Motion, große Schrift)
+* Deutsche und englische Oberfläche
+
+Datenschutz:
+
+Keine Analytics, kein Telemetrie, keine Werbung, keine Third-Party-SDKs. Alle Daten bleiben lokal auf deinem Gerät. Die App verbindet sich nie mit einem Server. Quellcode ist unter GPL-3.0 veröffentlicht.

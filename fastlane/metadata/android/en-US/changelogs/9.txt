@@ -1,0 +1,5 @@
+v0.8.1
+
+* Office Break is now submitted to F-Droid.
+* Build pipeline made reproducible-build friendly (dependencies-info blob disabled, foojay-resolver plugin removed).
+* No user-facing changes.
