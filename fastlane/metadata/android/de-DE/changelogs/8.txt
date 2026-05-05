@@ -1,11 +1,10 @@
 v0.8.0
 
-* Übungsmodus pro Wochentag: binde Workout / Mobilität / Büro an einzelne Tage, mit "Nur heute"-Override der zum Feierabend zurückgesetzt wird
-* 19 neue mitgelieferte Übungen in allen drei Modi (Plank, Katze-Kuh, Nacken-Dehnen, ...)
+* Übungsmodus pro Wochentag (Workout / Mobilität / Büro) mit "Nur heute"-Override
+* 19 neue Übungen in allen drei Modi
 * Homescreen-Widget reaktiviert mit Live-Countdown, Serie und Ein-Klick-Start
-* Alarm-Neuregistrierung beim Boot, damit Erinnerungen Neustarts und Updates überleben
-* Arbeitsbeginn-Benachrichtigung kommt jetzt 10 Minuten früher und hat eine Start-Aktion
+* Alarm-Neuregistrierung beim Boot, damit Erinnerungen Neustarts überleben
+* Arbeitsbeginn-Hinweis 10 Min früher mit direkter Start-Aktion
 * Eigene Pausenmusik während der Pause anhalten und fortsetzen
-* Freigeschaltete Erfolge als Bild-Karten über den Teilen-Dialog teilen
-* Barrierefreiheit überarbeitet: TalkBack-Überschriften, Slider-Labels, größere Tap-Flächen, Reduce-Motion-Unterstützung
-* Landscape-Layout-Fixes, Backup-Import gehärtet, Supply-Chain-Hardening in CI
+* Erfolge als Bild-Karten teilen
+* Barrierefreiheit überarbeitet + Landscape-Fixes

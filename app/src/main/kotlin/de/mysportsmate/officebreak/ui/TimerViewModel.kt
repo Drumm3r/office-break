@@ -959,16 +959,24 @@ class TimerViewModel @JvmOverloads constructor(
                     _backupState.value = BackupUiState.Error(app.getString(R.string.import_error_too_large))
                     return@launch
                 }
-                // size == -1 (unknown): fall through; readText below is still bounded by free heap.
 
                 val jsonString = app.contentResolver.openInputStream(uri)?.use { stream ->
-                    stream.bufferedReader(Charsets.UTF_8).readText()
+                    val reader = stream.bufferedReader(Charsets.UTF_8)
+                    val sb = StringBuilder()
+                    val buf = CharArray(8 * 1024)
+                    var total = 0L
+                    while (true) {
+                        val n = reader.read(buf)
+                        if (n < 0) break
+                        total += n
+                        if (total > MAX_BACKUP_SIZE_BYTES) {
+                            _backupState.value = BackupUiState.Error(app.getString(R.string.import_error_too_large))
+                            return@launch
+                        }
+                        sb.appendRange(buf, 0, n)
+                    }
+                    sb.toString()
                 } ?: throw Exception("Could not open file for reading")
-
-                if (jsonString.length.toLong() > MAX_BACKUP_SIZE_BYTES) {
-                    _backupState.value = BackupUiState.Error(app.getString(R.string.import_error_too_large))
-                    return@launch
-                }
 
                 when (val result = backupManager.restoreFromJson(jsonString)) {
                     is ImportResult.Success -> {

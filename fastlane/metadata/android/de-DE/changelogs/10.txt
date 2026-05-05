@@ -1,0 +1,5 @@
+v0.8.2
+
+* F-Droid-Scanner-Fixes: Foojay-JDK-Bereitstellung entfernt, transitive ACCESS_NETWORK_STATE-Berechtigung gestrichen, OpenCensus-Tracker-Dependency raus
+* Gradle-Wrapper-JAR auf die deklarierte Gradle-Version 9.4.1 aktualisiert
+* Keine sichtbaren Änderungen

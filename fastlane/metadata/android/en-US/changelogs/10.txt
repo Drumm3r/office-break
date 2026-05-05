@@ -1,0 +1,5 @@
+v0.8.2
+
+* F-Droid scanner fixes: stripped Foojay JDK toolchain provisioning from build, removed transitive ACCESS_NETWORK_STATE permission, dropped opencensus tracker dependency
+* Refreshed gradle-wrapper.jar to match the declared Gradle 9.4.1 version
+* No user-facing changes
