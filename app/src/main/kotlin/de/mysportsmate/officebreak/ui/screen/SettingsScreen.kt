@@ -142,6 +142,9 @@ fun SettingsScreen(
     var showClearAllDialog by rememberSaveable { mutableStateOf(false) }
     var devTapCount by rememberSaveable { mutableStateOf(0) }
     val settingsContext = LocalContext.current
+    val devModeEnabledToast = stringResource(R.string.dev_mode_enabled_toast)
+    val devModeDisabledToast = stringResource(R.string.dev_mode_disabled_toast)
+    val devResetDoneToast = stringResource(R.string.dev_reset_done)
     val devTapTarget = 7
     val showToast: (String) -> Unit = { msg ->
         Toast.makeText(settingsContext, msg, Toast.LENGTH_SHORT).show()
@@ -530,7 +533,7 @@ fun SettingsScreen(
                         if (devTapCount >= devTapTarget) {
                             devTapCount = 0
                             onDevModeEnabledChange(true)
-                            showToast(settingsContext.getString(R.string.dev_mode_enabled_toast))
+                            showToast(devModeEnabledToast)
                         }
                     }
                     .padding(bottom = 8.dp)
@@ -609,7 +612,7 @@ fun SettingsScreen(
                     summary = stringResource(R.string.dev_reset_donation_summary),
                     onClick = {
                         onResetDonationPrompt()
-                        showToast(settingsContext.getString(R.string.dev_reset_done))
+                        showToast(devResetDoneToast)
                     },
                 )
 
@@ -618,7 +621,7 @@ fun SettingsScreen(
                     summary = stringResource(R.string.dev_reset_onboarding_summary),
                     onClick = {
                         onResetOnboarding()
-                        showToast(settingsContext.getString(R.string.dev_reset_done))
+                        showToast(devResetDoneToast)
                     },
                 )
 
@@ -640,7 +643,7 @@ fun SettingsScreen(
                     summary = stringResource(R.string.dev_disable_summary),
                     onClick = {
                         onDevModeEnabledChange(false)
-                        showToast(settingsContext.getString(R.string.dev_mode_disabled_toast))
+                        showToast(devModeDisabledToast)
                     },
                 )
             }
@@ -710,6 +713,7 @@ private fun SettingsDumpDialog(
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
+    val dumpCopiedToast = stringResource(R.string.dev_dump_copied)
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.dev_dump_title)) },
@@ -734,7 +738,7 @@ private fun SettingsDumpDialog(
                     clipboard.setPrimaryClip(ClipData.newPlainText("office-break state", dump))
                     Toast.makeText(
                         context,
-                        context.getString(R.string.dev_dump_copied),
+                        dumpCopiedToast,
                         Toast.LENGTH_SHORT,
                     ).show()
                 },
