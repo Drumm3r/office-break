@@ -2,6 +2,19 @@
 
 All notable changes to Office Break are documented here. Newest on top.
 
+## [v0.8.2] - 2026-05-05
+
+### Distribution
+
+- **F-Droid scanner blockers cleared** — Removed the `org.gradle.toolchains.foojay-resolver-convention` reference from `settings.gradle.kts` (the SUSS scanner does substring matching and triggered on the literal in a comment) and deleted the auto-generated `gradle/gradle-daemon-jvm.properties`, which carried `api.foojay.io` JDK-toolchain URLs. JDK 17 is now sourced from `JAVA_HOME` / IDE Gradle JDK setting; the file is added to `.gitignore` so future Gradle syncs cannot re-introduce it.
+- **Fastlane changelogs trimmed under 500 chars** — `fastlane/metadata/android/{en-US,de-DE}/changelogs/8.txt` shortened to satisfy F-Droid's per-locale `whatsNew` length limit.
+
+### Build
+
+- **`gradle-wrapper.jar` regenerated to 9.4.1** — The committed wrapper jar was a stale Gradle 2.10 artifact while `gradle-wrapper.properties` declared 9.4.1. Refreshed via `./gradlew wrapper --gradle-version 9.4.1 --gradle-distribution-sha256-sum 2ab2958f2a1e51120c326cad6f385153bb11ee93b3c216c5fccebfdfbb7ec6cb` so the wrapper bootstrap matches the resolved distribution.
+- **`io.opencensus` tracker dependency excluded** — Added `configurations.all { exclude(group = "io.opencensus") }` to `app/build.gradle.kts` and removed the `opencensus-api` / `opencensus-proto` entries from `gradle/verification-metadata.xml`. The library was pulled transitively by `com.google.testing.platform:android-device-provider-local` (UTP / instrumentation test infra) and never reached the runtime/compile classpaths; this drops the F-Droid Tracker anti-feature flag at the source.
+- **Transitive `ACCESS_NETWORK_STATE` permission removed** — `AndroidManifest.xml` now declares `<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />` so the AndroidX-bundled permission is stripped from the merged manifest. The app never reads network state.
+
 ## [v0.8.1] - 2026-05-04
 
 ### Distribution
