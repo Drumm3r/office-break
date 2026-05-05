@@ -1,3 +1,8 @@
+# NOTE: This repository is public. All workflow output (logs, command echoes,
+# unzip/grep listings) is world-readable. Any future use of `secrets.*` MUST be
+# paired with GitHub Actions secret-masking and the most restrictive
+# `permissions:` block possible. Avoid `set -x`, `env`, `printenv`, and naked
+# `echo "$VAR"` of any value derived from secrets.
 name: Unit Tests
 
 on:
@@ -42,17 +47,30 @@ jobs:
 
       - name: Verify release APK has no debug tooling classes
         run: |
-          release_apk=$(find app/build/outputs/apk/release -name '*.apk' -print -quit)
-          if [ -z "$release_apk" ]; then
+          set -euo pipefail
+          found=0
+          for apk in app/build/outputs/apk/release/*.apk; do
+            [ -f "$apk" ] || continue
+            found=1
+            echo "Scanning $apk"
+            # 1) Entry-name guard
+            leaks=$(unzip -l "$apk" \
+              | grep -Ei '(ui-tooling|ui-test-manifest|leakcanary|androidx/test)' \
+              | grep -vF 'ui-tooling-preview' || true)
+            # 2) DEX-class guard (catches leaks that survive R8 minification)
+            class_leaks=$(unzip -p "$apk" 'classes*.dex' \
+              | strings -a \
+              | grep -E 'androidx/compose/ui/tooling/[^p]|androidx/compose/ui/test/manifest|leakcanary|androidx/test/' \
+              || true)
+            if [ -n "$leaks" ] || [ -n "$class_leaks" ]; then
+              echo "::error::Release APK contains debug tooling artifacts in $apk"
+              echo "$leaks"
+              echo "$class_leaks"
+              exit 1
+            fi
+          done
+          if [ "$found" -eq 0 ]; then
             echo "::error::No release APK found"
-            exit 1
-          fi
-          leaks=$(unzip -l "$release_apk" \
-            | grep -Ei '(ui-tooling|ui-test-manifest)' \
-            | grep -v 'ui-tooling-preview' || true)
-          if [ -n "$leaks" ]; then
-            echo "::error::Release APK contains debug tooling artifacts"
-            echo "$leaks"
             exit 1
           fi
 
