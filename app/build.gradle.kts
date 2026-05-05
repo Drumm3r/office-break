@@ -87,7 +87,7 @@ android {
 }
 
 dependencies {
-    implementation(platform("androidx.compose:compose-bom:2025.03.00"))
+    implementation(platform("androidx.compose:compose-bom:2026.04.01"))
     implementation("androidx.core:core-ktx:1.18.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
@@ -114,6 +114,6 @@ dependencies {
 
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
-    androidTestImplementation(platform("androidx.compose:compose-bom:2025.03.00"))
+    androidTestImplementation(platform("androidx.compose:compose-bom:2026.04.01"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
 }
