@@ -137,11 +137,14 @@ fun TimerScreen(
     }
 
     val snackbarContext = LocalContext.current
+    val exportSuccessMsg = stringResource(R.string.export_success)
+    val importSuccessMsg = stringResource(R.string.import_success)
+    val exerciseHeadingPrefix = stringResource(R.string.exercise_heading)
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(backupState) {
         val message = when (backupState) {
-            is BackupUiState.ExportSuccess -> snackbarContext.getString(R.string.export_success)
-            is BackupUiState.ImportSuccess -> snackbarContext.getString(R.string.import_success)
+            is BackupUiState.ExportSuccess -> exportSuccessMsg
+            is BackupUiState.ImportSuccess -> importSuccessMsg
             is BackupUiState.Error -> (backupState as BackupUiState.Error).message
             else -> null
         }
@@ -158,8 +161,7 @@ fun TimerScreen(
         LaunchedEffect(currentExercise) {
             if (ttsEnabled) {
                 val locale = LocaleHelper.resolveLocale(language)
-                val heading = ttsContext.getString(R.string.exercise_heading)
-                ttsManager.speak("$heading $reps $exerciseName", locale)
+                ttsManager.speak("$exerciseHeadingPrefix $reps $exerciseName", locale)
             }
         }
 

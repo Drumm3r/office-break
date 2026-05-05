@@ -19,3 +19,4 @@ keystore.properties
 *.env
 gradle/verification-metadata.dryrun.xml
 gradle/verification-keyring.gpg
+gradle/gradle-daemon-jvm.properties
