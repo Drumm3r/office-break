@@ -1,0 +1,5 @@
+v0.8.3
+
+* F-Droid-Listing-Politur: Raster-Launcher-Icons (mdpi–xxxhdpi) hinzugefügt, damit das App-Icon im F-Droid-Katalog und auf Android-7-Geräten korrekt angezeigt wird
+* Neues 1024×500-featureGraphic-Banner auf der F-Droid-App-Seite
+* Keine sichtbaren Änderungen

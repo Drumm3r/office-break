@@ -1,0 +1,5 @@
+v0.8.3
+
+* F-Droid listing polish: raster launcher icons (mdpi–xxxhdpi) added so the app icon renders correctly in F-Droid's catalog and on Android 7 devices
+* New 1024×500 featureGraphic banner shown on the F-Droid app page
+* No user-facing changes
