@@ -2,6 +2,14 @@
 
 All notable changes to Office Break are documented here. Newest on top.
 
+## [v0.8.3] - 2026-05-08
+
+### Distribution
+
+- **Raster launcher icons added** — Generated `ic_launcher.png` and `ic_launcher_round.png` from the existing 512×512 fastlane Play-Store icon at the five standard densities (`mipmap-mdpi/hdpi/xhdpi/xxhdpi/xxxhdpi` = 48/72/96/144/192 px). The app previously shipped only an adaptive icon (`mipmap-anydpi-v26/ic_launcher.xml` + vector foreground); F-Droid's index extractor and Android ≤ 7 fall back to raster `ic_launcher.png` and so rendered the default-Android-robot placeholder in the F-Droid catalog. Adaptive icon is retained for Android 8+; raster files are committed to the repo (not generated at build time) so reproducible-build verification continues to pass.
+- **F-Droid featureGraphic banner** — `fastlane/metadata/android/{en-US,de-DE}/images/featureGraphic.png` (1024×500) added with brand-green gradient, app icon, app name, and per-locale tagline. Replaces the empty banner area on the F-Droid app page.
+- **fdroiddata follow-up MR** — Submit `AuthorName: mysportsmate` (was `Daniel Schönenborn`) to align with the package namespace `de.mysportsmate.officebreak` and `AuthorEmail: officebreak@mysportsmate.de`. Real name remains in source-file copyright headers and `LICENSE`.
+
 ## [v0.8.2] - 2026-05-05
 
 ### Distribution
