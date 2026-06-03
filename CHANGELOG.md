@@ -15,8 +15,9 @@ All notable changes to Office Break are documented here. Newest on top.
 
 ### Build
 
-- **Dependency bumps** — `com.android.application` (AGP) 9.2.0 → 9.2.1, `org.jetbrains.kotlin.plugin.compose` 2.2.10 → 2.3.21, `org.jetbrains.kotlin.plugin.serialization` 2.2.10 → 2.3.21, `androidx.compose:compose-bom` 2026.04.01 → 2026.05.00, `org.jetbrains.kotlinx:kotlinx-serialization-json` 1.8.1 → 1.11.0, `androidx.test.ext:junit` 1.2.1 → 1.3.0. The compose Kotlin Gradle plugin was bumped in lockstep with serialization because both must share one Kotlin version, else the build fails on a plugin version mismatch.
-- **`gradle/verification-metadata.xml` regenerated** — SHA-256 pins added for all new artifact versions (and their new transitives, including `aapt2` 9.2.1) via `./gradlew --write-verification-metadata sha256 assembleFdroidDebug assembleGplayDebug`, so reproducible-build verification keeps passing. App version unchanged (`versionName` 0.9.0 / `versionCode` 12).
+- **Gradle wrapper 9.4.1 → 9.5.0** — `distributionUrl` and pinned `distributionSha256Sum` updated in `gradle/wrapper/gradle-wrapper.properties`.
+- **Dependency bumps** — `com.android.application` (AGP) 9.2.0 → 9.2.1, `org.jetbrains.kotlin.plugin.compose` 2.2.10 → 2.4.0, `org.jetbrains.kotlin.plugin.serialization` 2.2.10 → 2.4.0, `androidx.compose:compose-bom` 2026.04.01 → 2026.05.01, `org.jetbrains.kotlinx:kotlinx-serialization-json` 1.8.1 → 1.11.0, `androidx.test.ext:junit` 1.2.1 → 1.3.0. The compose Kotlin Gradle plugin was bumped in lockstep with serialization because both must share one Kotlin version, else the build fails on a plugin version mismatch.
+- **`gradle/verification-metadata.xml` regenerated** — SHA-256 pins added for all new artifact versions (including Gradle 9.5.0's bundled Kotlin 2.3.20 classpath and the new plugin/BOM transitives) via `./gradlew --write-verification-metadata sha256 assembleFdroidDebug assembleGplayDebug testFdroidDebugUnitTest testGplayDebugUnitTest`, so reproducible-build verification keeps passing. App version unchanged (`versionName` 0.9.0 / `versionCode` 12).
 
 ## [v0.8.3] - 2026-05-08
 
