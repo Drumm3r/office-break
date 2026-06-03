@@ -108,6 +108,7 @@ fun TimerScreen(
     val backupState by viewModel.backupState.collectAsState()
     val showDonationPrompt by viewModel.showDonationPrompt.collectAsState()
     val devModeEnabled by viewModel.devModeEnabled.collectAsState()
+    val cloudBackupEnabled by viewModel.cloudBackupEnabled.collectAsState()
     val settingsDump by viewModel.settingsDump.collectAsState()
     val ttsContext = LocalContext.current
     val ttsManager = remember { BreakTtsManager(ttsContext) }
@@ -302,6 +303,10 @@ fun TimerScreen(
             onExportToUri = viewModel::exportData,
             onImportFromUri = viewModel::importData,
             onOpenKofi = viewModel::openKofiLink,
+            onOpenImprint = viewModel::openImprintLink,
+            onOpenPrivacy = viewModel::openPrivacyLink,
+            cloudBackupEnabled = cloudBackupEnabled,
+            onCloudBackupEnabledChange = viewModel::setCloudBackupEnabled,
             devModeEnabled = devModeEnabled,
             settingsDump = settingsDump,
             onDevModeEnabledChange = viewModel::setDevModeEnabled,

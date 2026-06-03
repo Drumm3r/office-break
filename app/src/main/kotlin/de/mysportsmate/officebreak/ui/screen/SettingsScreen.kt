@@ -23,6 +23,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -73,6 +74,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import de.mysportsmate.officebreak.BuildConfig
 import de.mysportsmate.officebreak.R
 import de.mysportsmate.officebreak.data.DEFAULT_WEEK_SCHEDULE
 import de.mysportsmate.officebreak.data.DaySchedule
@@ -127,6 +129,10 @@ fun SettingsScreen(
     onExportToUri: (Uri) -> Unit,
     onImportFromUri: (Uri) -> Unit,
     onOpenKofi: () -> Unit,
+    onOpenImprint: () -> Unit,
+    onOpenPrivacy: () -> Unit,
+    cloudBackupEnabled: Boolean,
+    onCloudBackupEnabledChange: (Boolean) -> Unit,
     devModeEnabled: Boolean,
     settingsDump: String?,
     onDevModeEnabledChange: (Boolean) -> Unit,
@@ -593,6 +599,23 @@ fun SettingsScreen(
                 Text(text = stringResource(R.string.settings_import_data))
             }
 
+            if (BuildConfig.FLAVOR == "gplay") {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                LabeledSwitchRow(
+                    label = stringResource(R.string.settings_cloud_backup_enabled),
+                    checked = cloudBackupEnabled,
+                    onCheckedChange = onCloudBackupEnabledChange,
+                )
+
+                Text(
+                    text = stringResource(R.string.settings_cloud_backup_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+            }
+
             if (devModeEnabled) {
                 Spacer(modifier = Modifier.height(16.dp))
                 HorizontalDivider()
@@ -645,6 +668,50 @@ fun SettingsScreen(
                         onDevModeEnabledChange(false)
                         showToast(devModeDisabledToast)
                     },
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onOpenPrivacy)
+                    .padding(vertical = 12.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(
+                    text = stringResource(R.string.settings_privacy),
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onOpenImprint)
+                    .padding(vertical = 12.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(
+                    text = stringResource(R.string.settings_imprint),
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f),
                 )
             }
 
@@ -1206,6 +1273,10 @@ private fun SettingsScreenPreview() {
             onExportToUri = {},
             onImportFromUri = {},
             onOpenKofi = {},
+            onOpenImprint = {},
+            onOpenPrivacy = {},
+            cloudBackupEnabled = true,
+            onCloudBackupEnabledChange = {},
             devModeEnabled = false,
             settingsDump = null,
             onDevModeEnabledChange = {},

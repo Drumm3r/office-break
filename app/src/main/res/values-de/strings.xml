@@ -380,4 +380,12 @@
     <string name="share_text">Ich habe \"%1$s\" in Office Break freigeschaltet! 🏆</string>
     <string name="share_card_unlocked">Erfolg freigeschaltet!</string>
     <string name="share_card_app_name">Office Break</string>
+
+    <!-- Imprint -->
+    <string name="settings_imprint">Impressum</string>
+    <string name="settings_privacy">Datenschutz</string>
+
+    <!-- Cloud-Backup (nur Google-Play-Build) -->
+    <string name="settings_cloud_backup_enabled">Auf Google Drive sichern</string>
+    <string name="settings_cloud_backup_hint">Wenn aktiviert, werden Einstellungen und Statistiken in Androids Auto-Backup einbezogen. Beim Deaktivieren werden keine neuen Backups mehr erstellt; ein bestehendes Cloud-Backup bleibt, bis Android es nach ca. 57 Tagen Inaktivität entfernt oder du es manuell in Google Drive löschst.</string>
 </resources>

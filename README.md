@@ -33,6 +33,8 @@ Android app for regular movement breaks at the office. Set a timer, start it, an
 - Fitness levels with progression
 - Dynamic difficulty increase with adaptive threshold (optional)
 - Data export and import via JSON backup (SAF integration)
+- Imprint and Privacy policy links in Settings
+- Google Play build only -- toggle in Settings to disable Android Auto Backup to Google Drive
 - Onboarding flow for first-time users
 - Theme switcher (System, Light, Dark)
 - Language switcher (German, English, System)
@@ -65,23 +67,40 @@ Shoulder Blade Squeeze, Chest Opener, Neck Stretch, Calf Raises, Seated Leg Exte
 ## Build
 
 ```bash
-./gradlew assembleDebug
+./gradlew assembleDebug                # default (fdroid flavor)
+./gradlew assembleFdroidDebug          # explicit F-Droid build
+./gradlew assembleGplayDebug           # Google Play build
 ```
+
+The app has two product flavors:
+
+- **`fdroid`** (default) — Android Auto Backup disabled, fully privacy-strict.
+- **`gplay`** — Android Auto Backup enabled (settings sync to Google Drive); user-toggleable from Settings.
+
+Both flavors share the same `applicationId` (`de.mysportsmate.officebreak`).
 
 ### Release Build
 
-In Android Studio: **Build > Generate Signed Bundle / APK > APK > Release**
+```bash
+./gradlew assembleFdroidRelease        # signed APK for F-Droid / GitHub Releases
+./gradlew bundleGplayRelease           # signed AAB for Google Play
+```
+
+Signed release builds require a `keystore.properties` file in the repo root (git-ignored).
 
 ### Run Tests
 
 ```bash
-./gradlew testDebugUnitTest
+./gradlew test                         # all flavors
+./gradlew testFdroidDebugUnitTest      # fdroid only
+./gradlew testGplayDebugUnitTest       # gplay only
 ```
 
 ### Lint
 
 ```bash
-./gradlew lintDebug
+./gradlew lint                                    # default variant (fdroid)
+./gradlew lintFdroidDebug lintGplayDebug          # both flavors
 ```
 
 ## Install
@@ -92,6 +111,10 @@ In Android Studio: **Build > Generate Signed Bundle / APK > APK > Release**
      alt="Get it on F-Droid"
      height="80">](https://f-droid.org/packages/de.mysportsmate.officebreak/)
 
+### Google Play
+
+Available via Google Play (gplay flavor with Android Auto Backup enabled).
+
 ### GitHub Releases
 
 Pre-built signed APKs are attached to each [release](https://github.com/Drumm3r/office-break/releases).
@@ -99,7 +122,9 @@ Pre-built signed APKs are attached to each [release](https://github.com/Drumm3r/
 ### Local debug build
 
 ```bash
-adb install app/build/outputs/apk/debug/app-debug.apk
+adb install app/build/outputs/apk/fdroid/debug/app-fdroid-debug.apk
+# or
+adb install app/build/outputs/apk/gplay/debug/app-gplay-debug.apk
 ```
 
 ## Contributing

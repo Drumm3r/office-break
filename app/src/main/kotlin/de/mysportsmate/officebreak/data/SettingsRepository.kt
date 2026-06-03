@@ -248,6 +248,10 @@ class SettingsRepository(
         prefs[KEY_DEV_MODE_ENABLED] ?: false
     }
 
+    val cloudBackupEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[KEY_CLOUD_BACKUP_ENABLED] ?: DEFAULT_CLOUD_BACKUP_ENABLED
+    }
+
     suspend fun setTimerHours(hours: Int) {
         dataStore.edit { it[KEY_TIMER_HOURS] = hours }
     }
@@ -425,6 +429,10 @@ class SettingsRepository(
 
     suspend fun setDevModeEnabled(value: Boolean) {
         dataStore.edit { it[KEY_DEV_MODE_ENABLED] = value }
+    }
+
+    suspend fun setCloudBackupEnabled(value: Boolean) {
+        dataStore.edit { it[KEY_CLOUD_BACKUP_ENABLED] = value }
     }
 
     suspend fun resetDonationPrompt(nowMillis: Long) {
@@ -619,6 +627,7 @@ class SettingsRepository(
         internal val KEY_DONATION_PROMPT_LAST_SHOWN = longPreferencesKey("donation_prompt_last_shown")
         internal val KEY_DONATION_PROMPT_DISMISSED = booleanPreferencesKey("donation_prompt_dismissed")
         internal val KEY_DEV_MODE_ENABLED = booleanPreferencesKey("dev_mode_enabled")
+        internal val KEY_CLOUD_BACKUP_ENABLED = booleanPreferencesKey("cloud_backup_enabled")
 
         const val DEFAULT_HOURS = 0
         const val DEFAULT_MINUTES = 30
@@ -656,6 +665,7 @@ class SettingsRepository(
 
         const val DEFAULT_DYNAMIC_INCREASE_ENABLED = true
         const val DEFAULT_BREAKS_SINCE_LAST_INCREASE = 0
+        const val DEFAULT_CLOUD_BACKUP_ENABLED = true
 
         const val DONATION_PROMPT_INITIAL_DAYS = 21L
         const val DONATION_PROMPT_SNOOZE_DAYS = 60L

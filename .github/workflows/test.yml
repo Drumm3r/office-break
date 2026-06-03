@@ -33,23 +33,23 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
 
-      - name: Build debug APK
+      - name: Build debug APKs (all flavors)
         run: ./gradlew assembleDebug
 
-      - name: Run unit tests
-        run: ./gradlew testDebugUnitTest
+      - name: Run unit tests (all flavors)
+        run: ./gradlew test
 
-      - name: Run lint
-        run: ./gradlew lintDebug
+      - name: Run lint (all flavors)
+        run: ./gradlew lintFdroidDebug lintGplayDebug
 
-      - name: Build release APK (for tooling-leak guard)
+      - name: Build release APKs (for tooling-leak guard, all flavors)
         run: ./gradlew assembleRelease
 
-      - name: Verify release APK has no debug tooling classes
+      - name: Verify release APKs have no debug tooling classes
         run: |
           set -euo pipefail
           found=0
-          for apk in app/build/outputs/apk/release/*.apk; do
+          for apk in app/build/outputs/apk/*/release/*.apk; do
             [ -f "$apk" ] || continue
             found=1
             echo "Scanning $apk"
@@ -80,5 +80,5 @@ jobs:
         with:
           name: test-results
           path: |
-            app/build/reports/tests/testDebugUnitTest/
-            app/build/reports/lint-results-debug.html
+            app/build/reports/tests/
+            app/build/reports/lint-results-*.html
