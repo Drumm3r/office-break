@@ -4,4 +4,4 @@ v0.9.0
 * New "Back up to Google Drive" toggle in Settings (Play build only) to disable cloud backup
 * F-Droid build keeps Auto Backup disabled (privacy-strict, unchanged behavior)
 * Added Privacy policy link in Settings (mysportsmate.de/datenschutz-officebreak)
-* No other user-facing changes
+* Maintenance: updated build toolchain and dependencies (AGP, Kotlin, Compose); no other user-facing changes

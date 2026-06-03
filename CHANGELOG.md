@@ -2,6 +2,18 @@
 
 All notable changes to Office Break are documented here. Newest on top.
 
+## [v0.9.0] - 2026-06-03
+
+### Distribution
+
+- **Google Play gplay build flavor** — Added a `gplay` product flavor alongside `fdroid` (dimension `distribution`, `fdroid` default). The Play build enables Android Auto Backup to Google Drive with a "Back up to Google Drive" toggle in Settings to opt out; the F-Droid build keeps Auto Backup disabled (privacy-strict, unchanged). A privacy-policy link (mysportsmate.de/datenschutz-officebreak) was added to Settings.
+- **Play publishing workflow** — `.github/workflows/release-play.yml` builds and uploads the gplay release, guarded behind the `PLAY_PUBLISHING_ENABLED` repository variable so it stays inert until publishing is switched on.
+
+### Build
+
+- **Dependency bumps** — `com.android.application` (AGP) 9.2.0 → 9.2.1, `org.jetbrains.kotlin.plugin.compose` 2.2.10 → 2.3.21, `org.jetbrains.kotlin.plugin.serialization` 2.2.10 → 2.3.21, `androidx.compose:compose-bom` 2026.04.01 → 2026.05.00, `org.jetbrains.kotlinx:kotlinx-serialization-json` 1.8.1 → 1.11.0, `androidx.test.ext:junit` 1.2.1 → 1.3.0. The compose Kotlin Gradle plugin was bumped in lockstep with serialization because both must share one Kotlin version, else the build fails on a plugin version mismatch.
+- **`gradle/verification-metadata.xml` regenerated** — SHA-256 pins added for all new artifact versions (and their new transitives, including `aapt2` 9.2.1) via `./gradlew --write-verification-metadata sha256 assembleFdroidDebug assembleGplayDebug`, so reproducible-build verification keeps passing. App version unchanged (`versionName` 0.9.0 / `versionCode` 12).
+
 ## [v0.8.3] - 2026-05-08
 
 ### Distribution
