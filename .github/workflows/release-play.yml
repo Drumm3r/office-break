@@ -19,6 +19,9 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-24.04
+    # Skips cleanly until Play Console + secrets are ready.
+    # Flip the PLAY_PUBLISHING_ENABLED repository variable to 'true' to enable.
+    if: ${{ vars.PLAY_PUBLISHING_ENABLED == 'true' }}
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
