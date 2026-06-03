@@ -1,0 +1,91 @@
+# NOTE: This repository is public. All workflow output (logs, command echoes,
+# unzip/grep listings) is world-readable. Uses of `secrets.*` MUST be paired
+# with GitHub Actions secret-masking and the most restrictive `permissions:`
+# block possible. Avoid `set -x`, `env`, `printenv`, and naked `echo "$VAR"`
+# of any value derived from secrets.
+name: Publish to Google Play
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+
+      - name: Decode upload keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.UPLOAD_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > app/upload.keystore
+
+      - name: Write keystore.properties
+        env:
+          STORE_PASSWORD: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.UPLOAD_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          {
+            printf 'storeFile=%s\n' "app/upload.keystore"
+            printf 'storePassword=%s\n' "$STORE_PASSWORD"
+            printf 'keyAlias=%s\n' "$KEY_ALIAS"
+            printf 'keyPassword=%s\n' "$KEY_PASSWORD"
+          } > keystore.properties
+
+      - name: Build signed AAB
+        run: ./gradlew bundleGplayRelease
+
+      - name: Bridge fastlane changelogs to whatsnew directory
+        run: |
+          set -euo pipefail
+          versionCode=$(grep -oP 'versionCode = \K[0-9]+' app/build.gradle.kts)
+          mkdir -p whatsnew
+          for locale_dir in fastlane/metadata/android/*/; do
+            locale=$(basename "$locale_dir")
+            changelog="${locale_dir}changelogs/${versionCode}.txt"
+            if [ -f "$changelog" ]; then
+              cp "$changelog" "whatsnew/whatsnew-${locale}"
+            fi
+          done
+
+      # TODO: pin r0adkll/upload-google-play to a verified commit SHA
+      # (consistent with other actions in this repo). Look up the SHA for
+      # the desired release at https://github.com/r0adkll/upload-google-play/releases
+      - name: Upload AAB to Google Play (internal track)
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: de.mysportsmate.officebreak
+          releaseFiles: app/build/outputs/bundle/gplayRelease/app-gplay-release.aab
+          track: internal
+          status: completed
+          whatsNewDirectory: whatsnew
+          mappingFile: app/build/outputs/mapping/gplayRelease/mapping.txt
+
+      - name: Cleanup secrets
+        if: always()
+        run: |
+          set -euo pipefail
+          rm -f app/upload.keystore keystore.properties

@@ -91,6 +91,8 @@ class TimerViewModel @JvmOverloads constructor(
         private const val WORK_DAYS_FOR_INCREASE = 3
         private const val MIN_THRESHOLD = 5
         const val KOFI_URL = "https://ko-fi.com/drumm3r"
+        const val IMPRINT_URL = "https://mysportsmate.de/impressum"
+        const val PRIVACY_URL = "https://mysportsmate.de/datenschutz-officebreak"
     }
 
     private val json = AppJson
@@ -202,6 +204,9 @@ class TimerViewModel @JvmOverloads constructor(
 
     val devModeEnabled: StateFlow<Boolean> = repository.devModeEnabled
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    val cloudBackupEnabled: StateFlow<Boolean> = repository.cloudBackupEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsRepository.DEFAULT_CLOUD_BACKUP_ENABLED)
 
     private val _settingsDump = MutableStateFlow<String?>(null)
     val settingsDump: StateFlow<String?> = _settingsDump.asStateFlow()
@@ -1046,6 +1051,12 @@ class TimerViewModel @JvmOverloads constructor(
         }
     }
 
+    fun setCloudBackupEnabled(enabled: Boolean) {
+        launchSafely("Failed to toggle cloud backup") {
+            repository.setCloudBackupEnabled(enabled)
+        }
+    }
+
     fun resetDonationPromptForTesting() {
         launchSafely("Failed to reset donation prompt") {
             repository.resetDonationPrompt(System.currentTimeMillis())
@@ -1117,6 +1128,30 @@ class TimerViewModel @JvmOverloads constructor(
             Log.w(TAG, "No activity available to open Ko-fi link", e)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to open Ko-fi link", e)
+        }
+    }
+
+    fun openImprintLink() {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(IMPRINT_URL))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        try {
+            getApplication<Application>().startActivity(intent)
+        } catch (e: ActivityNotFoundException) {
+            Log.w(TAG, "No activity available to open Imprint link", e)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to open Imprint link", e)
+        }
+    }
+
+    fun openPrivacyLink() {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(PRIVACY_URL))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        try {
+            getApplication<Application>().startActivity(intent)
+        } catch (e: ActivityNotFoundException) {
+            Log.w(TAG, "No activity available to open Privacy link", e)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to open Privacy link", e)
         }
     }
 

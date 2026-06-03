@@ -32,8 +32,8 @@ android {
         applicationId = "de.mysportsmate.officebreak"
         minSdk = 28
         targetSdk = 36
-        versionCode = 11
-        versionName = "0.8.3"
+        versionCode = 12
+        versionName = "0.9.0"
 
         buildConfigField("String", "GIT_SHA", "\"${readGitSha()}\"")
         buildConfigField("String", "BUILD_TIMESTAMP", "\"${Instant.now()}\"")
@@ -66,6 +66,17 @@ android {
             if (keystorePropsFile.exists()) {
                 signingConfig = signingConfigs.getByName("release")
             }
+        }
+    }
+
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("fdroid") {
+            dimension = "distribution"
+            isDefault = true
+        }
+        create("gplay") {
+            dimension = "distribution"
         }
     }
 

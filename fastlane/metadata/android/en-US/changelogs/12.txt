@@ -1,0 +1,7 @@
+v0.9.0
+
+* Google Play release: separate gplay build flavor with Android Auto Backup to Google Drive
+* New "Back up to Google Drive" toggle in Settings (Play build only) to disable cloud backup
+* F-Droid build keeps Auto Backup disabled (privacy-strict, unchanged behavior)
+* Added Privacy policy link in Settings (mysportsmate.de/datenschutz-officebreak)
+* No other user-facing changes

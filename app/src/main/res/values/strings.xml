@@ -380,4 +380,12 @@
     <string name="share_text">I just unlocked \"%1$s\" in Office Break! 🏆</string>
     <string name="share_card_unlocked">Achievement Unlocked!</string>
     <string name="share_card_app_name">Office Break</string>
+
+    <!-- Imprint -->
+    <string name="settings_imprint">Imprint</string>
+    <string name="settings_privacy">Privacy policy</string>
+
+    <!-- Cloud backup (Google Play build only) -->
+    <string name="settings_cloud_backup_enabled">Back up to Google Drive</string>
+    <string name="settings_cloud_backup_hint">When on, settings and statistics are included in Android Auto Backup. Turning off stops new backups; an existing cloud backup remains until Android expires it (~57 days inactivity) or you remove it via Google Drive.</string>
 </resources>
