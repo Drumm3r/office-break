@@ -2,7 +2,11 @@
 
 All notable changes to Office Break are documented here. Newest on top.
 
-## [v0.9.0] - 2026-06-03
+## [v0.9.0]
+
+### Fixed
+
+- **Crash on duplicate exercise names (#30)** — Adding a custom exercise whose name matched an existing one produced two list items with the same name, and the exercise list used the name as its Compose `LazyColumn` key, so opening the exercise screen crashed with `IllegalArgumentException: Key "…" was already used`. Adding an exercise now rejects a name that already exists (case-insensitive, across all modes) and shows a snackbar; the repository also de-duplicates exercises on read, so users who already created duplicates no longer crash and their list self-heals on the next save.
 
 ### Distribution
 

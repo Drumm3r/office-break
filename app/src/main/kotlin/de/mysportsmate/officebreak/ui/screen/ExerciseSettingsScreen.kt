@@ -27,12 +27,15 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
@@ -62,11 +65,22 @@ fun ExerciseSettingsScreen(
     onRemove: (Int) -> Unit,
     onBack: () -> Unit,
     showOverrideHint: Boolean = false,
+    addErrorMessage: String? = null,
+    onErrorShown: () -> Unit = {},
 ) {
     var newExerciseName by rememberSaveable { mutableStateOf("") }
     val listState = remember(exerciseMode) { LazyListState() }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(addErrorMessage) {
+        if (addErrorMessage != null) {
+            snackbarHostState.showSnackbar(addErrorMessage)
+            onErrorShown()
+        }
+    }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.exercises_title)) },
@@ -185,7 +199,7 @@ fun ExerciseSettingsScreen(
             ) {
                 items(
                     count = sortedExercises.size,
-                    key = { sortedExercises[it].second.name },
+                    key = { "${sortedExercises[it].first}-${sortedExercises[it].second.name}" },
                 ) { sortedIndex ->
                     val (originalIndex, exercise) = sortedExercises[sortedIndex]
                     ExerciseRow(

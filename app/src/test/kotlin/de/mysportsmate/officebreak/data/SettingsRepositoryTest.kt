@@ -182,6 +182,31 @@ class SettingsRepositoryTest {
     }
 
     @Test
+    fun `exercisesForMode dedups duplicate names case-insensitive`() = runTest {
+        val dupStore = FakeDataStore()
+        val stored = listOf(
+            Exercise(name = "Custom Stretch", isEnabled = true),
+            Exercise(name = "Squats", nameResKey = "exercise_squats"),
+            Exercise(name = "custom stretch", isEnabled = false),
+            Exercise(name = "Custom Stretch", isEnabled = true),
+        )
+        dupStore.updateData { prefs ->
+            val mutable = prefs.toMutablePreferences()
+            mutable[androidx.datastore.preferences.core.stringPreferencesKey("exercises_home_workout")] =
+                AppJson.encodeToString(stored)
+            mutable
+        }
+        val repo = SettingsRepository(dataStore = dupStore, defaultExercisesByMode = defaultExercisesByMode)
+
+        val result = repo.exercisesForMode(ExerciseMode.HOME_WORKOUT).first()
+        assertEquals(2, result.size)
+        // First occurrence is kept (original casing preserved)
+        assertEquals("Custom Stretch", result[0].name)
+        assertTrue(result[0].isEnabled)
+        assertEquals("Squats", result[1].name)
+    }
+
+    @Test
     fun `language emits default when empty`() = runTest {
         repository.language.test {
             assertEquals(SettingsRepository.LANGUAGE_SYSTEM, awaitItem())

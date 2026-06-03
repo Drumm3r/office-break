@@ -101,6 +101,9 @@ class TimerViewModel @JvmOverloads constructor(
     private val _backupState = MutableStateFlow<BackupUiState>(BackupUiState.Idle)
     val backupState: StateFlow<BackupUiState> = _backupState.asStateFlow()
 
+    private val _addExerciseError = MutableStateFlow<String?>(null)
+    val addExerciseError: StateFlow<String?> = _addExerciseError.asStateFlow()
+
     val onboardingCompleted: StateFlow<Boolean?> = repository.onboardingCompleted
         .map<Boolean, Boolean?> { it }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
@@ -679,13 +682,31 @@ class TimerViewModel @JvmOverloads constructor(
         launchSafely("Failed to add exercise") {
             // Add enabled to active mode, disabled to other modes
             val activeMode = exerciseMode.value
+            val perMode = ExerciseMode.entries.associateWith { mode ->
+                repository.exercisesForMode(mode).first()
+            }
+
+            // Reject duplicate names (case-insensitive) across all modes
+            val normalized = trimmed.lowercase()
+            val isDuplicate = perMode.values.any { list ->
+                list.any { it.name.trim().lowercase() == normalized }
+            }
+            if (isDuplicate) {
+                _addExerciseError.value = getApplication<Application>().getString(R.string.exercise_duplicate_name)
+                return@launchSafely
+            }
+
             for (mode in ExerciseMode.entries) {
-                val modeExercises = repository.exercisesForMode(mode).first().toMutableList()
+                val modeExercises = perMode.getValue(mode).toMutableList()
                 modeExercises.add(Exercise(name = trimmed, isEnabled = mode == activeMode))
                 repository.setExercisesForMode(mode, modeExercises)
             }
             statsRepository.markCustomExerciseCreated()
         }
+    }
+
+    fun clearAddExerciseError() {
+        _addExerciseError.value = null
     }
 
     fun removeExercise(index: Int) {

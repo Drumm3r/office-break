@@ -1,7 +1,8 @@
 v0.9.0
 
 * Google-Play-Release: eigener gplay-Build mit Android-Auto-Backup zu Google Drive
-* Neuer Schalter "Auf Google Drive sichern" in den Einstellungen (nur Play-Build) zum Deaktivieren des Cloud-Backups
-* F-Droid-Build behält Auto-Backup deaktiviert (datenschutzfreundlich, unverändert)
+* Neuer Schalter "Auf Google Drive sichern" (nur Play-Build) zum Deaktivieren des Cloud-Backups
+* F-Droid-Build behält Auto-Backup deaktiviert (unverändert)
 * Datenschutz-Link in den Einstellungen ergänzt (mysportsmate.de/datenschutz-officebreak)
-* Wartung: Build-Toolchain und Abhängigkeiten aktualisiert; keine weiteren sichtbaren Änderungen
+* Absturz durch doppelte Übungsnamen behoben; Duplikate werden nun verhindert (#30)
+* Wartung: Build-Toolchain und Abhängigkeiten aktualisiert

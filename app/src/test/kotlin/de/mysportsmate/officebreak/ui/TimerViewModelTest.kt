@@ -554,6 +554,36 @@ class TimerViewModelTest {
     }
 
     @Test
+    fun `addExercise rejects duplicate name case-insensitive`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        // "Push Ups" already exists as a default; adding "push ups" must be rejected
+        viewModel.addExercise("  push ups  ")
+        advanceUntilIdle()
+
+        assertEquals(2, viewModel.exercises.value.size)
+        assertNotNull(viewModel.addExerciseError.value)
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `clearAddExerciseError resets error`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        viewModel.addExercise("Push Ups")
+        advanceUntilIdle()
+        assertNotNull(viewModel.addExerciseError.value)
+
+        viewModel.clearAddExerciseError()
+        assertNull(viewModel.addExerciseError.value)
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
     fun `removeExercise removes from list`() = runTest {
         val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
         advanceUntilIdle()

@@ -100,7 +100,7 @@ class SettingsRepository(
             } else {
                 exercise
             }
-        }
+        }.distinctBy { it.name.trim().lowercase() }
     }
 
     @Suppress("OPT_IN_USAGE")
