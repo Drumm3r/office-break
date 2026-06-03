@@ -4,4 +4,4 @@ v0.9.0
 * Neuer Schalter "Auf Google Drive sichern" in den Einstellungen (nur Play-Build) zum Deaktivieren des Cloud-Backups
 * F-Droid-Build behält Auto-Backup deaktiviert (datenschutzfreundlich, unverändert)
 * Datenschutz-Link in den Einstellungen ergänzt (mysportsmate.de/datenschutz-officebreak)
-* Wartung: Build-Toolchain und Abhängigkeiten aktualisiert (AGP, Kotlin, Compose); keine weiteren sichtbaren Änderungen
+* Wartung: Build-Toolchain und Abhängigkeiten aktualisiert; keine weiteren sichtbaren Änderungen
