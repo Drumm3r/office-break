@@ -6,6 +6,7 @@ import app.cash.turbine.test
 import de.mysportsmate.officebreak.MainDispatcherRule
 import de.mysportsmate.officebreak.data.AchievementDefinition
 import de.mysportsmate.officebreak.data.Exercise
+import de.mysportsmate.officebreak.data.ExerciseConfig
 import de.mysportsmate.officebreak.data.ExerciseMode
 import de.mysportsmate.officebreak.data.FakeDataStore
 import de.mysportsmate.officebreak.data.DEFAULT_WEEK_SCHEDULE
@@ -16,6 +17,7 @@ import de.mysportsmate.officebreak.service.TimerState
 import de.mysportsmate.officebreak.service.TimerStateHolder
 import de.mysportsmate.officebreak.widget.WidgetUpdater
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
@@ -579,6 +581,38 @@ class TimerViewModelTest {
 
         viewModel.clearAddExerciseError()
         assertNull(viewModel.addExerciseError.value)
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `addExercise rejects localized display name of default`() = runTest {
+        // "Push Ups" exists as a default; its German display name resolves to "Liegestütze".
+        // Typing that localized name must be detected as a duplicate.
+        val resId = ExerciseConfig.resKeyToId.getValue("exercise_push_ups")
+        every { application.getString(resId) } returns "Liegestütze"
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        viewModel.addExercise("liegestütze")
+        advanceUntilIdle()
+
+        assertEquals(2, viewModel.exercises.value.size)
+        assertNotNull(viewModel.addExerciseError.value)
+
+        collectors.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `addExercise emits success event`() = runTest {
+        val collectors = collectFlows().map { flow -> launch { flow.collect {} } }
+        advanceUntilIdle()
+
+        viewModel.addExerciseSuccess.test {
+            viewModel.addExercise("Brand New Exercise")
+            advanceUntilIdle()
+            awaitItem() // Unit emitted on success
+        }
 
         collectors.forEach { it.cancel() }
     }

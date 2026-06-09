@@ -84,7 +84,6 @@ fun TimerScreen(
     val currentExercise by viewModel.currentExercise.collectAsState()
     val exercises by viewModel.exercises.collectAsState()
     val addExerciseError by viewModel.addExerciseError.collectAsState()
-    val addExerciseSuccess by viewModel.addExerciseSuccess.collectAsState()
     val language by viewModel.language.collectAsState()
     val beepVolume by viewModel.beepVolume.collectAsState()
     val vibrationEnabled by viewModel.vibrationEnabled.collectAsState()
@@ -263,7 +262,7 @@ fun TimerScreen(
             showOverrideHint = showOverrideHint,
             addErrorMessage = addExerciseError,
             onErrorShown = viewModel::clearAddExerciseError,
-            addExerciseSuccess = addExerciseSuccess,
+            successEvents = viewModel.addExerciseSuccess,
         )
 
         return

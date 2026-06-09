@@ -51,6 +51,8 @@ import de.mysportsmate.officebreak.R
 import de.mysportsmate.officebreak.data.Exercise
 import de.mysportsmate.officebreak.data.ExerciseMode
 import de.mysportsmate.officebreak.ui.theme.OfficeBreakTheme
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,15 +67,13 @@ fun ExerciseSettingsScreen(
     showOverrideHint: Boolean = false,
     addErrorMessage: String? = null,
     onErrorShown: () -> Unit = {},
-    addExerciseSuccess: Int = 0,
+    successEvents: Flow<Unit> = emptyFlow(),
 ) {
     var newExerciseName by rememberSaveable { mutableStateOf("") }
     val listState = remember(exerciseMode) { LazyListState() }
 
-    LaunchedEffect(addExerciseSuccess) {
-        if (addExerciseSuccess > 0) {
-            newExerciseName = ""
-        }
+    LaunchedEffect(Unit) {
+        successEvents.collect { newExerciseName = "" }
     }
 
     Scaffold(
