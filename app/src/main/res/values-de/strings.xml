@@ -106,6 +106,7 @@
     <string name="exercises_title">Übungen</string>
     <string name="new_exercise_hint">Neue Übung</string>
     <string name="add_exercise">Hinzufügen</string>
+    <string name="exercise_duplicate_name">Diese Übung gibt es bereits</string>
     <string name="remove_exercise">Entfernen</string>
 
     <!-- Home Workout Übungen -->

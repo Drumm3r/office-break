@@ -33,6 +33,7 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
@@ -50,6 +51,8 @@ import de.mysportsmate.officebreak.R
 import de.mysportsmate.officebreak.data.Exercise
 import de.mysportsmate.officebreak.data.ExerciseMode
 import de.mysportsmate.officebreak.ui.theme.OfficeBreakTheme
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,9 +65,16 @@ fun ExerciseSettingsScreen(
     onRemove: (Int) -> Unit,
     onBack: () -> Unit,
     showOverrideHint: Boolean = false,
+    addErrorMessage: String? = null,
+    onErrorShown: () -> Unit = {},
+    successEvents: Flow<Unit> = emptyFlow(),
 ) {
     var newExerciseName by rememberSaveable { mutableStateOf("") }
     val listState = remember(exerciseMode) { LazyListState() }
+
+    LaunchedEffect(Unit) {
+        successEvents.collect { newExerciseName = "" }
+    }
 
     Scaffold(
         topBar = {
@@ -139,15 +149,25 @@ fun ExerciseSettingsScreen(
             ) {
                 OutlinedTextField(
                     value = newExerciseName,
-                    onValueChange = { newExerciseName = it },
+                    onValueChange = {
+                        newExerciseName = it
+                        if (addErrorMessage != null) {
+                            onErrorShown()
+                        }
+                    },
                     label = { Text(stringResource(R.string.new_exercise_hint)) },
                     singleLine = true,
+                    isError = addErrorMessage != null,
+                    supportingText = {
+                        if (addErrorMessage != null) {
+                            Text(addErrorMessage)
+                        }
+                    },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(
                         onDone = {
                             if (newExerciseName.isNotBlank()) {
                                 onAdd(newExerciseName)
-                                newExerciseName = ""
                             }
                         },
                     ),
@@ -160,7 +180,6 @@ fun ExerciseSettingsScreen(
                     onClick = {
                         if (newExerciseName.isNotBlank()) {
                             onAdd(newExerciseName)
-                            newExerciseName = ""
                         }
                     },
                 ) {
@@ -185,7 +204,7 @@ fun ExerciseSettingsScreen(
             ) {
                 items(
                     count = sortedExercises.size,
-                    key = { sortedExercises[it].second.name },
+                    key = { "${sortedExercises[it].first}-${sortedExercises[it].second.name}" },
                 ) { sortedIndex ->
                     val (originalIndex, exercise) = sortedExercises[sortedIndex]
                     ExerciseRow(

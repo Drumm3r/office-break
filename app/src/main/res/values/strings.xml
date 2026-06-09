@@ -106,6 +106,7 @@
     <string name="exercises_title">Exercises</string>
     <string name="new_exercise_hint">New exercise</string>
     <string name="add_exercise">Add</string>
+    <string name="exercise_duplicate_name">This exercise already exists</string>
     <string name="remove_exercise">Remove</string>
 
     <!-- Home Workout exercises -->

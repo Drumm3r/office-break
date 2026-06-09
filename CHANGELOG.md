@@ -2,7 +2,11 @@
 
 All notable changes to Office Break are documented here. Newest on top.
 
-## [v0.9.0] - 2026-06-03
+## [v0.9.0] - 2026-06-09
+
+### Fixed
+
+- **Crash on duplicate exercise names (#30)** — Adding a custom exercise whose name matched an existing one produced two list items with the same name, and the exercise list used the name as its Compose `LazyColumn` key, so opening the exercise screen crashed with `IllegalArgumentException: Key "…" was already used`. Adding an exercise now rejects a name that already exists (case-insensitive, across all modes) and shows a snackbar; the repository also de-duplicates exercises on read, so users who already created duplicates no longer crash and their list self-heals on the next save.
 
 ### Distribution
 
@@ -11,8 +15,11 @@ All notable changes to Office Break are documented here. Newest on top.
 
 ### Build
 
-- **Dependency bumps** — `com.android.application` (AGP) 9.2.0 → 9.2.1, `org.jetbrains.kotlin.plugin.compose` 2.2.10 → 2.3.21, `org.jetbrains.kotlin.plugin.serialization` 2.2.10 → 2.3.21, `androidx.compose:compose-bom` 2026.04.01 → 2026.05.00, `org.jetbrains.kotlinx:kotlinx-serialization-json` 1.8.1 → 1.11.0, `androidx.test.ext:junit` 1.2.1 → 1.3.0. The compose Kotlin Gradle plugin was bumped in lockstep with serialization because both must share one Kotlin version, else the build fails on a plugin version mismatch.
-- **`gradle/verification-metadata.xml` regenerated** — SHA-256 pins added for all new artifact versions (and their new transitives, including `aapt2` 9.2.1) via `./gradlew --write-verification-metadata sha256 assembleFdroidDebug assembleGplayDebug`, so reproducible-build verification keeps passing. App version unchanged (`versionName` 0.9.0 / `versionCode` 12).
+- **Gradle wrapper 9.4.1 → 9.5.0** — `distributionUrl` and pinned `distributionSha256Sum` updated in `gradle/wrapper/gradle-wrapper.properties`.
+- **Dependency bumps** — `com.android.application` (AGP) 9.2.0 → 9.2.1, `org.jetbrains.kotlin.plugin.compose` 2.2.10 → 2.4.0, `org.jetbrains.kotlin.plugin.serialization` 2.2.10 → 2.4.0, `androidx.compose:compose-bom` 2026.04.01 → 2026.05.01, `androidx.core:core-ktx` 1.18.0 → 1.19.0, `org.jetbrains.kotlinx:kotlinx-serialization-json` 1.8.1 → 1.11.0, `org.jetbrains.kotlinx:kotlinx-coroutines-android` (and `-test`) 1.10.2 → 1.11.0, `androidx.test.ext:junit` 1.2.1 → 1.3.0. The compose Kotlin Gradle plugin was bumped in lockstep with serialization because both must share one Kotlin version, else the build fails on a plugin version mismatch.
+- **`compileSdk` 36 → 37** — required by `core-ktx` 1.19.0 (`CheckAarMetadata`); compile-only bump, `targetSdk` stays 36 (runtime behavior unchanged).
+- **`actions/checkout` 6.0.2 → 6.0.3** — SHA-pinned in `.github/workflows/test.yml` and `release-play.yml`.
+- **`gradle/verification-metadata.xml` regenerated** — SHA-256 pins added for all new artifact versions (including Gradle 9.5.0's bundled Kotlin 2.3.20 classpath and the new plugin/BOM transitives) via `./gradlew --write-verification-metadata sha256 assembleFdroidDebug assembleGplayDebug testFdroidDebugUnitTest testGplayDebugUnitTest`, so reproducible-build verification keeps passing. App version unchanged (`versionName` 0.9.0 / `versionCode` 12).
 
 ## [v0.8.3] - 2026-05-08
 

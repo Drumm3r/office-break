@@ -37,9 +37,12 @@ import de.mysportsmate.officebreak.service.TimerServiceController
 import de.mysportsmate.officebreak.service.TimerState
 import de.mysportsmate.officebreak.service.TimerStateHolder
 import de.mysportsmate.officebreak.widget.WidgetUpdater
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
@@ -100,6 +103,12 @@ class TimerViewModel @JvmOverloads constructor(
 
     private val _backupState = MutableStateFlow<BackupUiState>(BackupUiState.Idle)
     val backupState: StateFlow<BackupUiState> = _backupState.asStateFlow()
+
+    private val _addExerciseError = MutableStateFlow<String?>(null)
+    val addExerciseError: StateFlow<String?> = _addExerciseError.asStateFlow()
+
+    private val _addExerciseSuccess = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val addExerciseSuccess: SharedFlow<Unit> = _addExerciseSuccess.asSharedFlow()
 
     val onboardingCompleted: StateFlow<Boolean?> = repository.onboardingCompleted
         .map<Boolean, Boolean?> { it }
@@ -679,13 +688,38 @@ class TimerViewModel @JvmOverloads constructor(
         launchSafely("Failed to add exercise") {
             // Add enabled to active mode, disabled to other modes
             val activeMode = exerciseMode.value
+            val perMode = ExerciseMode.entries.associateWith { mode ->
+                repository.exercisesForMode(mode).first()
+            }
+
+            // Reject duplicate names (case-insensitive) across all modes.
+            // Compare both the canonical name and the resolved display name so a
+            // localized default name (e.g. "Liegestütze" for "Push Ups") is caught too.
+            val context = getApplication<Application>()
+            val normalized = trimmed.lowercase()
+            val isDuplicate = perMode.values.any { list ->
+                list.any { ex ->
+                    ex.name.trim().lowercase() == normalized ||
+                        ex.displayName(context).trim().lowercase() == normalized
+                }
+            }
+            if (isDuplicate) {
+                _addExerciseError.value = context.getString(R.string.exercise_duplicate_name)
+                return@launchSafely
+            }
+
             for (mode in ExerciseMode.entries) {
-                val modeExercises = repository.exercisesForMode(mode).first().toMutableList()
+                val modeExercises = perMode.getValue(mode).toMutableList()
                 modeExercises.add(Exercise(name = trimmed, isEnabled = mode == activeMode))
                 repository.setExercisesForMode(mode, modeExercises)
             }
             statsRepository.markCustomExerciseCreated()
+            _addExerciseSuccess.tryEmit(Unit)
         }
+    }
+
+    fun clearAddExerciseError() {
+        _addExerciseError.value = null
     }
 
     fun removeExercise(index: Int) {

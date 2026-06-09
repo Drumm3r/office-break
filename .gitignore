@@ -7,6 +7,7 @@ local.properties
 /build
 /app/build
 /app/release
+/app/*/release/
 /captures
 .externalNativeBuild
 .cxx
