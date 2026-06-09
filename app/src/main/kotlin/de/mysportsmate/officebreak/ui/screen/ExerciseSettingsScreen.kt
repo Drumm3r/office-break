@@ -27,8 +27,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -67,20 +65,18 @@ fun ExerciseSettingsScreen(
     showOverrideHint: Boolean = false,
     addErrorMessage: String? = null,
     onErrorShown: () -> Unit = {},
+    addExerciseSuccess: Int = 0,
 ) {
     var newExerciseName by rememberSaveable { mutableStateOf("") }
     val listState = remember(exerciseMode) { LazyListState() }
-    val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(addErrorMessage) {
-        if (addErrorMessage != null) {
-            snackbarHostState.showSnackbar(addErrorMessage)
-            onErrorShown()
+    LaunchedEffect(addExerciseSuccess) {
+        if (addExerciseSuccess > 0) {
+            newExerciseName = ""
         }
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.exercises_title)) },
@@ -153,15 +149,25 @@ fun ExerciseSettingsScreen(
             ) {
                 OutlinedTextField(
                     value = newExerciseName,
-                    onValueChange = { newExerciseName = it },
+                    onValueChange = {
+                        newExerciseName = it
+                        if (addErrorMessage != null) {
+                            onErrorShown()
+                        }
+                    },
                     label = { Text(stringResource(R.string.new_exercise_hint)) },
                     singleLine = true,
+                    isError = addErrorMessage != null,
+                    supportingText = {
+                        if (addErrorMessage != null) {
+                            Text(addErrorMessage)
+                        }
+                    },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(
                         onDone = {
                             if (newExerciseName.isNotBlank()) {
                                 onAdd(newExerciseName)
-                                newExerciseName = ""
                             }
                         },
                     ),
@@ -174,7 +180,6 @@ fun ExerciseSettingsScreen(
                     onClick = {
                         if (newExerciseName.isNotBlank()) {
                             onAdd(newExerciseName)
-                            newExerciseName = ""
                         }
                     },
                 ) {

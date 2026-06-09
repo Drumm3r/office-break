@@ -104,6 +104,9 @@ class TimerViewModel @JvmOverloads constructor(
     private val _addExerciseError = MutableStateFlow<String?>(null)
     val addExerciseError: StateFlow<String?> = _addExerciseError.asStateFlow()
 
+    private val _addExerciseSuccess = MutableStateFlow(0)
+    val addExerciseSuccess: StateFlow<Int> = _addExerciseSuccess.asStateFlow()
+
     val onboardingCompleted: StateFlow<Boolean?> = repository.onboardingCompleted
         .map<Boolean, Boolean?> { it }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
@@ -702,6 +705,7 @@ class TimerViewModel @JvmOverloads constructor(
                 repository.setExercisesForMode(mode, modeExercises)
             }
             statsRepository.markCustomExerciseCreated()
+            _addExerciseSuccess.value += 1
         }
     }
 
