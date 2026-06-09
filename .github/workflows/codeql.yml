@@ -1,0 +1,49 @@
+# NOTE: This repository is public. All workflow output (logs, command echoes)
+# is world-readable. Any future use of `secrets.*` MUST be paired with GitHub
+# Actions secret-masking and the most restrictive `permissions:` block possible.
+#
+# CodeQL runs in `build-mode: none` for java-kotlin: the analyzer extracts
+# directly from source and does NOT build the project. This deliberately avoids
+# the default-setup autobuild (`./gradlew assemble`), which fails inside CodeQL's
+# tracer/proxy because it cannot provision the Android SDK platform or run the
+# multi-flavor R8 release build. Source-mode analysis is GitHub's recommended
+# mode for Kotlin and needs no JDK/Gradle/SDK setup.
+name: CodeQL
+
+on:
+  push:
+    branches: [main, develop, release]
+  pull_request:
+  schedule:
+    - cron: '27 4 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (java-kotlin)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@c35d1b164463ee62a100735382aaaa525c5d3496 # CLI v2.25.6
+        with:
+          languages: java-kotlin
+          build-mode: none
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@c35d1b164463ee62a100735382aaaa525c5d3496 # CLI v2.25.6
+        with:
+          category: "/language:java-kotlin"
