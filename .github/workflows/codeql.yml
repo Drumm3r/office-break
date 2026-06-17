@@ -2,12 +2,14 @@
 # is world-readable. Any future use of `secrets.*` MUST be paired with GitHub
 # Actions secret-masking and the most restrictive `permissions:` block possible.
 #
-# CodeQL runs in `build-mode: none` for java-kotlin: the analyzer extracts
-# directly from source and does NOT build the project. This deliberately avoids
-# the default-setup autobuild (`./gradlew assemble`), which fails inside CodeQL's
-# tracer/proxy because it cannot provision the Android SDK platform or run the
-# multi-flavor R8 release build. Source-mode analysis is GitHub's recommended
-# mode for Kotlin and needs no JDK/Gradle/SDK setup.
+# CodeQL runs in `build-mode: manual` for java-kotlin. Kotlin analysis REQUIRES
+# a build (CodeQL's Kotlin extractor hooks into the Kotlin compiler), so
+# `build-mode: none` produces no database ("no source code seen"). The default
+# autobuild (`./gradlew assemble`) is too heavy: it builds every flavor's R8
+# release variant and fails inside CodeQL's tracer. Instead we run the same
+# lightweight debug compile that the Unit Tests workflow already uses
+# (`./gradlew assembleDebug`) — it compiles Kotlin for all flavors, needs only
+# the runner's preinstalled Android SDK + JDK 17, and skips the R8 release build.
 name: CodeQL
 
 on:
@@ -38,11 +40,21 @@ jobs:
         with:
           persist-credentials: false
 
+      - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+
       - name: Initialize CodeQL
         uses: github/codeql-action/init@c35d1b164463ee62a100735382aaaa525c5d3496 # CLI v2.25.6
         with:
           languages: java-kotlin
-          build-mode: none
+          build-mode: manual
+
+      - name: Build debug APKs (all flavors)
+        run: ./gradlew assembleDebug
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@c35d1b164463ee62a100735382aaaa525c5d3496 # CLI v2.25.6
