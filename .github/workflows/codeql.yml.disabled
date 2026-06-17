@@ -1,0 +1,72 @@
+# NOTE: This repository is public. All workflow output (logs, command echoes)
+# is world-readable. Any future use of `secrets.*` MUST be paired with GitHub
+# Actions secret-masking and the most restrictive `permissions:` block possible.
+#
+# CodeQL runs in `build-mode: manual` for java-kotlin. Kotlin analysis REQUIRES
+# a build (CodeQL's Kotlin extractor hooks into the Kotlin compiler), so
+# `build-mode: none` produces no database ("no source code seen"). The default
+# autobuild (`./gradlew assemble`) is too heavy: it builds every flavor's R8
+# release variant and fails inside CodeQL's tracer. Instead we run the same
+# lightweight debug compile that the Unit Tests workflow already uses
+# (`./gradlew assembleDebug`) — it compiles Kotlin for all flavors, needs only
+# the runner's preinstalled Android SDK + JDK 17, and skips the R8 release build.
+#
+# DISABLED (temporary): this file is named `codeql.yml.disabled` so GitHub does
+# NOT run it — CodeQL does not yet support Kotlin 2.4.0 (this project's version).
+# Its extractor caps at 2.3.20 and the build fails with "Kotlin version 2.4.0 is
+# too recent", which also produces a noisy neutral "Error when processing the
+# SARIF file" code-scanning check on every PR. Tracking: github/codeql#21938.
+#
+# TO RE-ENABLE once a CodeQL release supports Kotlin 2.4.0: rename this file back
+# to `codeql.yml`. The build-mode/manual setup below is already correct and
+# blocking — no other change needed.
+name: CodeQL
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    - cron: '27 4 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (java-kotlin)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@c35d1b164463ee62a100735382aaaa525c5d3496 # CLI v2.25.6
+        with:
+          languages: java-kotlin
+          build-mode: manual
+
+      - name: Build debug APKs (all flavors)
+        run: ./gradlew assembleDebug
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@c35d1b164463ee62a100735382aaaa525c5d3496 # CLI v2.25.6
+        with:
+          category: "/language:java-kotlin"
