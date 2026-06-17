@@ -11,12 +11,15 @@
 # (`./gradlew assembleDebug`) — it compiles Kotlin for all flavors, needs only
 # the runner's preinstalled Android SDK + JDK 17, and skips the R8 release build.
 #
-# KNOWN LIMITATION (temporary): CodeQL does not yet support Kotlin 2.4.0 (this
-# project's version) — its extractor caps at 2.3.20 and the build fails with
-# "Kotlin version 2.4.0 is too recent". Tracking: github/codeql#21938. Until a
-# CodeQL release adds 2.4.0 support, the analyze job is marked
-# `continue-on-error: true` so it surfaces the failure without blocking PRs/merges.
-# Remove that line once CodeQL supports 2.4.0 — the rest of the setup is correct.
+# DISABLED (temporary): this file is named `codeql.yml.disabled` so GitHub does
+# NOT run it — CodeQL does not yet support Kotlin 2.4.0 (this project's version).
+# Its extractor caps at 2.3.20 and the build fails with "Kotlin version 2.4.0 is
+# too recent", which also produces a noisy neutral "Error when processing the
+# SARIF file" code-scanning check on every PR. Tracking: github/codeql#21938.
+#
+# TO RE-ENABLE once a CodeQL release supports Kotlin 2.4.0: rename this file back
+# to `codeql.yml`. The build-mode/manual setup below is already correct and
+# blocking — no other change needed.
 name: CodeQL
 
 on:
@@ -38,9 +41,6 @@ jobs:
   analyze:
     name: Analyze (java-kotlin)
     runs-on: ubuntu-24.04
-    # TEMPORARY: Kotlin 2.4.0 unsupported by CodeQL (github/codeql#21938). Drop
-    # once a CodeQL release adds 2.4.0 support so failures block again.
-    continue-on-error: true
     permissions:
       contents: read
       security-events: write
