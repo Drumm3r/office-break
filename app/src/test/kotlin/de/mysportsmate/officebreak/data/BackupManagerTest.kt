@@ -10,6 +10,9 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneId
 
 class BackupManagerTest {
 
@@ -17,6 +20,12 @@ class BackupManagerTest {
         ignoreUnknownKeys = true
         prettyPrint = true
     }
+
+    // Fixed clock keeps hardcoded record dates inside the rolling window regardless of the real date.
+    private val fixedClock = Clock.fixed(
+        Instant.parse("2026-03-30T12:00:00Z"),
+        ZoneId.of("UTC"),
+    )
 
     private lateinit var settingsDataStore: FakeDataStore
     private lateinit var statsDataStore: FakeDataStore
@@ -29,7 +38,7 @@ class BackupManagerTest {
         settingsDataStore = FakeDataStore()
         statsDataStore = FakeDataStore()
         settingsRepo = SettingsRepository(dataStore = settingsDataStore)
-        statsRepo = StatsRepository(dataStore = statsDataStore)
+        statsRepo = StatsRepository(dataStore = statsDataStore, clock = fixedClock)
         backupManager = BackupManager(settingsRepo, statsRepo)
     }
 
@@ -251,7 +260,7 @@ class BackupManagerTest {
         val newSettingsStore = FakeDataStore()
         val newStatsStore = FakeDataStore()
         val newSettingsRepo = SettingsRepository(dataStore = newSettingsStore)
-        val newStatsRepo = StatsRepository(dataStore = newStatsStore)
+        val newStatsRepo = StatsRepository(dataStore = newStatsStore, clock = fixedClock)
         val newManager = BackupManager(newSettingsRepo, newStatsRepo)
 
         val result = newManager.restoreFromJson(exported)
@@ -280,7 +289,7 @@ class BackupManagerTest {
         val newSettingsStore = FakeDataStore()
         val newStatsStore = FakeDataStore()
         val newSettingsRepo = SettingsRepository(dataStore = newSettingsStore)
-        val newStatsRepo = StatsRepository(dataStore = newStatsStore)
+        val newStatsRepo = StatsRepository(dataStore = newStatsStore, clock = fixedClock)
         val newManager = BackupManager(newSettingsRepo, newStatsRepo)
 
         val result = newManager.restoreFromJson(exported)
